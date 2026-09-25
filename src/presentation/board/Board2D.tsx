@@ -1,15 +1,27 @@
+import { RadialBoard2D } from './RadialBoard2D';
 import { StyleSheet, Text, View } from 'react-native';
-import { PLAYER_COLORS, isSafeSquare, type GameState, type Move, type Piece } from '@/domain';
+import {
+  PLAYER_COLORS,
+  isSafeSquare,
+  type GameState,
+  type Move,
+  type Piece,
+  type PlayerColor,
+} from '@/domain';
 import { AnimatedPiece2D } from './AnimatedPiece2D';
 import { getBoardTheme, type BoardTheme } from '../theme/themes';
 import {
+  flipTrackSquare,
   GRID_SIZE,
-  HOME_COLUMN_CELLS,
+  homeColumnCells,
   TRACK_CELLS,
-  YARD_BLOCKS,
+  yardBlock,
   YARD_BLOCK_SIZE,
+  yardRestSpots,
 } from './boardLayout';
 import { getCellForPiece } from './getCellForPiece';
+
+const ENTRY_ARROWS = ['→', '↓', '←', '↑'] as const;
 
 export interface Board2DProps {
   readonly state: GameState;
@@ -17,6 +29,14 @@ export interface Board2DProps {
   readonly size: number;
   readonly theme?: BoardTheme;
   readonly motionEnabled?: boolean;
+  /**
+   * Renders every seat at its diagonally-opposite corner, so a 2-player
+   * table can put the local player's colour at the bottom of the screen
+   * regardless of which colour they actually hold. The board is symmetric
+   * under a 180° turn (see boardLayout.ts), so this relabels which corner
+   * each colour uses rather than recomputing any geometry.
+   */
+  readonly flip?: boolean;
   onSelectMove(move: Move): void;
 }
 
@@ -24,7 +44,7 @@ interface RenderablePiece {
   readonly piece: Piece;
   readonly yardSlot: number;
   readonly id: string;
-  readonly color: (typeof PLAYER_COLORS)[number];
+  readonly color: PlayerColor;
   readonly row: number;
   readonly col: number;
   readonly stackIndex: number;
@@ -38,14 +58,26 @@ export function Board2D({
   onSelectMove,
   theme = getBoardTheme('classic'),
   motionEnabled = false,
+  flip = false,
 }: Board2DProps): React.JSX.Element {
+  if (state.players.length > 4)
+    return (
+      <RadialBoard2D
+        state={state}
+        validMoves={validMoves}
+        size={size}
+        theme={theme}
+        motionEnabled={motionEnabled}
+        onSelectMove={onSelectMove}
+      />
+    );
   const cellSize = size / GRID_SIZE;
   const validMoveByPieceId = new Map((validMoves ?? []).map((move) => [move.pieceId, move]));
 
   const cellOccupancy = new Map<string, number>();
   const pieces: RenderablePiece[] = state.players.flatMap((player) =>
     player.pieces.map((piece, pieceIndex): RenderablePiece => {
-      const [row, col] = getCellForPiece(piece, pieceIndex);
+      const [row, col] = getCellForPiece(piece, pieceIndex, state.players.length, flip);
       const key = `${row},${col}`;
       const stackIndex = cellOccupancy.get(key) ?? 0;
       cellOccupancy.set(key, stackIndex + 1);
@@ -64,8 +96,25 @@ export function Board2D({
 
   return (
     <View style={[styles.board, { width: size, height: size, backgroundColor: theme.tile }]}>
+      {theme.wood && (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          {Array.from({ length: 45 }, (_, i) => (
+            <View
+              key={i}
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: (size * i) / 45,
+                height: i % 4 === 0 ? 2 : 1,
+                backgroundColor: i % 3 === 0 ? '#ffffff25' : '#8c693515',
+              }}
+            />
+          ))}
+        </View>
+      )}
       {PLAYER_COLORS.map((color) => {
-        const block = YARD_BLOCKS[color];
+        const block = yardBlock(color, flip);
         return (
           <View
             key={`yard-${color}`}
@@ -76,7 +125,7 @@ export function Board2D({
                 top: block.row * cellSize,
                 width: YARD_BLOCK_SIZE * cellSize,
                 height: YARD_BLOCK_SIZE * cellSize,
-                backgroundColor: theme.colors[color],
+                backgroundColor: theme.wood ? theme.tile : theme.colors[color],
                 borderColor: theme.colors[color],
               },
             ]}
@@ -84,9 +133,9 @@ export function Board2D({
             <View
               style={{
                 position: 'absolute',
-                inset: cellSize * 0.65,
-                backgroundColor: theme.tile,
-                borderRadius: cellSize * 0.65,
+                inset: cellSize * (theme.wood ? 0.25 : 0.65),
+                backgroundColor: theme.wood ? theme.colors[color] : theme.tile,
+                borderRadius: theme.wood ? cellSize * 3 : cellSize * 0.65,
                 borderWidth: 2,
                 borderColor: '#00000015',
               }}
@@ -95,43 +144,71 @@ export function Board2D({
         );
       })}
 
-      {TRACK_CELLS.map(([row, col], index) => (
-        <View
-          key={`track-${index}`}
-          style={[
-            styles.cell,
-            {
-              left: col * cellSize,
-              top: row * cellSize,
-              width: cellSize,
-              height: cellSize,
-              backgroundColor:
-                index % 13 === 0
-                  ? theme.colors[PLAYER_COLORS[Math.floor(index / 13)]!]
-                  : theme.tile,
-              borderColor: theme.line,
-            },
-          ]}
-        >
-          <Text
-            style={{
-              fontSize: cellSize * 0.65,
-              lineHeight: cellSize,
-              textAlign: 'center',
-              color: index % 13 === 0 ? '#ffffff' : '#8190a5',
-            }}
+      {theme.wood &&
+        PLAYER_COLORS.flatMap((color) =>
+          yardRestSpots(color, flip).map(([row, col], index) => (
+            <View
+              key={`rest-${color}-${index}`}
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                left: (col - 0.15) * cellSize,
+                top: (row - 0.15) * cellSize,
+                width: cellSize * 1.3,
+                height: cellSize * 1.3,
+                borderRadius: cellSize,
+                backgroundColor: theme.tile,
+                borderWidth: 1,
+                borderColor: '#00000035',
+              }}
+            />
+          )),
+        )}
+      {TRACK_CELLS.map(([row, col], index) => {
+        // Physically fixed cell; only which colour's entry marker paints it
+        // moves under a flip, and always to another entry cell (both are
+        // multiples of 13 apart, see flipTrackSquare).
+        const entryIndex = flip ? flipTrackSquare(index) : index;
+        return (
+          <View
+            key={`track-${index}`}
+            style={[
+              styles.cell,
+              {
+                left: col * cellSize,
+                top: row * cellSize,
+                width: cellSize,
+                height: cellSize,
+                backgroundColor:
+                  index % 13 === 0
+                    ? theme.colors[PLAYER_COLORS[Math.floor(entryIndex / 13)]!]
+                    : theme.wood
+                      ? `${theme.tile}d9`
+                      : theme.tile,
+                borderColor: theme.line,
+              },
+            ]}
           >
-            {isSafeSquare(index)
-              ? index % 13 === 0
-                ? ['→', '↓', '←', '↑'][Math.floor(index / 13)]
-                : '☆'
-              : ''}
-          </Text>
-        </View>
-      ))}
+            <Text
+              style={{
+                fontSize: cellSize * 0.65,
+                lineHeight: cellSize,
+                textAlign: 'center',
+                color: index % 13 === 0 ? '#ffffff' : '#8190a5',
+              }}
+            >
+              {isSafeSquare(index)
+                ? index % 13 === 0
+                  ? ENTRY_ARROWS[Math.floor(entryIndex / 13)]
+                  : '☆'
+                : ''}
+            </Text>
+          </View>
+        );
+      })}
 
       {PLAYER_COLORS.map((color) =>
-        HOME_COLUMN_CELLS[color].map(([row, col], step) => (
+        homeColumnCells(color, flip).map(([row, col], step) => (
           <View
             key={`home-${color}-${step}`}
             style={[
@@ -166,10 +243,10 @@ export function Board2D({
             borderBottomWidth: cellSize * 1.5,
             borderLeftWidth: cellSize * 1.5,
             borderRightWidth: cellSize * 1.5,
-            borderTopColor: theme.colors.GREEN,
-            borderRightColor: theme.colors.YELLOW,
-            borderBottomColor: theme.colors.BLUE,
-            borderLeftColor: theme.colors.RED,
+            borderTopColor: theme.colors[flip ? 'BLUE' : 'GREEN'],
+            borderRightColor: theme.colors[flip ? 'RED' : 'YELLOW'],
+            borderBottomColor: theme.colors[flip ? 'GREEN' : 'BLUE'],
+            borderLeftColor: theme.colors[flip ? 'YELLOW' : 'RED'],
           }}
         />
         <Text
@@ -194,7 +271,16 @@ export function Board2D({
           yardSlot={yardSlot}
           cellSize={cellSize}
           fill={theme.colors[color]}
+          pieceStyle={theme.pieceStyle}
+          flip={flip}
           stackIndex={stackIndex}
+          stackCount={
+            pieces.filter(
+              (p) =>
+                p.row === getCellForPiece(piece, yardSlot, state.players.length, flip)[0] &&
+                p.col === getCellForPiece(piece, yardSlot, state.players.length, flip)[1],
+            ).length
+          }
           move={move}
           motionEnabled={motionEnabled}
           onSelectMove={onSelectMove}

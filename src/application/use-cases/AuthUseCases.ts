@@ -6,10 +6,12 @@ export async function signUp(
   progress: IUserProgressRepository,
   email: string,
   password: string,
-  displayName: string | null,
+  seed: Omit<UserProfile, 'uid'>,
 ): Promise<{ readonly user: AuthUser; readonly profile: UserProfile }> {
   const user = await auth.signUp(email, password);
-  const profile = await progress.createProfile(user.uid, displayName);
+  // The client owns only the display name; the database seeds the wallet.
+  await progress.saveDisplayName(user.uid, seed.displayName);
+  const profile = (await progress.getProfile(user.uid)) ?? { ...seed, uid: user.uid };
   return { user, profile };
 }
 

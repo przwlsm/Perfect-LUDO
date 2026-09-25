@@ -2,15 +2,24 @@
 
 ## What is ready
 
-This release is an offline Ludo app: 2–4 players, two AI difficulties, pass-and-play,
-2D and interactive 3D boards, 12 board themes, 6 dice finishes, local coin purchases,
-daily gifts, saved matches, and player statistics. The UI works on phones, tablets,
-and web. The 3D scene loads separately on web and renders on demand to limit battery use.
+The app supports 2-6 player pass-and-play, 2-4 player AI games, 2D/3D boards, themed dice and packs and saved matches. Accounts, friend requests, invitations, private online rooms and the coin wallet (coins, cosmetics, daily gift, rewards) use Supabase. See the catalog for current collections and [authentication setup](AUTH_SETUP.md) for provider configuration.
 
-No accounts, cloud sync, online matchmaking, real-money payments, cash prizes, ads,
-or remote leaderboards are implemented. Saved data is device-local. Deleting app data
-removes progress. Coins are entertainment currency; local storage is not a secure
-financial ledger. The old authentication ports remain extension points, not connected services.
+Online moves are validated on the database against the stored board and server roll. The app recovers through realtime events, periodic refresh and foreground refresh. Private rooms wait for the player whose turn it is; there is no automatic turn deadline/forfeit or public matchmaking. Leaving ends the room for everyone, without completion rewards.
+
+Coins and inventory are account-held entertainment rewards changed only by server functions (`purchase_item`, `claim_daily_gift`, `award_match`), not paid entitlements. Do not use these counters for prizes or leaderboards.
+
+## Online database rollout
+
+1. Back up the target database and apply migrations `0001` through `0007` in order, first in a staging project. Never embed a service-role key in the client.
+2. Deploy the updated client and `0005_authoritative_matches.sql` together. The legacy one-argument roll RPC is revoked deliberately. Earlier clients cannot roll after this migration. End pre-migration test rooms and start fresh rooms for verification; historical client-generated states were not authoritative.
+3. Enable Realtime for the tables specified by the migrations and configure Auth redirects, email delivery, Google and Facebook as described in `AUTH_SETUP.md`.
+4. Run `npm run test:online` locally. This executes all migrations in isolated PostgreSQL and verifies legal state transitions, membership, turn ownership, idempotency, RPC grants and that the wallet catalog matches the app. It does not test the hosted Realtime service.
+5. Migration `0007` closes the coin and statistics columns to clients and moves the wallet to the server. Deploy it together with this client: older clients will fail to sync progress after it. Items bought on a device before `0007` are not carried over; every account starts from the server's default wallet. Run `npm run store:check` against the hosted project afterwards (see the script header for the test-account variables).
+6. On a dedicated staging project with three dedicated test accounts, run the social-flow script according to its header. It mutates those accounts' relationships/invitations. Do not use normal player accounts. The RLS probe script attempts writes and belongs on staging too.
+7. Play real 2-, 5- and 6-account rooms across at least two physical devices and a browser. Test a lost response immediately after a roll/move, airplane mode, app backgrounding, expired tokens, reconnect, sole-move automation, capture/home/third-six turns, abandon and completed results.
+8. Confirm browser/native OAuth redirects, email verification and password recovery on the actual release domain and native scheme. Provider secrets, SMTP, publisher identity and signing need project-owner configuration.
+
+No hosted migration or signed production release was performed by this audit.
 
 ## Before the first native release
 
@@ -55,6 +64,9 @@ is local to that site's origin. Changing domain does not migrate a player's coll
 
 1. Add the cosmetic, stable ID, category, and coin price to
    `src/domain/cosmetics/catalog.ts`. Never reuse an existing product ID for another item.
+   Add the same row to `public.store_items` in a new migration (see `0007` for the
+   seed shape); the server charges the catalog price, and `npm run test:online` fails
+   while the two disagree.
 2. For a board, add semantic surface/accent/frame/tile/player tokens to
    `src/presentation/theme/themes.ts`. Both renderers consume the same theme.
 3. For dice, add its face/pip palette to `DICE_FINISHES`.
@@ -70,12 +82,9 @@ and integrate the platform billing flow. The backend must verify purchases, own 
 and entitlements, handle idempotency/refunds, and support restore purchases. Do not trust
 device coin balances, dates, match results, or entitlement flags for paid goods.
 
-## Online multiplayer later
+## Expanding online play
 
-Reuse the pure domain engine on an authoritative server. Add identity, room lifecycle,
-server dice, turn deadlines, reconnect/resume, result validation, and abuse controls.
-Clients should submit intentions; the server computes captures and validates all moves.
-The existing local AI/session controllers do not provide networking.
+Before adding public matchmaking, add turn deadlines, reconnection grace/forfeit policy, moderation, rate limits and load tests. Prize eligibility and paid entitlements require a server-owned ledger independent of local rewards. Keep the TypeScript/PostgreSQL parity test whenever game rules change.
 
 ## Validation completed during implementation
 

@@ -61,7 +61,16 @@ export default function SettingsScreen() {
               'Play in 3D',
               'A dimensional board with sculpted pieces. Switch views during any match.',
             ],
-            ['reducedMotion', 'Reduced motion', 'Keep dice feedback still for a calmer game.'],
+            [
+              'reducedMotion',
+              'Reduced motion',
+              'Keep coins and dice still, with clear outlines for playable pieces.',
+            ],
+            [
+              'soundEnabled',
+              'Game sounds',
+              'Soft dice rolls, wooden taps, captures, and homecoming chimes.',
+            ],
           ] as const
         ).map(([key, title, hint]) => (
           <View key={key} style={[shared.between, { paddingVertical: 8 }]}>
@@ -89,12 +98,12 @@ export default function SettingsScreen() {
         <Label color={theme.accent}>ABOUT THE CLUB</Label>
         <Text style={shared.sectionTitle}>Good times, wherever you are.</Text>
         <Body>
-          Ludo Club works offline. Your matches, coins, and collection are stored on this device.
-          Clearing app data or uninstalling removes them.
+          Ludo Club works offline. Matches and settings are stored on this device; coins and your
+          collection are kept on your account when you sign in.
         </Body>
         <Body>
-          Daily gifts reset at midnight UTC. Local coins cannot be purchased, transferred, or
-          redeemed for money.
+          Daily gifts reset at midnight UTC. Coins cannot be purchased, transferred, or redeemed for
+          money.
         </Body>
         <Text style={shared.small}>Ludo Club · 1.0.0</Text>
       </Card>

@@ -1,10 +1,6 @@
 import type { AuthUser } from '../entities/User';
 
-/**
- * The whole app talks to this interface, never to the Firebase SDK
- * directly. That's what makes swapping Firebase for a different backend
- * later a matter of writing one new adapter, not a rewrite.
- */
+/** Backend-independent sign-in operations. Account lifecycle features extend this port. */
 export interface IAuthProvider {
   signUp(email: string, password: string): Promise<AuthUser>;
   signIn(email: string, password: string): Promise<AuthUser>;

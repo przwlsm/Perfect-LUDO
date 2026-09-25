@@ -1,5 +1,5 @@
-import { getBoardPosition, isSafeSquare } from '../board';
-import { FINISH_PROGRESS, isInYard, type Piece } from '../entities/Piece';
+import { getBoardPosition, isSafeSquare, getFinishProgress } from '../board';
+import { isInYard, type Piece } from '../entities/Piece';
 import type { Player } from '../entities/Player';
 import type { DieValue, PlayerColor } from '../entities/PlayerColor';
 
@@ -14,7 +14,7 @@ function findPiecesAtSquare(players: readonly Player[], square: number): Piece[]
   const occupants: Piece[] = [];
   for (const player of players) {
     for (const piece of player.pieces) {
-      const position = getBoardPosition(piece.color, piece.progress);
+      const position = getBoardPosition(piece.color, piece.progress, players.length);
       if (position?.zone === 'SHARED_TRACK' && position.square === square) {
         occupants.push(piece);
       }
@@ -59,7 +59,7 @@ function getCapturedPieceIds(
   square: number,
   movingColor: PlayerColor,
 ): string[] {
-  if (isSafeSquare(square)) return [];
+  if (isSafeSquare(square, players.length)) return [];
   const occupants = findPiecesAtSquare(players, square).filter((p) => p.color !== movingColor);
   const counts = countByOpponentColor(occupants, movingColor);
   return occupants.filter((p) => counts.get(p.color) === 1).map((p) => p.id);
@@ -71,9 +71,9 @@ export function getValidMoveForPiece(
   dieValue: DieValue,
 ): Move | null {
   const toProgress = isInYard(piece) ? (dieValue === 6 ? 1 : null) : piece.progress + dieValue;
-  if (toProgress === null || toProgress > FINISH_PROGRESS) return null;
+  if (toProgress === null || toProgress > getFinishProgress(players.length)) return null;
 
-  const position = getBoardPosition(piece.color, toProgress);
+  const position = getBoardPosition(piece.color, toProgress, players.length);
   if (position?.zone !== 'SHARED_TRACK') {
     return { pieceId: piece.id, fromProgress: piece.progress, toProgress, capturedPieceIds: [] };
   }
@@ -94,7 +94,7 @@ export function getValidMoves(
 
   const moves: Move[] = [];
   for (const piece of player.pieces) {
-    if (piece.progress === FINISH_PROGRESS) continue;
+    if (piece.progress === getFinishProgress(players.length)) continue;
     const move = getValidMoveForPiece(players, piece, dieValue);
     if (move) moves.push(move);
   }

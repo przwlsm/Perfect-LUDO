@@ -1,4 +1,4 @@
-import { FINISH_PROGRESS, type GameState, type Move } from '@/domain';
+import { getFinishProgress, type GameState, type Move } from '@/domain';
 import type { IMoveSelectionStrategy } from '../ports/IMoveSelectionStrategy';
 
 /**
@@ -20,7 +20,9 @@ export class HeuristicMoveStrategy implements IMoveSelectionStrategy {
       );
     }
 
-    const finishing = validMoves.find((move) => move.toProgress === FINISH_PROGRESS);
+    const finishing = validMoves.find(
+      (move) => move.toProgress === getFinishProgress(_state.players.length),
+    );
     if (finishing) return finishing;
 
     const leavingYard = validMoves.find((move) => move.fromProgress === 0);

@@ -16,7 +16,7 @@ export class InMemoryAuthProvider implements IAuthProvider {
     if (this.usersByEmail.has(email)) {
       throw new Error(`Email already registered: ${email}`);
     }
-    const user: AuthUser = { uid: `uid-${this.nextUid++}`, email };
+    const user: AuthUser = { uid: `uid-${this.nextUid++}`, email, isGuest: false };
     this.usersByEmail.set(email, { user, password });
     this.setCurrentUser(user);
     return user;

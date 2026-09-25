@@ -1,80 +1,72 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Animated, {
   cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
-  withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import type { DieValue } from '@/domain';
 import { Dice } from './Dice';
-
 export function AnimatedDice({
   value,
   finish,
   rolling,
   ready,
   motionEnabled,
+  size = 56,
 }: {
   value: DieValue | null;
   finish: string;
   rolling: boolean;
   ready: boolean;
   motionEnabled: boolean;
+  size?: number;
 }) {
-  const [frame, setFrame] = useState<DieValue>(1);
-  const tilt = useSharedValue(0);
-  const lift = useSharedValue(0);
-  const scale = useSharedValue(1);
+  const spin = useSharedValue(0),
+    lift = useSharedValue(0);
+  const tilt = useSharedValue(value === null ? 1 : 0);
   useEffect(() => {
-    cancelAnimation(tilt);
+    cancelAnimation(spin);
     cancelAnimation(lift);
-    cancelAnimation(scale);
+    cancelAnimation(tilt);
     if (!motionEnabled) {
-      tilt.value = 0;
+      spin.value = 0;
+      tilt.value = value === null ? 1 : 0;
       lift.value = 0;
-      scale.value = 1;
       return;
     }
+    tilt.value = withTiming(rolling || value === null ? 1 : 0, {
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+    });
     if (rolling) {
-      tilt.value = withRepeat(
-        withSequence(
-          withTiming(-16, { duration: 80 }),
-          withTiming(16, { duration: 160 }),
-          withTiming(0, { duration: 80 }),
-        ),
+      spin.value = 0;
+      spin.value = withRepeat(
+        withTiming(Math.PI * 2, { duration: 480, easing: Easing.linear }),
         -1,
       );
       lift.value = withRepeat(
-        withTiming(-9, { duration: 160, easing: Easing.inOut(Easing.quad) }),
+        withTiming(-5, { duration: 160, easing: Easing.inOut(Easing.quad) }),
         -1,
         true,
       );
-      scale.value = withTiming(1.1, { duration: 120 });
     } else {
-      tilt.value = withSpring(0, { damping: 13, stiffness: 180 });
-      scale.value = withSpring(1, { damping: 11, stiffness: 220 });
+      spin.value = withTiming(Math.ceil(spin.value / (Math.PI * 2)) * Math.PI * 2, {
+        duration: 180,
+        easing: Easing.out(Easing.cubic),
+      });
       lift.value = ready
         ? withRepeat(withTiming(-2, { duration: 1100, easing: Easing.inOut(Easing.sin) }), -1, true)
-        : withSpring(0);
+        : withTiming(0, { duration: 180 });
     }
     return () => {
-      cancelAnimation(tilt);
+      cancelAnimation(spin);
       cancelAnimation(lift);
-      cancelAnimation(scale);
     };
-  }, [rolling, ready, motionEnabled, tilt, lift, scale]);
-  useEffect(() => {
-    if (!rolling || !motionEnabled) return;
-    const timer = setInterval(() => setFrame((previous) => ((previous % 6) + 1) as DieValue), 70);
-    return () => clearInterval(timer);
-  }, [rolling, motionEnabled]);
-  const style = useAnimatedStyle(() => ({
-    transform: [{ translateY: lift.value }, { rotate: `${tilt.value}deg` }, { scale: scale.value }],
-  }));
+  }, [rolling, ready, motionEnabled, spin, lift, tilt, value]);
+  const style = useAnimatedStyle(() => ({ transform: [{ translateY: lift.value }] }));
   return (
     <Animated.View
       accessible
@@ -83,7 +75,7 @@ export function AnimatedDice({
       }
       style={style}
     >
-      <Dice value={rolling && motionEnabled ? frame : value} finish={finish} />
+      <Dice value={value} finish={finish} size={size} spin={spin} tilt={tilt} />
     </Animated.View>
   );
 }

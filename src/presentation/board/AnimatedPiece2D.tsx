@@ -13,32 +13,50 @@ import Animated, {
 import type { Move, Piece } from '@/domain';
 import { PieceToken } from '../components/PieceToken';
 import { getCellForPiece } from './getCellForPiece';
-import { getPieceWaypoints, PIECE_STEP_MS } from './pieceMotion';
+import { getPieceWaypoints, PIECE_JUMP_MS, PIECE_STEP_MS } from './pieceMotion';
 
 interface Props {
   piece: Piece;
+  playerCount?: number;
   yardSlot: number;
   stackIndex: number;
+  stackCount?: number;
   cellSize: number;
   fill: string;
+  pieceStyle?: 'coin' | 'pawn';
+  /** See Board2DProps.flip. Must match the board it is drawn on, or the
+   * piece renders at its un-flipped seat's cell instead of the flipped one. */
+  flip?: boolean;
   move?: Move;
   motionEnabled: boolean;
   onSelectMove(move: Move): void;
 }
 export function AnimatedPiece2D({
   piece,
+  playerCount = 4,
   yardSlot,
   stackIndex,
+  stackCount = 1,
   cellSize,
   fill,
+  pieceStyle,
+  flip = false,
   move,
   motionEnabled,
   onSelectMove,
 }: Props) {
-  const [row, col] = getCellForPiece(piece, yardSlot);
-  const offset = stackIndex * cellSize * 0.16;
+  const [row, col] = getCellForPiece(piece, yardSlot, playerCount, flip);
+  const columns = Math.ceil(Math.sqrt(stackCount));
+  const offset =
+    stackCount > 1 ? ((stackIndex % columns) - (columns - 1) / 2) * cellSize * 0.48 : 0;
+  const offsetY =
+    stackCount > 1
+      ? (Math.floor(stackIndex / columns) - (Math.ceil(stackCount / columns) - 1) / 2) *
+        cellSize *
+        0.48
+      : 0;
   const targetX = (col + 0.5) * cellSize + offset;
-  const targetY = (row + 0.5) * cellSize - offset;
+  const targetY = (row + 0.5) * cellSize + offsetY;
   const x = useSharedValue(targetX);
   const y = useSharedValue(targetY);
   const hop = useSharedValue(0);
@@ -57,8 +75,14 @@ export function AnimatedPiece2D({
       return;
     }
     const changed = from.progress !== progress;
-    const path = getPieceWaypoints({ id, color, progress }, from.progress, yardSlot);
-    const duration = changed ? (path.length === 1 ? 240 : PIECE_STEP_MS) : 160;
+    const path = getPieceWaypoints(
+      { id, color, progress },
+      from.progress,
+      yardSlot,
+      playerCount,
+      flip,
+    );
+    const duration = changed ? (path.length === 1 ? PIECE_JUMP_MS : PIECE_STEP_MS) : 160;
     const config = {
       duration,
       easing: Easing.inOut(Easing.quad),
@@ -68,7 +92,7 @@ export function AnimatedPiece2D({
       withTiming((c + 0.5) * cellSize + (i === path.length - 1 ? offset : 0), config),
     );
     const ys = path.map(([r], i) =>
-      withTiming((r + 0.5) * cellSize - (i === path.length - 1 ? offset : 0), config),
+      withTiming((r + 0.5) * cellSize + (i === path.length - 1 ? offsetY : 0), config),
     );
     x.value = withSequence(ReduceMotion.System, xs[0]!, ...xs.slice(1));
     y.value = withSequence(ReduceMotion.System, ys[0]!, ...ys.slice(1));
@@ -87,7 +111,23 @@ export function AnimatedPiece2D({
       cancelAnimation(y);
       cancelAnimation(hop);
     };
-  }, [id, color, progress, yardSlot, cellSize, offset, targetX, targetY, motionEnabled, x, y, hop]);
+  }, [
+    playerCount,
+    flip,
+    id,
+    color,
+    progress,
+    yardSlot,
+    cellSize,
+    offset,
+    offsetY,
+    targetX,
+    targetY,
+    motionEnabled,
+    x,
+    y,
+    hop,
+  ]);
   const position = useAnimatedStyle(() => ({
     transform: [{ translateX: x.value }, { translateY: y.value + hop.value }],
   }));
@@ -111,10 +151,11 @@ export function AnimatedPiece2D({
       <PieceToken
         color={color}
         fill={fill}
+        pieceStyle={pieceStyle}
         label={`${color} piece ${yardSlot + 1}`}
         isTappable={Boolean(move)}
         motionEnabled={motionEnabled}
-        size={cellSize * (progress === 0 ? 1.25 : 0.88)}
+        size={cellSize * (stackCount > 1 ? 0.65 : progress === 0 ? 1.25 : 0.88)}
         hitSize={hitSize}
         onPress={move ? () => onSelectMove(move) : undefined}
       />

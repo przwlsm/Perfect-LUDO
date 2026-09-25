@@ -1,8 +1,8 @@
-import { FINISH_PROGRESS } from '../entities/Piece';
+import { getFinishProgress } from '../board';
 import type { GameState } from '../entities/GameState';
 import { getCurrentPlayer } from '../entities/GameState';
 import type { Player } from '../entities/Player';
-import type { DieValue, PlayerColor } from '../entities/PlayerColor';
+import { ALL_PLAYER_COLORS, type DieValue, type PlayerColor } from '../entities/PlayerColor';
 import type { IRandomProvider } from '../ports/IRandomProvider';
 import { getValidMoves as computeValidMoves, type Move } from './MoveValidator';
 import { findWinner } from './WinConditionChecker';
@@ -11,8 +11,15 @@ const PIECES_PER_PLAYER = 4;
 const MAX_CONSECUTIVE_SIXES = 3;
 
 export function createGame(colors: readonly PlayerColor[]): GameState {
-  if (colors.length < 2 || colors.length > 4 || new Set(colors).size !== colors.length) {
-    throw new Error('Ludo requires 2 to 4 distinct players');
+  if (
+    colors.length < 2 ||
+    colors.length > 6 ||
+    new Set(colors).size !== colors.length ||
+    colors.some(
+      (color) => !ALL_PLAYER_COLORS.slice(0, colors.length > 4 ? colors.length : 4).includes(color),
+    )
+  ) {
+    throw new Error('Ludo requires 2 to 6 distinct players');
   }
 
   const players: Player[] = colors.map((color) => ({
@@ -107,7 +114,9 @@ export function applyMove(state: GameState, move: Move): GameState {
 
   const earnedBonusTurn =
     state.consecutiveSixes < MAX_CONSECUTIVE_SIXES &&
-    (rolledSix || capturedIds.size > 0 || move.toProgress === FINISH_PROGRESS);
+    (rolledSix ||
+      capturedIds.size > 0 ||
+      move.toProgress === getFinishProgress(state.players.length));
 
   if (earnedBonusTurn) {
     return { ...state, players, lastRoll: null };

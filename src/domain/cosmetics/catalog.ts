@@ -1,4 +1,4 @@
-export type CosmeticKind = 'board' | 'dice';
+export type CosmeticKind = 'board' | 'dice' | 'pack';
 export interface Cosmetic {
   readonly id: string;
   readonly kind: CosmeticKind;
@@ -8,9 +8,18 @@ export interface Cosmetic {
   readonly rarity: 'Classic' | 'Rare' | 'Epic' | 'Legendary';
   /** Reserved for an externally verified store product, never a client-side payment. */
   readonly productId?: string;
+  readonly contents?: { readonly board: string; readonly dice: string };
 }
 
-export const COSMETICS: readonly Cosmetic[] = [
+const INDIVIDUALS: readonly Cosmetic[] = [
+  {
+    id: 'heritage',
+    kind: 'board',
+    name: 'Heritage Wood',
+    description: 'Warm ivory wood. Forest, mustard, brick and deep blue.',
+    price: 250,
+    rarity: 'Rare',
+  },
   {
     id: 'classic',
     kind: 'board',
@@ -156,6 +165,37 @@ export const COSMETICS: readonly Cosmetic[] = [
     rarity: 'Legendary',
   },
 ];
+const boards = INDIVIDUALS.filter((item) => item.kind === 'board');
+export const COSMETICS: readonly Cosmetic[] = [
+  ...INDIVIDUALS,
+  ...boards.map((board): Cosmetic => ({
+    id: board.id + '-dice',
+    kind: 'dice',
+    name: board.name + ' Dice',
+    description: 'The matching signature dice for ' + board.name + '.',
+    price: board.price === 0 ? 0 : 150,
+    rarity: board.rarity,
+  })),
+  ...boards.map((board): Cosmetic => ({
+    id: board.id + '-pack',
+    kind: 'pack',
+    name: board.id === 'heritage' ? 'Wooden Theme Pack' : board.name + ' Pack',
+    description: 'Matching board, signature dice, player cards and app styling.',
+    price: board.price === 0 ? 0 : board.price + 100,
+    rarity: board.rarity,
+    contents: { board: board.id, dice: board.id + '-dice' },
+  })),
+];
+export function isCosmeticEquipped(
+  profile: { board: string; dice: string; pack: string | null },
+  item: Cosmetic,
+): boolean {
+  return item.kind === 'pack'
+    ? profile.pack === item.id &&
+        profile.board === item.contents?.board &&
+        profile.dice === item.contents?.dice
+    : profile[item.kind] === item.id;
+}
 export function getCosmetic(id: string): Cosmetic {
   const item = COSMETICS.find((entry) => entry.id === id);
   if (!item) throw new Error('This item is not in the store.');

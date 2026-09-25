@@ -7,12 +7,21 @@ describe('signUp', () => {
     const auth = new InMemoryAuthProvider();
     const progress = new InMemoryUserProgressRepository();
 
-    const { user, profile } = await signUp(auth, progress, 'a@test.com', 'pw', 'Alice');
+    const { user, profile } = await signUp(auth, progress, 'a@test.com', 'pw', {
+      displayName: 'Alice',
+      coins: 1000,
+      gamesPlayed: 0,
+      gamesWon: 0,
+      streak: 0,
+      bestStreak: 0,
+    });
 
     expect(user.email).toBe('a@test.com');
     expect(profile.uid).toBe(user.uid);
     expect(profile.displayName).toBe('Alice');
-    expect(profile.stats).toEqual({ gamesPlayed: 0, gamesWon: 0 });
+    expect(profile.coins).toBe(1000);
+    // The seeded profile must be readable back, not just returned.
+    await expect(progress.getProfile(user.uid)).resolves.toMatchObject({ coins: 1000 });
     expect(auth.getCurrentUser()).toEqual(user);
   });
 });

@@ -1,4 +1,4 @@
-import type { PlayerColor } from '@/domain';
+import { TRACK_LENGTH, type ClassicColor } from '@/domain';
 
 /**
  * Pixel-free board geometry: every cell as a (row, col) on a 15x15 grid.
@@ -67,7 +67,7 @@ export const TRACK_CELLS: readonly Cell[] = [
   [6, 0],
 ];
 
-export const HOME_COLUMN_CELLS: Record<PlayerColor, readonly Cell[]> = {
+export const HOME_COLUMN_CELLS: Record<ClassicColor, readonly Cell[]> = {
   RED: [
     [7, 1],
     [7, 2],
@@ -99,14 +99,14 @@ export const HOME_COLUMN_CELLS: Record<PlayerColor, readonly Cell[]> = {
 };
 
 /** The literal home/finished resting spot, one step past the home column. */
-export const FINISH_CELL: Record<PlayerColor, Cell> = {
+export const FINISH_CELL: Record<ClassicColor, Cell> = {
   RED: [7, 6],
   GREEN: [6, 7],
   YELLOW: [7, 8],
   BLUE: [8, 7],
 };
 
-export const YARD_REST_SPOTS: Record<PlayerColor, readonly Cell[]> = {
+export const YARD_REST_SPOTS: Record<ClassicColor, readonly Cell[]> = {
   RED: [
     [1, 1],
     [1, 4],
@@ -133,10 +133,53 @@ export const YARD_REST_SPOTS: Record<PlayerColor, readonly Cell[]> = {
   ],
 };
 
-export const YARD_BLOCKS: Record<PlayerColor, { readonly row: number; readonly col: number }> = {
+export const YARD_BLOCKS: Record<ClassicColor, { readonly row: number; readonly col: number }> = {
   RED: { row: 0, col: 0 },
   GREEN: { row: 0, col: 9 },
   YELLOW: { row: 9, col: 9 },
   BLUE: { row: 9, col: 0 },
 };
 export const YARD_BLOCK_SIZE = 6;
+
+/**
+ * The board's four quadrants are diagonal opposites under a 180° turn: RED's
+ * corner (0,0) lands exactly on YELLOW's (9,9), and GREEN's on BLUE's — the
+ * same 90°-rotation symmetry noted above, applied twice. "Flipping" a seat
+ * therefore never recomputes a coordinate; it just reads its opposite
+ * number's already-defined geometry.
+ */
+export const OPPOSITE_COLOR: Record<ClassicColor, ClassicColor> = {
+  RED: 'YELLOW',
+  YELLOW: 'RED',
+  GREEN: 'BLUE',
+  BLUE: 'GREEN',
+};
+
+/**
+ * A 2-player table puts the local player's own colour nearest their thumbs
+ * (bottom of the screen) rather than wherever the classic board happens to
+ * draw it. These helpers are how every renderer (2D, 3D) applies that
+ * without hand-rolling the swap in four different places.
+ */
+export function yardBlock(color: ClassicColor, flip: boolean) {
+  return YARD_BLOCKS[flip ? OPPOSITE_COLOR[color] : color];
+}
+export function homeColumnCells(color: ClassicColor, flip: boolean) {
+  return HOME_COLUMN_CELLS[flip ? OPPOSITE_COLOR[color] : color];
+}
+export function yardRestSpots(color: ClassicColor, flip: boolean) {
+  return YARD_REST_SPOTS[flip ? OPPOSITE_COLOR[color] : color];
+}
+export function finishCell(color: ClassicColor, flip: boolean) {
+  return FINISH_CELL[flip ? OPPOSITE_COLOR[color] : color];
+}
+
+/**
+ * A shared-track square's position exactly half way around the 52-square
+ * ring — the physical point a 180° turn moves it to. Entry squares (13
+ * apart) map onto entry squares this way, which is what keeps a flipped
+ * seat's launch point lined up with its (also flipped) yard.
+ */
+export function flipTrackSquare(square: number): number {
+  return (square + TRACK_LENGTH / 2) % TRACK_LENGTH;
+}

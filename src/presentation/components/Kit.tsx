@@ -7,12 +7,15 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
   type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, usePathname } from 'expo-router';
 import { useProfile } from '../state/ProfileProvider';
-import { ui } from '../theme/themes';
+import { useSocial } from '../state/SocialProvider';
+import { NotificationBell } from '../social/NotificationBell';
+import { getCardDesign, ui } from '../theme/themes';
 
 export function Label({ children, color = ui.muted }: { children: ReactNode; color?: string }) {
   return <Text style={[s.label, { color }]}>{children}</Text>;
@@ -44,17 +47,32 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={onPress}
+      android_ripple={{ color: secondary ? '#ffffff30' : '#00000025' }}
       style={({ pressed }) => [
         s.button,
-        {
-          backgroundColor: secondary ? theme.surface : theme.accent,
-          borderBottomColor: secondary ? '#090d18' : '#00000045',
-          opacity: disabled ? 0.45 : 1,
-        },
+        secondary
+          ? {
+              backgroundColor: '#ffffff12',
+              borderWidth: 1.5,
+              borderColor: '#ffffff28',
+              borderBottomWidth: 3,
+              borderBottomColor: '#00000035',
+            }
+          : {
+              backgroundColor: theme.accent,
+              borderBottomWidth: 4,
+              borderBottomColor: '#00000045',
+              boxShadow: `0 6px 16px ${theme.accent}4a`,
+            },
+        { opacity: disabled ? 0.45 : 1 },
         compact && { paddingVertical: 10, minHeight: 44 },
-        pressed && { transform: [{ translateY: 2 }], borderBottomWidth: 2 },
+        pressed && {
+          transform: [{ translateY: secondary ? 1 : 2 }],
+          borderBottomWidth: secondary ? 1 : 2,
+        },
       ]}
     >
       <Text style={[s.buttonText, { color: secondary ? ui.text : '#251b13' }]}>{children}</Text>
@@ -62,16 +80,59 @@ export function Button({
   );
 }
 export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
-  const { theme } = useProfile();
-  return <View style={[s.card, { backgroundColor: theme.surface }, style]}>{children}</View>;
+  const { theme, profile } = useProfile();
+  return (
+    <View
+      style={[
+        s.card,
+        { backgroundColor: theme.surface },
+        profile.pack && getCardDesign(profile.pack),
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
 }
+/**
+ * The header wallet. Coins belong to an account, so a guest or signed-out
+ * player is offered sign-in instead of a device number; a member whose
+ * account could not be reached sees a reload instead of a stale balance.
+ */
 export function CoinPill() {
-  const { profile } = useProfile();
+  const { profile, member, wallet, refreshWallet } = useProfile();
+  if (!member)
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Sign in to use coins"
+        onPress={() => router.push({ pathname: '/login', params: { intent: 'store' } })}
+        android_ripple={{ color: '#ffc56840' }}
+        style={s.coins}
+      >
+        <Text style={s.coinText}>◉ Sign in</Text>
+        <Text style={s.coinPlus}>+</Text>
+      </Pressable>
+    );
+  if (wallet !== 'ready')
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Coins could not be loaded. Retry"
+        onPress={() => void refreshWallet()}
+        android_ripple={{ color: '#ffc56840' }}
+        style={s.coins}
+      >
+        <Text style={s.coinText}>◉ —</Text>
+        <Text style={s.coinPlus}>↻</Text>
+      </Pressable>
+    );
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${profile.coins} coins. Open store`}
       onPress={() => router.push('/store')}
+      android_ripple={{ color: '#ffc56840' }}
       style={s.coins}
     >
       <Text style={s.coinText}>◉ {profile.coins.toLocaleString()}</Text>
@@ -85,35 +146,50 @@ export function Screen({
   subtitle,
   nav = true,
   back = false,
+  immersive = false,
 }: {
   children: ReactNode;
   title?: string;
   subtitle?: string;
   nav?: boolean;
   back?: boolean;
+  immersive?: boolean;
 }) {
   const { theme, ready, error, reload } = useProfile();
+  const { width, height, fontScale } = useWindowDimensions();
+  const compactHeader = width / fontScale < 390;
+  // Landscape on a phone leaves little height; tighten the chrome so more
+  // of each screen's content is on screen without scrolling.
+  const landscape = width > height;
   return (
     <SafeAreaView style={[s.screen, { backgroundColor: theme.background }]}>
-      <View style={s.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={back ? 'Back' : 'Ludo Club home'}
-          onPress={() => (back && router.canGoBack() ? router.back() : router.replace('/'))}
-          style={s.brand}
-        >
-          <View style={[s.brandMark, { backgroundColor: theme.accent }]}>
-            <Text style={s.brandDie}>{back ? '‹' : '⚄'}</Text>
+      {!immersive && (
+        <View style={[s.header, landscape && { paddingVertical: 8 }]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={back ? 'Back' : 'Ludo Club home'}
+            onPress={() => (back && router.canGoBack() ? router.back() : router.replace('/'))}
+            android_ripple={{ color: '#ffffff1f' }}
+            style={s.brand}
+          >
+            <View style={[s.brandMark, { backgroundColor: theme.accent }]}>
+              <Text style={s.brandDie}>{back ? '‹' : '⚄'}</Text>
+            </View>
+            {!compactHeader && (
+              <View>
+                <Text style={s.brandText}>
+                  LUDO<Text style={{ color: theme.accent }}> CLUB</Text>
+                </Text>
+                <Text style={s.brandSub}>GOOD TIMES. GREAT MOVES.</Text>
+              </View>
+            )}
+          </Pressable>
+          <View style={s.headerActions}>
+            <NotificationBell />
+            <CoinPill />
           </View>
-          <View>
-            <Text style={s.brandText}>
-              LUDO<Text style={{ color: theme.accent }}> CLUB</Text>
-            </Text>
-            <Text style={s.brandSub}>GOOD TIMES. GREAT MOVES.</Text>
-          </View>
-        </Pressable>
-        <CoinPill />
-      </View>
+        </View>
+      )}
       {!ready ? (
         <View style={s.loading}>
           {error ? (
@@ -126,7 +202,15 @@ export function Screen({
           )}
         </View>
       ) : (
-        <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[
+            s.content,
+            immersive && { paddingHorizontal: 8, paddingTop: 8 },
+            landscape && { paddingTop: 0, gap: 18 },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
           {title && (
             <View style={s.heading}>
               <Label color={theme.accent}>{subtitle ?? 'MAKE YOUR NEXT MOVE'}</Label>
@@ -136,28 +220,34 @@ export function Screen({
           {children}
         </ScrollView>
       )}
-      {nav && <BottomNav />}
+      {nav && <BottomNav compact={landscape} />}
     </SafeAreaView>
   );
 }
-function BottomNav() {
+function BottomNav({ compact }: { compact: boolean }) {
   const path = usePathname();
   const { theme } = useProfile();
+  const { account } = useSocial();
+  // Guests still reach Friends, where the account offer explains the lock.
+  const locked = (href: string) => account === 'guest' && href === '/friends';
   return (
-    <View style={[s.nav, { backgroundColor: theme.background }]}>
+    <View style={[s.nav, { backgroundColor: theme.background }, compact && { paddingVertical: 4 }]}>
       {(
         [
           ['/', '⌂', 'Play'],
+          ['/online', '◎', 'Online'],
+          ['/friends', '⚈⚈', 'Friends'],
           ['/store', '▦', 'Store'],
           ['/profile', '♙', 'Profile'],
-          ['/settings', '⚙', 'Settings'],
         ] as const
       ).map(([href, symbol, label]) => (
         <Pressable
           key={href}
           accessibilityRole="button"
+          accessibilityLabel={locked(href) ? `${label}, account required` : label}
           accessibilityState={{ selected: path === href }}
           onPress={() => router.replace(href)}
+          android_ripple={{ color: '#ffffff1f' }}
           style={s.navItem}
         >
           <Text style={[s.navIcon, { color: path === href ? theme.accent : ui.subtle }]}>
@@ -165,6 +255,7 @@ function BottomNav() {
           </Text>
           <Text style={[s.navText, { color: path === href ? theme.accent : ui.subtle }]}>
             {label}
+            {locked(href) ? ' 🔒' : ''}
           </Text>
           {path === href && <View style={[s.navDot, { backgroundColor: theme.accent }]} />}
         </Pressable>
@@ -194,6 +285,7 @@ export function Sheet({
               accessibilityRole="button"
               accessibilityLabel="Close dialog"
               onPress={onClose}
+              android_ripple={{ color: '#ffffff25' }}
               style={s.close}
             >
               <Text style={{ color: ui.muted, fontSize: 24 }}>×</Text>
@@ -228,7 +320,8 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  brand: { minHeight: 44, flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   brandMark: {
     width: 40,
     height: 42,
@@ -247,7 +340,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingLeft: 12,
     paddingRight: 6,
-    height: 36,
+    minHeight: 44,
     backgroundColor: '#ffc56812',
     borderWidth: 1,
     borderColor: '#ffc56830',
@@ -286,7 +379,13 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonText: { fontSize: 14, fontWeight: '800', letterSpacing: 0.3 },
+  buttonText: {
+    textAlign: 'center',
+    flexShrink: 1,
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
   card: { borderRadius: 20, padding: 20, borderWidth: 1, borderColor: ui.line, gap: 14 },
   nav: {
     borderTopWidth: 1,

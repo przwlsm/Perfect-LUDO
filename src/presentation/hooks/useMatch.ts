@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { DICE_ROLL_MS, PIECE_SETTLE_MS } from '../board/pieceMotion';
+import { getGameCue, type GameFeedback } from '../audio/gameFeedback';
 import { HeuristicMoveStrategy } from '@/application/ai/HeuristicMoveStrategy';
 import {
   newMatch,
@@ -15,12 +16,18 @@ import {
   getValidMovesForCurrentPlayer,
   rollDice,
   type Move,
+  type PlayerColor,
+  type DieValue,
 } from '@/domain';
 
 export function useMatch(options: MatchOptions, resume: boolean, paused: boolean, animate = false) {
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [match, setMatch] = useState<SavedMatch | null>(null);
   const [busy, setBusy] = useState(false);
   const [activity, setActivity] = useState<'rolling' | 'moving' | null>(null);
+  const [feedback, setFeedback] = useState<GameFeedback | null>(null);
+  const [seatRolls, setSeatRolls] = useState<Partial<Record<PlayerColor, DieValue>>>({});
+  const sequence = useRef(0);
   const finishFeedback = useRef<(() => void) | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [foreground, setForeground] = useState(AppState.currentState !== 'background');
@@ -34,9 +41,15 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
       try {
         const loaded = resume ? await matchRepository.load() : null;
         if (cancelled) return;
+        if (resume && !loaded)
+          throw new Error('No saved match was found. Start a new game from the lobby.');
         const next = loaded ?? newMatch({ mode, players, difficulty });
         await matchRepository.save(next);
-        if (!cancelled) setMatch(next);
+        if (!cancelled) {
+          setMatch(next);
+          if (next.state.lastRoll)
+            setSeatRolls({ [getCurrentPlayer(next.state).color]: next.state.lastRoll });
+        }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load match.');
       }
@@ -50,7 +63,7 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
       finishFeedback.current?.();
       listener.remove();
     };
-  }, [resume, mode, players, difficulty]);
+  }, [resume, mode, players, difficulty, loadAttempt]);
 
   const transition = useCallback(
     async (next: () => Promise<SavedMatch> | SavedMatch, kind: 'rolling' | 'moving') => {
@@ -64,7 +77,16 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
         // A delayed RNG response from an abandoned screen must not overwrite a new match.
         if (!alive.current) return;
         await matchRepository.save(updated);
-        if (alive.current) setMatch(updated);
+        if (alive.current) {
+          setMatch(updated);
+          if (kind === 'rolling' && match && updated.state.lastRoll)
+            setSeatRolls((previous) => ({
+              ...previous,
+              [getCurrentPlayer(match.state).color]: updated.state.lastRoll!,
+            }));
+          const cue = match ? getGameCue(match.state, updated.state) : null;
+          if (cue) setFeedback({ ...cue, id: ++sequence.current });
+        }
         if (alive.current && animate)
           await new Promise<void>((resolve) => {
             const timer = setTimeout(
@@ -91,10 +113,12 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
         }
       }
     },
-    [animate],
+    [animate, match],
   );
   const current = match ? getCurrentPlayer(match.state) : null;
   const humanTurn = match?.options.mode === 'local' || current?.color === 'RED';
+  // Pass & play has no single local player to favour; vs-AI always seats the human as RED.
+  const myColor: PlayerColor | null = match && match.options.mode !== 'local' ? 'RED' : null;
   const moves = match ? getValidMovesForCurrentPlayer(match.state) : [];
   const roll = useCallback(() => {
     if (
@@ -123,7 +147,9 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
       return;
     const legalMoves = getValidMovesForCurrentPlayer(match.state);
     if (match.state.lastRoll === null && humanTurn) return;
-    if (match.state.lastRoll !== null && legalMoves.length > 0 && humanTurn) return;
+    // A single legal move isn't a decision, so play it instead of making the
+    // player tap the only option they have. Two or more still waits for them.
+    if (match.state.lastRoll !== null && legalMoves.length > 1 && humanTurn) return;
     const timer = setTimeout(
       () => {
         if (match.state.lastRoll === null) {
@@ -133,13 +159,15 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
         void transition(async () => {
           if (legalMoves.length === 0) return { ...match, state: endTurnWithoutMove(match.state) };
           const selected =
-            match.options.difficulty === 'smart'
-              ? new HeuristicMoveStrategy().selectMove(match.state, legalMoves)
-              : legalMoves[await randomProvider.nextInt(0, legalMoves.length - 1)]!;
+            legalMoves.length === 1
+              ? legalMoves[0]!
+              : match.options.difficulty === 'smart'
+                ? new HeuristicMoveStrategy().selectMove(match.state, legalMoves)
+                : legalMoves[await randomProvider.nextInt(0, legalMoves.length - 1)]!;
           return { ...match, state: applyMove(match.state, selected) };
         }, 'moving');
       },
-      match.state.lastRoll === null ? 850 : 1000,
+      match.state.lastRoll === null ? 850 : humanTurn && legalMoves.length === 1 ? 350 : 1000,
     );
     return () => clearTimeout(timer);
   }, [match, busy, paused, foreground, error, humanTurn, roll, transition]);
@@ -147,12 +175,18 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
     match,
     busy,
     activity,
+    feedback,
+    seatRolls,
     error,
     current,
     humanTurn,
+    myColor,
     moves: humanTurn ? moves : [],
     roll,
     move,
-    retry: () => setError(null),
+    retry: () => {
+      setError(null);
+      if (!match) setLoadAttempt((attempt) => attempt + 1);
+    },
   };
 }

@@ -104,12 +104,24 @@ module.exports = defineConfig([
             'emissive',
             'emissiveIntensity',
             'depthWrite',
+            'roughness',
+            'metalness',
           ],
         },
       ],
     },
   },
   {
-    ignores: ['dist/*'],
+    // Build-time tooling (e.g. the sound-effect generator) runs in Node, not
+    // in the app runtime, so it gets Node globals rather than RN/browser ones.
+    files: ['scripts/**/*.{js,mjs,cjs}'],
+    languageOptions: { globals: require('globals').node },
+  },
+  {
+    // .test-browser/.test-artifacts hold a Playwright/Chromium profile
+    // (including installed extension bundles) used by local E2E scripts —
+    // vendored, minified, not ours to lint. Already excluded from git and
+    // Prettier; this closes the same gap for ESLint.
+    ignores: ['dist/*', '.test-browser/**', '.test-artifacts/**'],
   },
 ]);

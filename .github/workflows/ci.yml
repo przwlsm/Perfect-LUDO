@@ -28,6 +28,11 @@ jobs:
       - name: Test
         run: npm run test:coverage
 
+      - name: Database rules and RPC integrity
+        run: npm run test:online
+
+      - name: Export all platforms
+        run: npm run export:all
+
       - name: Audit dependencies
         run: npm audit --audit-level=high
-        continue-on-error: true

@@ -1,3 +1,4 @@
+import { getTrackLength, getFinishProgress } from '../board';
 import type { PlayerColor } from './PlayerColor';
 
 /**
@@ -21,14 +22,16 @@ export function isInYard(piece: Piece): boolean {
   return piece.progress === YARD_PROGRESS;
 }
 
-export function hasFinished(piece: Piece): boolean {
-  return piece.progress === FINISH_PROGRESS;
+export function hasFinished(piece: Piece, playerCount = 4): boolean {
+  return piece.progress === getFinishProgress(playerCount);
 }
 
-export function isOnSharedTrack(piece: Piece): boolean {
-  return piece.progress >= 1 && piece.progress <= 51;
+export function isOnSharedTrack(piece: Piece, playerCount = 4): boolean {
+  return piece.progress >= 1 && piece.progress < getTrackLength(playerCount);
 }
 
-export function isInHomeColumn(piece: Piece): boolean {
-  return piece.progress >= 52 && piece.progress <= 56;
+export function isInHomeColumn(piece: Piece, playerCount = 4): boolean {
+  return (
+    piece.progress >= getTrackLength(playerCount) && piece.progress < getFinishProgress(playerCount)
+  );
 }

@@ -1,15 +1,16 @@
 import {
   createGame,
-  PLAYER_COLORS,
+  isGameState,
+  seatColors,
   type DieValue,
   type GameState,
   type IKeyValueStore,
-  type Piece,
 } from '@/domain';
-export type MatchMode = 'ai' | 'local';
+/** 'online' matches are held by the server; only the first two are saved here. */
+export type MatchMode = 'ai' | 'local' | 'online';
 export interface MatchOptions {
   mode: MatchMode;
-  players: 2 | 3 | 4;
+  players: 2 | 3 | 4 | 5 | 6;
   difficulty: 'easy' | 'smart';
 }
 export interface SavedMatch {
@@ -21,8 +22,7 @@ export interface SavedMatch {
 }
 export const MATCH_KEY = 'ludo.match.v1';
 export function newMatch(options: MatchOptions): SavedMatch {
-  const colors =
-    options.players === 2 ? (['RED', 'YELLOW'] as const) : PLAYER_COLORS.slice(0, options.players);
+  const colors = seatColors(options.players);
   return {
     version: 1,
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -33,48 +33,17 @@ export function newMatch(options: MatchOptions): SavedMatch {
 }
 export function parseMatch(raw: string): SavedMatch {
   const m = JSON.parse(raw) as SavedMatch;
-  const s = m.state;
   if (
     m.version !== 1 ||
     typeof m.id !== 'string' ||
     !m.options ||
+    // An online match lives on the server and is never saved here, so a local
+    // file claiming to be one is not something this can restore.
     !['ai', 'local'].includes(m.options.mode) ||
-    ![2, 3, 4].includes(m.options.players) ||
+    ![2, 3, 4, 5, 6].includes(m.options.players) ||
     !['easy', 'smart'].includes(m.options.difficulty) ||
-    !s ||
-    !Array.isArray(s.players) ||
-    s.players.length !== m.options.players ||
-    new Set(s.players.map((p) => p.color)).size !== s.players.length ||
-    !Number.isInteger(s.currentPlayerIndex) ||
-    s.currentPlayerIndex < 0 ||
-    s.currentPlayerIndex >= s.players.length ||
-    !Number.isInteger(s.consecutiveSixes) ||
-    s.consecutiveSixes < 0 ||
-    s.consecutiveSixes > 3 ||
-    ![null, 1, 2, 3, 4, 5, 6].includes(s.lastRoll) ||
     ![null, 1, 2, 3, 4, 5, 6].includes(m.lastDie) ||
-    !['IN_PROGRESS', 'FINISHED'].includes(s.status) ||
-    !s.players.every(
-      (p) =>
-        PLAYER_COLORS.includes(p.color) &&
-        p.id === p.color &&
-        Array.isArray(p.pieces) &&
-        p.pieces.length === 4 &&
-        p.pieces.every(
-          (piece: Piece, index: number) =>
-            piece.id === `${p.color}-${index}` &&
-            piece.color === p.color &&
-            Number.isInteger(piece.progress) &&
-            piece.progress >= 0 &&
-            piece.progress <= 57,
-        ),
-    ) ||
-    (s.status === 'IN_PROGRESS'
-      ? s.winnerColor !== null
-      : !s.players.some(
-          (p) =>
-            p.color === s.winnerColor && p.pieces.every((piece: Piece) => piece.progress === 57),
-        ))
+    !isGameState(m.state, m.options.players)
   ) {
     throw new Error('The saved match could not be restored. Start a new game from the lobby.');
   }

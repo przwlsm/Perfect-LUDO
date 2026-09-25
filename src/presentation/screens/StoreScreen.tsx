@@ -1,18 +1,24 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { router } from 'expo-router';
 import { createGame } from '@/domain';
-import { COSMETICS, type Cosmetic, type CosmeticKind } from '@/domain/cosmetics/catalog';
-import { profileService } from '@/config/container';
+import {
+  COSMETICS,
+  isCosmeticEquipped,
+  type Cosmetic,
+  type CosmeticKind,
+} from '@/domain/cosmetics/catalog';
 import { Board2D } from '../board/Board2D';
 import { Dice } from '../components/Dice';
 import { Body, Button, Card, Label, Screen, shared, Sheet } from '../components/Kit';
 import { useProfile } from '../state/ProfileProvider';
-import { getBoardTheme, ui } from '../theme/themes';
+import { getBoardTheme, getCardDesign, ui } from '../theme/themes';
 const preview = createGame(['RED', 'GREEN', 'YELLOW', 'BLUE']);
 export default function StoreScreen() {
-  const { profile, theme, perform } = useProfile();
+  const { profile, theme, member, wallet, purchase, equip } = useProfile();
+  const signIn = () => router.push({ pathname: '/login', params: { intent: 'store' } });
   const { width } = useWindowDimensions();
-  const [kind, setKind] = useState<CosmeticKind>('board');
+  const [kind, setKind] = useState<CosmeticKind>('pack');
   const [ownedOnly, setOwnedOnly] = useState(false);
   const [selected, setSelected] = useState<Cosmetic | null>(null);
   const [busy, setBusy] = useState(false);
@@ -28,9 +34,13 @@ export default function StoreScreen() {
     setMessage(null);
     try {
       const owned = profile.owned.includes(selected.id);
-      await perform(() =>
-        owned ? profileService.equip(selected.id) : profileService.purchase(selected.id),
-      );
+      if (!owned && !member) {
+        // Coins live on an account; the store sends a guest to get one.
+        signIn();
+        return;
+      }
+      // Server first, device second: a refused or lost request changes nothing here.
+      await (owned ? equip(selected.id) : purchase(selected.id));
       setMessage(`${selected.name} is equipped. Make it a good game!`);
       setSelected(null);
     } catch (e) {
@@ -42,8 +52,8 @@ export default function StoreScreen() {
   return (
     <Screen title="A little more you." subtitle="THE CLUB COLLECTION">
       <Body>
-        Your board. Your dice. Your signature move.{'\n'}Unlock a new look with the coins you earn
-        by playing.
+        Individual boards. Signature dice. Complete theme packs.{'\n'}Unlock a new look with the
+        coins you earn by playing.
       </Body>
       <Card style={{ backgroundColor: '#382b4822', borderColor: '#c5a5ff25' }}>
         <View style={shared.between}>
@@ -57,18 +67,19 @@ export default function StoreScreen() {
           <Text style={{ fontSize: 36, color: '#c5a5ff' }}>✧</Text>
         </View>
       </Card>
-      <View style={shared.between}>
+      <View style={{ gap: 8 }}>
         <View style={s.tabs}>
-          {(['board', 'dice'] as const).map((tab) => (
+          {(['board', 'dice', 'pack'] as const).map((tab) => (
             <Pressable
               key={tab}
               accessibilityRole="button"
               accessibilityState={{ selected: kind === tab }}
               onPress={() => setKind(tab)}
+              android_ripple={{ color: `${theme.accent}30` }}
               style={[s.tab, kind === tab && { backgroundColor: theme.accent }]}
             >
               <Text style={[s.tabText, kind === tab && { color: '#211d19' }]}>
-                {tab === 'board' ? 'Boards' : 'Dice'} ·{' '}
+                {tab === 'board' ? 'Boards' : tab === 'dice' ? 'Dice' : 'Theme Packs'} ·{' '}
                 {COSMETICS.filter((item) => item.kind === tab).length}
               </Text>
             </Pressable>
@@ -78,7 +89,8 @@ export default function StoreScreen() {
           accessibilityRole="checkbox"
           accessibilityState={{ checked: ownedOnly }}
           onPress={() => setOwnedOnly(!ownedOnly)}
-          style={{ minHeight: 44, justifyContent: 'center' }}
+          android_ripple={{ color: '#ffffff20' }}
+          style={{ minHeight: 44, justifyContent: 'center', alignSelf: 'flex-end' }}
         >
           <Text style={[shared.small, ownedOnly && { color: theme.accent }]}>
             {ownedOnly ? '☑' : '☐'} Owned
@@ -88,8 +100,8 @@ export default function StoreScreen() {
       <View style={s.grid}>
         {items.map((item) => {
           const owned = profile.owned.includes(item.id);
-          const equipped = profile[item.kind] === item.id;
-          const boardTheme = getBoardTheme(item.id);
+          const equipped = isCosmeticEquipped(profile, item);
+          const boardTheme = getBoardTheme(item.contents?.board ?? item.id);
           return (
             <Pressable
               key={item.id}
@@ -99,6 +111,7 @@ export default function StoreScreen() {
                 setSelected(item);
                 setMessage(null);
               }}
+              android_ripple={{ color: `${theme.accent}25` }}
               style={({ pressed }) => [
                 s.product,
                 {
@@ -114,12 +127,14 @@ export default function StoreScreen() {
                   s.preview,
                   {
                     backgroundColor: item.kind === 'board' ? boardTheme.background : '#ffffff05',
-                    height: cardWidth * 0.88,
+                    height: cardWidth * (item.kind === 'pack' ? 1.25 : 0.88),
                   },
                 ]}
                 pointerEvents="none"
               >
-                {item.kind === 'board' ? (
+                {item.kind === 'pack' ? (
+                  <PackPreview item={item} size={cardWidth * 0.6} />
+                ) : item.kind === 'board' ? (
                   <View
                     style={{
                       padding: 4,
@@ -187,8 +202,10 @@ export default function StoreScreen() {
         </Text>
       )}
       <Text style={[shared.small, { textAlign: 'center' }]}>
-        Coins are earned in this app and have no cash value.{'\n'}Your collection is saved on this
-        device.
+        Coins are earned in this app and have no cash value.{'\n'}
+        {member
+          ? 'Your coins and collection are kept on your account.'
+          : 'Sign in to unlock looks; coins and your collection stay on your account.'}
       </Text>
       <Sheet
         visible={selected !== null}
@@ -200,7 +217,9 @@ export default function StoreScreen() {
         {selected && (
           <>
             <View style={{ alignItems: 'center', padding: 16 }} pointerEvents="none">
-              {selected.kind === 'board' ? (
+              {selected.kind === 'pack' ? (
+                <PackPreview item={selected} size={Math.min(width - 150, 230)} />
+              ) : selected.kind === 'board' ? (
                 <View
                   style={{
                     padding: 7,
@@ -226,23 +245,40 @@ export default function StoreScreen() {
               {selected.rarity.toUpperCase()} {selected.kind.toUpperCase()}
             </Label>
             <Body>{selected.description}</Body>
+            {selected.contents && (
+              <Body>
+                Includes {COSMETICS.find((c) => c.id === selected.contents!.board)?.name}, matching
+                dice, and coordinated player cards. Equip the full look together or mix its board
+                and dice with your collection.
+              </Body>
+            )}
             {!profile.owned.includes(selected.id) && (
               <Card>
                 <View style={shared.between}>
                   <Text style={shared.small}>Unlock price</Text>
                   <Text style={{ color: theme.accent, fontWeight: '800' }}>◉ {selected.price}</Text>
                 </View>
-                <View style={shared.between}>
-                  <Text style={shared.small}>Your balance after purchase</Text>
-                  <Text
-                    style={{
-                      color: profile.coins >= selected.price ? ui.text : ui.danger,
-                      fontWeight: '700',
-                    }}
-                  >
-                    ◉ {profile.coins - selected.price}
+                {!member ? (
+                  <Text style={shared.small}>
+                    Coins and unlocked looks are kept on your account. Sign in to use them here.
                   </Text>
-                </View>
+                ) : wallet !== 'ready' ? (
+                  <Text style={shared.small}>
+                    Your coins could not be loaded. Reconnect and try again before unlocking.
+                  </Text>
+                ) : (
+                  <View style={shared.between}>
+                    <Text style={shared.small}>Your balance after purchase</Text>
+                    <Text
+                      style={{
+                        color: profile.coins >= selected.price ? ui.text : ui.danger,
+                        fontWeight: '700',
+                      }}
+                    >
+                      ◉ {profile.coins - selected.price}
+                    </Text>
+                  </View>
+                )}
               </Card>
             )}
             {message && (
@@ -253,20 +289,26 @@ export default function StoreScreen() {
             <Button
               disabled={
                 busy ||
-                profile[selected.kind] === selected.id ||
-                (!profile.owned.includes(selected.id) && profile.coins < selected.price)
+                isCosmeticEquipped(profile, selected) ||
+                (!profile.owned.includes(selected.id) &&
+                  member &&
+                  (wallet !== 'ready' || profile.coins < selected.price))
               }
               onPress={() => void confirm()}
             >
               {busy
                 ? 'Saving…'
-                : profile[selected.kind] === selected.id
+                : isCosmeticEquipped(profile, selected)
                   ? '✓ Currently equipped'
                   : profile.owned.includes(selected.id)
                     ? 'Equip this look'
-                    : profile.coins < selected.price
-                      ? 'Earn more coins to unlock'
-                      : `Unlock & equip · ${selected.price} coins`}
+                    : !member
+                      ? 'Sign in to unlock'
+                      : wallet !== 'ready'
+                        ? 'Reconnect to unlock'
+                        : profile.coins < selected.price
+                          ? 'Earn more coins to unlock'
+                          : `Unlock & equip · ${selected.price} coins`}
             </Button>
             <Text style={[shared.small, { textAlign: 'center' }]}>
               One unlock. Yours on every board view.
@@ -277,6 +319,47 @@ export default function StoreScreen() {
     </Screen>
   );
 }
+function PackPreview({ item, size }: { item: Cosmetic; size: number }) {
+  const t = getBoardTheme(item.contents!.board);
+  return (
+    <View
+      style={{
+        alignItems: 'center',
+        gap: 8,
+        padding: 8,
+        backgroundColor: t.background,
+        borderRadius: 12,
+      }}
+    >
+      <Board2D
+        state={preview}
+        size={size}
+        validMoves={null}
+        theme={t}
+        onSelectMove={() => undefined}
+      />
+      <View
+        style={[
+          {
+            width: size,
+            backgroundColor: t.surface,
+            padding: 8,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          },
+          getCardDesign(item.id),
+        ]}
+      >
+        <View style={{ gap: 4 }}>
+          <Text style={{ color: t.accent, fontSize: 10, fontWeight: '800' }}>PLAYER</Text>
+          <Text style={{ color: ui.text, fontSize: 8 }}>Your turn</Text>
+        </View>
+        <Dice value={5} finish={item.contents!.dice} size={30} />
+      </View>
+    </View>
+  );
+}
 const s = StyleSheet.create({
   tabs: {
     flexDirection: 'row',
@@ -285,7 +368,13 @@ const s = StyleSheet.create({
     padding: 4,
     borderRadius: 14,
   },
-  tab: { paddingHorizontal: 15, paddingVertical: 12, borderRadius: 10 },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
   tabText: { color: ui.muted, fontSize: 12, fontWeight: '800' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   product: { borderWidth: 1, borderRadius: 17, overflow: 'hidden' },

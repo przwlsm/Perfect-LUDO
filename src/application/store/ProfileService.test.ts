@@ -8,6 +8,77 @@ describe('local cosmetic economy', () => {
     storage = new InMemoryKeyValueStore();
     service = new ProfileService(storage);
   });
+  it('unlocks an entire wooden pack atomically and preserves the old collection', async () => {
+    const p = await service.purchase('heritage-pack');
+    expect(p).toMatchObject({
+      coins: 650,
+      board: 'heritage',
+      dice: 'heritage-dice',
+      pack: 'heritage-pack',
+    });
+    expect(p.owned).toEqual(
+      expect.arrayContaining(['classic', 'ivory', 'heritage', 'heritage-dice', 'heritage-pack']),
+    );
+    await service.equip('classic');
+    expect(await service.load()).toMatchObject({ board: 'classic', dice: 'heritage-dice' });
+    await service.equip('heritage-pack');
+    expect(await new ProfileService(storage).load()).toMatchObject({
+      coins: 650,
+      board: 'heritage',
+      dice: 'heritage-dice',
+      pack: 'heritage-pack',
+    });
+  });
+  it('charges a pack only once under concurrent purchases and does not charge for its included dice', async () => {
+    await Promise.all([service.purchase('neon-pack'), service.purchase('neon-pack')]);
+    await service.purchase('neon-dice');
+    expect(await service.load()).toMatchObject({
+      coins: 450,
+      board: 'neon',
+      dice: 'neon-dice',
+      pack: 'neon-pack',
+    });
+  });
+  it('does not grant partial pack ownership when saving fails', async () => {
+    jest.spyOn(storage, 'setItem').mockRejectedValueOnce(new Error('Disk full'));
+    await expect(service.purchase('heritage-pack')).rejects.toThrow('Disk full');
+    expect(await service.load()).toMatchObject({
+      coins: 1000,
+      owned: ['classic', 'ivory'],
+      pack: null,
+    });
+  });
+  it('loads an older profile without resetting its equipped board', async () => {
+    await storage.setItem(
+      PROFILE_KEY,
+      JSON.stringify({
+        ...INITIAL_PROFILE,
+        pack: undefined,
+        board: 'royal',
+        owned: ['classic', 'ivory', 'royal'],
+      }),
+    );
+    expect(await service.load()).toMatchObject({ board: 'royal', pack: null });
+  });
+  it('migrates the sound preference without resetting existing purchases or coins', async () => {
+    await storage.setItem(
+      PROFILE_KEY,
+      JSON.stringify({
+        ...INITIAL_PROFILE,
+        soundEnabled: undefined,
+        coins: 321,
+        owned: ['classic', 'ivory', 'royal'],
+        board: 'royal',
+      }),
+    );
+    expect(await service.load()).toMatchObject({ soundEnabled: true, coins: 321, board: 'royal' });
+    await service.update({ soundEnabled: false });
+    expect(await new ProfileService(storage).load()).toMatchObject({
+      soundEnabled: false,
+      coins: 321,
+      board: 'royal',
+    });
+  });
   it('unlocks and equips a purchase and restores it after reload', async () => {
     const purchased = await service.purchase('royal');
     expect(purchased.coins).toBe(400);
@@ -43,6 +114,29 @@ describe('local cosmetic economy', () => {
     await service.recordMatch('match-2', false, true);
     await service.recordMatch('match-3', true, false);
     expect(await service.load()).toMatchObject({ coins: 1190, wins: 2, games: 3 });
+  });
+  it('builds a win streak and resets it on a loss, keeping the best', async () => {
+    await service.recordMatch('m1', true, true);
+    await service.recordMatch('m2', true, true);
+    await service.recordMatch('m3', true, true);
+    expect(await service.load()).toMatchObject({ streak: 3, bestStreak: 3 });
+
+    await service.recordMatch('m4', false, true);
+    expect(await service.load()).toMatchObject({ streak: 0, bestStreak: 3 });
+
+    await service.recordMatch('m5', true, true);
+    expect(await service.load()).toMatchObject({ streak: 1, bestStreak: 3 });
+  });
+  it('reads a save written before streaks existed', async () => {
+    const legacy = JSON.stringify({
+      ...INITIAL_PROFILE,
+      games: 4,
+      wins: 2,
+      streak: undefined,
+      bestStreak: undefined,
+    });
+    await storage.setItem(PROFILE_KEY, legacy);
+    expect(await service.load()).toMatchObject({ streak: 0, bestStreak: 0, wins: 2 });
   });
   it('limits daily claims and rejects clock rollback', async () => {
     await service.claimGift(new Date('2026-09-23T01:00:00Z'));

@@ -1,4 +1,4 @@
-import type { Move } from '@/domain';
+import { createGame, type Move } from '@/domain';
 import { HeuristicMoveStrategy } from './HeuristicMoveStrategy';
 
 function move(overrides: Partial<Move> & { pieceId: string }): Move {
@@ -9,7 +9,7 @@ describe('HeuristicMoveStrategy', () => {
   const strategy = new HeuristicMoveStrategy();
 
   it('throws when there are no valid moves', () => {
-    expect(() => strategy.selectMove({} as never, [])).toThrow();
+    expect(() => strategy.selectMove(createGame(['RED', 'GREEN', 'YELLOW', 'BLUE']), [])).toThrow();
   });
 
   it('prefers capturing the most pieces over any other option', () => {
@@ -20,7 +20,9 @@ describe('HeuristicMoveStrategy', () => {
       doubleCapture,
     ];
 
-    expect(strategy.selectMove({} as never, moves)).toBe(doubleCapture);
+    expect(strategy.selectMove(createGame(['RED', 'GREEN', 'YELLOW', 'BLUE']), moves)).toBe(
+      doubleCapture,
+    );
   });
 
   it('prefers finishing a piece over leaving the yard or advancing', () => {
@@ -31,20 +33,24 @@ describe('HeuristicMoveStrategy', () => {
       move({ pieceId: 'advancer', fromProgress: 20, toProgress: 22 }),
     ];
 
-    expect(strategy.selectMove({} as never, moves)).toBe(finisher);
+    expect(strategy.selectMove(createGame(['RED', 'GREEN', 'YELLOW', 'BLUE']), moves)).toBe(
+      finisher,
+    );
   });
 
   it('prefers leaving the yard over merely advancing a piece already in play', () => {
     const leaver = move({ pieceId: 'leaver', fromProgress: 0, toProgress: 1 });
     const moves = [move({ pieceId: 'advancer', fromProgress: 20, toProgress: 22 }), leaver];
 
-    expect(strategy.selectMove({} as never, moves)).toBe(leaver);
+    expect(strategy.selectMove(createGame(['RED', 'GREEN', 'YELLOW', 'BLUE']), moves)).toBe(leaver);
   });
 
   it('otherwise advances the piece that has progressed the furthest', () => {
     const furthest = move({ pieceId: 'furthest', fromProgress: 40, toProgress: 42 });
     const moves = [move({ pieceId: 'nearer', fromProgress: 10, toProgress: 12 }), furthest];
 
-    expect(strategy.selectMove({} as never, moves)).toBe(furthest);
+    expect(strategy.selectMove(createGame(['RED', 'GREEN', 'YELLOW', 'BLUE']), moves)).toBe(
+      furthest,
+    );
   });
 });

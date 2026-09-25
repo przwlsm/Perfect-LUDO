@@ -1,5 +1,19 @@
-import type { IKeyValueStore } from '@/domain';
+import {
+  DAILY_GIFT_COINS,
+  FREE_ITEMS,
+  PLAYED_COINS,
+  WIN_COINS,
+  type IKeyValueStore,
+  type WalletSnapshot,
+} from '@/domain';
 import { COSMETICS, getCosmetic } from '@/domain/cosmetics/catalog';
+
+/** A finished match whose reward could not reach the account yet. */
+export interface PendingReward {
+  readonly matchId: string;
+  readonly won: boolean;
+  readonly rewardEligible: boolean;
+}
 
 export interface Profile {
   readonly version: 1;
@@ -8,28 +22,60 @@ export interface Profile {
   readonly owned: readonly string[];
   readonly board: string;
   readonly dice: string;
+  readonly pack: string | null;
   readonly board3d: boolean;
   readonly reducedMotion: boolean;
+  readonly soundEnabled: boolean;
   readonly games: number;
   readonly wins: number;
+  /** Consecutive wins right now; any loss resets it to zero. */
+  readonly streak: number;
+  /** High-water mark of `streak`, never decreases. */
+  readonly bestStreak: number;
   readonly rewardedMatches: readonly string[];
   readonly lastGift: string | null;
+  /**
+   * Results recorded while the account wallet was unreachable. Replayed in
+   * order the next time it answers; the server pays each match id once, so a
+   * replay after a crash or a second device can never pay twice.
+   */
+  readonly pendingRewards: readonly PendingReward[];
 }
 export const INITIAL_PROFILE: Profile = {
   version: 1,
   name: 'Player',
   coins: 1000,
-  owned: ['classic', 'ivory'],
+  owned: [...FREE_ITEMS],
   board: 'classic',
   dice: 'ivory',
+  pack: null,
   board3d: false,
   reducedMotion: false,
+  soundEnabled: true,
   games: 0,
   wins: 0,
+  streak: 0,
+  bestStreak: 0,
   rewardedMatches: [],
   lastGift: null,
+  pendingRewards: [],
 };
 export const PROFILE_KEY = 'ludo.profile.v1';
+
+function validPending(value: unknown): value is PendingReward[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (r: Partial<PendingReward> | null) =>
+        r !== null &&
+        typeof r === 'object' &&
+        typeof r.matchId === 'string' &&
+        r.matchId.length > 0 &&
+        typeof r.won === 'boolean' &&
+        typeof r.rewardEligible === 'boolean',
+    )
+  );
+}
 
 export function parseProfile(raw: string): Profile {
   const p = JSON.parse(raw) as Profile;
@@ -45,33 +91,115 @@ export function parseProfile(raw: string): Profile {
     getCosmetic(p.board).kind !== 'board' ||
     !p.owned.includes(p.dice) ||
     getCosmetic(p.dice).kind !== 'dice' ||
+    (p.pack != null &&
+      (!p.owned.includes(p.pack) ||
+        getCosmetic(p.pack).kind !== 'pack' ||
+        !p.owned.includes(getCosmetic(p.pack).contents!.board) ||
+        !p.owned.includes(getCosmetic(p.pack).contents!.dice))) ||
     typeof p.board3d !== 'boolean' ||
     typeof p.reducedMotion !== 'boolean' ||
+    (p.soundEnabled !== undefined && typeof p.soundEnabled !== 'boolean') ||
     !Number.isSafeInteger(p.games) ||
     p.games < 0 ||
     !Number.isSafeInteger(p.wins) ||
     p.wins < 0 ||
     p.wins > p.games ||
+    // Older saves predate streaks, so absent is valid; present must be sane.
+    (p.streak !== undefined &&
+      (!Number.isSafeInteger(p.streak) || p.streak < 0 || p.streak > p.wins)) ||
+    (p.bestStreak !== undefined &&
+      (!Number.isSafeInteger(p.bestStreak) ||
+        p.bestStreak < 0 ||
+        p.bestStreak > p.wins ||
+        p.bestStreak < (p.streak ?? 0))) ||
     !Array.isArray(p.rewardedMatches) ||
     !p.rewardedMatches.every((id) => typeof id === 'string') ||
-    (p.lastGift !== null && typeof p.lastGift !== 'string')
+    (p.lastGift !== null && typeof p.lastGift !== 'string') ||
+    (p.pendingRewards !== undefined && !validPending(p.pendingRewards))
   ) {
     throw new Error('Saved profile could not be read. Please retry loading.');
   }
-  return p;
+  return {
+    ...p,
+    soundEnabled: p.soundEnabled ?? true,
+    pack: p.pack ?? null,
+    streak: p.streak ?? 0,
+    bestStreak: p.bestStreak ?? 0,
+    pendingRewards: p.pendingRewards ?? [],
+  };
+}
+
+/**
+ * Projects the account wallet onto the device profile. The server's coins,
+ * inventory, gift day and statistics replace the local copies; equipment
+ * stays as chosen unless the account does not own it (a new device, or an
+ * item removed from the catalog), in which case it falls back to the free
+ * look rather than leaving the profile unreadable. Results still waiting to
+ * reach the account keep counting locally so a stat never appears to go
+ * backwards while offline.
+ */
+export function applyWalletSnapshot(local: Profile, wallet: WalletSnapshot): Profile {
+  const known = new Set(COSMETICS.map((c) => c.id));
+  const owned = new Set<string>(FREE_ITEMS);
+  for (const id of wallet.owned) {
+    if (!known.has(id)) continue;
+    owned.add(id);
+    const contents = getCosmetic(id).contents;
+    if (contents) {
+      owned.add(contents.board);
+      owned.add(contents.dice);
+    }
+  }
+  const board = owned.has(local.board) ? local.board : 'classic';
+  const dice = owned.has(local.dice) ? local.dice : 'ivory';
+  const packContents = local.pack ? getCosmetic(local.pack).contents : undefined;
+  const pack =
+    local.pack && owned.has(local.pack) && packContents && board === packContents.board
+      ? local.pack
+      : null;
+  const pending = local.pendingRewards;
+  const pendingWins = pending.filter((r) => r.won).length;
+  return {
+    ...local,
+    coins: wallet.coins,
+    owned: [...owned],
+    board,
+    dice,
+    pack,
+    lastGift: wallet.lastGift,
+    games: wallet.games + pending.length,
+    wins: wallet.wins + pendingWins,
+    streak: wallet.streak,
+    bestStreak: Math.max(wallet.bestStreak, wallet.streak),
+  };
 }
 
 /** Serializes purchases, equipment changes and rewards into one persisted snapshot.
- * A future server implementation can replace this service through IProfileService.
- * Local coins are entertainment currency, never a source of paid entitlements.
+ * For signed-in members the wallet parts of this snapshot mirror the account
+ * (see `applyWalletSnapshot`); for guests they are device-local play money
+ * that is never spendable in the store.
  */
 export interface IProfileService {
   load(): Promise<Profile>;
   purchase(id: string): Promise<Profile>;
   equip(id: string): Promise<Profile>;
-  update(settings: Partial<Pick<Profile, 'name' | 'board3d' | 'reducedMotion'>>): Promise<Profile>;
+  update(
+    settings: Partial<Pick<Profile, 'name' | 'board3d' | 'reducedMotion' | 'soundEnabled'>>,
+  ): Promise<Profile>;
   claimGift(now?: Date): Promise<Profile>;
   recordMatch(id: string, won: boolean, rewardEligible: boolean): Promise<Profile>;
+  /** Adopts the account wallet the server just returned. */
+  mirrorWallet(wallet: WalletSnapshot): Promise<Profile>;
+  /** Counts a finished match locally and remembers to tell the account later. */
+  queueReward(id: string, won: boolean, rewardEligible: boolean): Promise<Profile>;
+  /** Forgets a queued result once the account has recorded it (or refused it for good). */
+  settleReward(id: string): Promise<Profile>;
+  /**
+   * Overwrites the stored profile wholesale. Only cloud sign-in sync should
+   * use this — everything else must go through the intent-specific methods
+   * above so their rules (prices, once-per-match rewards) still apply.
+   */
+  replace(profile: Profile): Promise<Profile>;
 }
 export class ProfileService implements IProfileService {
   private queue: Promise<unknown> = Promise.resolve();
@@ -100,17 +228,25 @@ export class ProfileService implements IProfileService {
       if (item.productId) throw new Error('This item requires a verified store purchase.');
       if (p.coins < item.price)
         throw new Error('Not enough coins. Finish matches or claim your daily gift.');
-      return { ...p, coins: p.coins - item.price, owned: [...p.owned, id], [item.kind]: id };
+      const contents = item.contents;
+      const unlocked = {
+        ...p,
+        coins: p.coins - item.price,
+        owned: [...new Set([...p.owned, id, ...(contents ? [contents.board, contents.dice] : [])])],
+      };
+      return contents ? { ...unlocked, ...contents, pack: id } : { ...unlocked, [item.kind]: id };
     });
   }
   equip(id: string): Promise<Profile> {
     return this.transact((p) => {
       const item = getCosmetic(id);
       if (!p.owned.includes(id)) throw new Error('Unlock this item before equipping it.');
-      return { ...p, [item.kind]: id };
+      return item.contents ? { ...p, ...item.contents, pack: id } : { ...p, [item.kind]: id };
     });
   }
-  update(settings: Partial<Pick<Profile, 'name' | 'board3d' | 'reducedMotion'>>): Promise<Profile> {
+  update(
+    settings: Partial<Pick<Profile, 'name' | 'board3d' | 'reducedMotion' | 'soundEnabled'>>,
+  ): Promise<Profile> {
     return this.transact((p) => ({
       ...p,
       ...settings,
@@ -122,20 +258,51 @@ export class ProfileService implements IProfileService {
       const today = now.toISOString().slice(0, 10);
       if (p.lastGift && p.lastGift >= today)
         throw new Error('Today’s gift is claimed. Come back tomorrow!');
-      return { ...p, coins: p.coins + 250, lastGift: today };
+      return { ...p, coins: p.coins + DAILY_GIFT_COINS, lastGift: today };
     });
   }
+  replace(profile: Profile): Promise<Profile> {
+    // Round-tripped through the parser so a bad merge can never persist a
+    // profile the app would later refuse to load.
+    return this.transact(() => parseProfile(JSON.stringify(profile)));
+  }
   recordMatch(id: string, won: boolean, rewardEligible: boolean): Promise<Profile> {
-    return this.transact((p) =>
-      p.rewardedMatches.includes(id)
-        ? p
-        : {
-            ...p,
-            games: p.games + 1,
-            wins: p.wins + (won ? 1 : 0),
-            coins: p.coins + (rewardEligible ? (won ? 150 : 40) : 0),
-            rewardedMatches: [...p.rewardedMatches, id],
-          },
-    );
+    return this.transact((p) => {
+      if (p.rewardedMatches.includes(id)) return p;
+      const streak = won ? p.streak + 1 : 0;
+      return {
+        ...p,
+        games: p.games + 1,
+        wins: p.wins + (won ? 1 : 0),
+        streak,
+        bestStreak: Math.max(p.bestStreak, streak),
+        coins: p.coins + (rewardEligible ? (won ? WIN_COINS : PLAYED_COINS) : 0),
+        rewardedMatches: [...p.rewardedMatches, id],
+      };
+    });
+  }
+  mirrorWallet(wallet: WalletSnapshot): Promise<Profile> {
+    return this.transact((p) => parseProfile(JSON.stringify(applyWalletSnapshot(p, wallet))));
+  }
+  queueReward(id: string, won: boolean, rewardEligible: boolean): Promise<Profile> {
+    return this.transact((p) => {
+      if (p.rewardedMatches.includes(id)) return p;
+      const streak = won ? p.streak + 1 : 0;
+      return {
+        ...p,
+        games: p.games + 1,
+        wins: p.wins + (won ? 1 : 0),
+        streak,
+        bestStreak: Math.max(p.bestStreak, streak),
+        rewardedMatches: [...p.rewardedMatches, id],
+        pendingRewards: [...p.pendingRewards, { matchId: id, won, rewardEligible }],
+      };
+    });
+  }
+  settleReward(id: string): Promise<Profile> {
+    return this.transact((p) => ({
+      ...p,
+      pendingRewards: p.pendingRewards.filter((r) => r.matchId !== id),
+    }));
   }
 }

@@ -1,118 +1,150 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
 import type { DieValue } from '@/domain';
 import { DICE_FINISHES } from '../theme/themes';
-
-const PIP_LAYOUTS: Record<DieValue, readonly (readonly [number, number])[]> = {
-  1: [[1, 1]],
-  2: [
-    [0, 0],
-    [2, 2],
-  ],
-  3: [
-    [0, 0],
-    [1, 1],
-    [2, 2],
-  ],
-  4: [
-    [0, 0],
-    [0, 2],
-    [2, 0],
-    [2, 2],
-  ],
-  5: [
-    [0, 0],
-    [0, 2],
-    [1, 1],
-    [2, 0],
-    [2, 2],
-  ],
-  6: [
-    [0, 0],
-    [0, 2],
-    [1, 0],
-    [1, 2],
-    [2, 0],
-    [2, 2],
-  ],
-};
-
+import { FACES, PIPS, projectFace } from './diceGeometry';
 export interface DiceProps {
   readonly value: DieValue | null;
   readonly finish?: string;
+  readonly size?: number;
+  readonly spin?: SharedValue<number>;
+  readonly tilt?: SharedValue<number>;
 }
-
-export function Dice({ value, finish = 'ivory' }: DiceProps): React.JSX.Element {
+/** Six orthographically projected cube faces, rendered on the native UI thread. */
+export function Dice({ value, finish = 'ivory', size = 56, spin, tilt }: DiceProps) {
+  const still = useSharedValue(0);
+  const angled = useSharedValue(1);
   const colors = DICE_FINISHES[finish] ?? DICE_FINISHES.ivory!;
   return (
     <View
-      style={[
-        styles.face,
-        {
-          backgroundColor: colors.face,
-          borderWidth: 1,
-          borderColor: '#ffffff50',
-          borderBottomWidth: 4,
-        },
-      ]}
-      accessibilityLabel={value ? `Dice showing ${value}` : 'Dice not rolled'}
+      pointerEvents="none"
+      accessible
+      accessibilityLabel={value ? `Dice showing ${value}` : 'Dice ready to roll'}
+      style={{ width: size, height: size }}
     >
-      {value === null ? (
-        <Text style={styles.placeholder}>?</Text>
-      ) : (
-        <View style={styles.grid}>
-          {Array.from({ length: 9 }, (_, index) => {
-            const row = Math.floor(index / 3);
-            const col = index % 3;
-            const isPip = PIP_LAYOUTS[value].some(([r, c]) => r === row && c === col);
-            return (
-              <View key={index} style={styles.cell}>
-                {isPip && <View style={[styles.pip, { backgroundColor: colors.pip }]} />}
-              </View>
-            );
-          })}
-        </View>
-      )}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: size * 0.16,
+          width: size * 0.72,
+          height: size * 0.16,
+          borderRadius: size,
+          backgroundColor: '#00000035',
+          boxShadow: colors.glow ? `0 0 10px ${colors.glow}` : '0 2px 5px #00000025',
+        }}
+      />
+      {FACES.map((face) => (
+        <CubeFace
+          key={face.value}
+          face={face}
+          value={value ?? 1}
+          size={size}
+          colors={colors}
+          spin={spin ?? still}
+          tilt={tilt ?? angled}
+        />
+      ))}
     </View>
   );
 }
-
-const SIZE = 56;
-
-const styles = StyleSheet.create({
-  face: {
-    width: SIZE,
-    height: SIZE,
-    borderRadius: 10,
-    backgroundColor: '#f8fafc',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  placeholder: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#94a3b8',
-  },
-  grid: {
-    width: SIZE - 12,
-    height: SIZE - 12,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  cell: {
-    width: (SIZE - 12) / 3,
-    height: (SIZE - 12) / 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pip: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#0f172a',
-  },
-});
+function CubeFace({
+  face,
+  value,
+  size,
+  colors,
+  spin,
+  tilt,
+}: {
+  face: (typeof FACES)[number];
+  value: DieValue;
+  size: number;
+  colors: (typeof DICE_FINISHES)[string];
+  spin: SharedValue<number>;
+  tilt: SharedValue<number>;
+}) {
+  // A cube's corner reaches edge * sqrt(3) / 2 from its centre, so this keeps
+  // even the most diagonal tumbling pose inside the `size` box instead of
+  // poking through the control's border and over its label.
+  const edge = size * 0.57;
+  const faceStyle = useAnimatedStyle(() => {
+    const p = projectFace(face, value, spin.value, edge, tilt.value);
+    return {
+      opacity: p.visible ? 1 : 0,
+      zIndex: Math.round(p.depth * 100) + 100,
+      transform: p.transform,
+    };
+  });
+  const shadeStyle = useAnimatedStyle(() => ({
+    opacity: projectFace(face, value, spin.value, edge, tilt.value).shade,
+  }));
+  return (
+    <Animated.View
+      style={[
+        {
+          position: 'absolute',
+          left: (size - edge) / 2,
+          top: (size - edge) / 2 - 1,
+          width: edge,
+          height: edge,
+          backgroundColor: colors.face,
+          borderRadius: Math.min(3, edge * 0.06),
+          borderWidth: 0.6,
+          borderColor: colors.edge ?? '#ffffff80',
+          overflow: 'hidden',
+          backfaceVisibility: 'hidden',
+        },
+        faceStyle,
+      ]}
+    >
+      {colors.wood &&
+        [0.2, 0.4, 0.6, 0.8].map((top) => (
+          <View
+            key={top}
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: top * edge,
+              height: 1,
+              backgroundColor: '#714a2630',
+            }}
+          />
+        ))}
+      {PIPS[face.value].map(([row, col]) => (
+        <View
+          key={`${row}-${col}`}
+          style={{
+            position: 'absolute',
+            left: edge * (0.27 + col * 0.23) - edge * 0.075,
+            top: edge * (0.27 + row * 0.23) - edge * 0.075,
+            width: edge * 0.15,
+            height: edge * 0.15,
+            borderRadius: edge,
+            backgroundColor: colors.pip,
+            boxShadow: '0 1px 0 #ffffff50',
+            borderTopWidth: 0.7,
+            borderTopColor: '#00000060',
+          }}
+        />
+      ))}
+      <Animated.View
+        style={[StyleSheet.absoluteFill, { backgroundColor: '#000000' }, shadeStyle]}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 1,
+          backgroundColor: '#ffffff65',
+        }}
+      />
+    </Animated.View>
+  );
+}

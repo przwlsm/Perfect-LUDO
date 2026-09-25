@@ -1,25 +1,36 @@
 import { useLayoutEffect, useRef } from 'react';
-import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
+import { useFrame, useThree, type ThreeEvent } from './ThreeCanvas';
 import { Group, Mesh } from 'three';
 import type { Move, Piece } from '@/domain';
 import { cellToPosition3D } from './cellToPosition3D';
 import { getCellForPiece } from './getCellForPiece';
-import { getPieceWaypoints, PIECE_STEP_MS } from './pieceMotion';
+import { getPieceWaypoints, PIECE_JUMP_MS, PIECE_STEP_MS } from './pieceMotion';
+import { shade } from './shade';
 
 type Point = readonly [number, number, number];
 export function AnimatedPiece3D({
   piece,
+  playerCount = 4,
   yardSlot,
   stackIndex,
+  stackCount = 1,
   fill,
+  pieceStyle = 'pawn',
+  flip = false,
   move,
   motionEnabled,
   onSelectMove,
 }: {
   piece: Piece;
+  playerCount?: number;
   yardSlot: number;
   stackIndex: number;
+  stackCount?: number;
   fill: string;
+  /** Matches the theme's 2D token look: a squat coin, or a pawn with a head. */
+  pieceStyle?: 'coin' | 'pawn';
+  /** See Board2DProps.flip. Must match the board it is drawn on. */
+  flip?: boolean;
   move?: Move;
   motionEnabled: boolean;
   onSelectMove(move: Move): void;
@@ -32,26 +43,39 @@ export function AnimatedPiece3D({
   const invalidate = useThree((state) => state.invalidate);
   const { id, color, progress } = piece;
   useLayoutEffect(() => {
-    const offset = stackIndex * 0.18;
+    const columns = Math.ceil(Math.sqrt(stackCount));
+    const offset = stackCount > 1 ? ((stackIndex % columns) - (columns - 1) / 2) * 0.48 : 0;
+    const offsetZ =
+      stackCount > 1
+        ? (Math.floor(stackIndex / columns) - (Math.ceil(stackCount / columns) - 1) / 2) * 0.48
+        : 0;
     const toPoint = ([row, col]: readonly [number, number]): Point => {
-      const [x, , z] = cellToPosition3D(row, col);
-      return [x + offset, 0.2 + stackIndex * 0.12, z - offset];
+      const [x, , z] = cellToPosition3D(row, col, 1, playerCount > 4 ? 19 : 15);
+      return [x + offset, 0.2, z + offsetZ];
     };
-    resting.current = toPoint(getCellForPiece({ id, color, progress }, yardSlot));
+    resting.current = toPoint(
+      getCellForPiece({ id, color, progress }, yardSlot, playerCount, flip),
+    );
     if (
       group.current &&
       motionEnabled &&
       previous.current !== null &&
       previous.current !== progress
     ) {
-      const cells = getPieceWaypoints({ id, color, progress }, previous.current, yardSlot);
+      const cells = getPieceWaypoints(
+        { id, color, progress },
+        previous.current,
+        yardSlot,
+        playerCount,
+        flip,
+      );
       motion.current = {
         points: [
           [group.current.position.x, group.current.position.y, group.current.position.z],
           ...cells.map(toPoint),
         ],
         elapsed: 0,
-        step: cells.length === 1 ? 0.24 : PIECE_STEP_MS / 1000,
+        step: (cells.length === 1 ? PIECE_JUMP_MS : PIECE_STEP_MS) / 1000,
       };
     } else {
       motion.current = null;
@@ -59,7 +83,18 @@ export function AnimatedPiece3D({
     }
     previous.current = progress;
     invalidate();
-  }, [id, color, progress, yardSlot, stackIndex, motionEnabled, invalidate]);
+  }, [
+    playerCount,
+    flip,
+    id,
+    color,
+    progress,
+    yardSlot,
+    stackIndex,
+    stackCount,
+    motionEnabled,
+    invalidate,
+  ]);
   useFrame(({ clock }, delta) => {
     if (!group.current) return;
     const tween = motion.current;
@@ -81,8 +116,9 @@ export function AnimatedPiece3D({
       const [x, y, z] = resting.current;
       group.current.position.set(x, y + pulse * 0.15, z);
     }
-    group.current.scale.setScalar(1 + pulse * 0.07);
-    ring.current?.scale.setScalar(1 + pulse * 0.25);
+    group.current.scale.setScalar((stackCount > 1 ? 0.7 : 1) * (1 + pulse * 0.07));
+    group.current.rotation.z = pulse * 0.08;
+    ring.current?.scale.setScalar(1);
     if (motionEnabled && (move || motion.current)) invalidate();
   });
   const handleClick = (event: ThreeEvent<MouseEvent>) => {
@@ -91,24 +127,68 @@ export function AnimatedPiece3D({
       onSelectMove(move);
     }
   };
+  const rim = shade(fill, -0.3);
+  const gloss = shade(fill, 0.35);
+  const glow = move ? fill : '#000000';
   return (
     <group ref={group} onClick={handleClick}>
-      <mesh>
-        <cylinderGeometry args={[0.38, 0.45, 0.2, 20]} />
-        <meshStandardMaterial color={fill} />
+      {/* A soft contact shadow sells the token as sitting on the board. */}
+      <mesh position={[0, -0.13, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.5, 24]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.28} depthWrite={false} />
       </mesh>
-      <mesh position={[0, 0.3, 0]}>
-        <coneGeometry args={[0.3, 0.6, 20]} />
-        <meshStandardMaterial
-          color={fill}
-          emissive={move ? fill : '#000000'}
-          emissiveIntensity={move ? 0.5 : 0}
-        />
+      {/* Darker base rim under a lit top: reads as a turned edge, not a flat disc. */}
+      <mesh position={[0, -0.04, 0]}>
+        <cylinderGeometry args={[0.47, 0.5, 0.1, 24]} />
+        <meshStandardMaterial color={rim} roughness={0.7} />
       </mesh>
-      <mesh position={[0, 0.65, 0]}>
-        <sphereGeometry args={[0.26, 16, 12]} />
-        <meshStandardMaterial color={fill} />
-      </mesh>
+      {pieceStyle === 'coin' ? (
+        <>
+          <mesh position={[0, 0.08, 0]}>
+            <cylinderGeometry args={[0.44, 0.46, 0.16, 24]} />
+            <meshStandardMaterial
+              color={fill}
+              roughness={0.45}
+              metalness={0.2}
+              emissive={glow}
+              emissiveIntensity={move ? 0.35 : 0}
+            />
+          </mesh>
+          <mesh position={[0, 0.17, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.28, 0.045, 8, 28]} />
+            <meshStandardMaterial color={gloss} roughness={0.4} metalness={0.3} />
+          </mesh>
+          <mesh position={[0, 0.2, 0]}>
+            <sphereGeometry args={[0.1, 12, 10]} />
+            <meshStandardMaterial color={gloss} roughness={0.35} metalness={0.3} />
+          </mesh>
+        </>
+      ) : (
+        <>
+          <mesh position={[0, 0.07, 0]}>
+            <cylinderGeometry args={[0.36, 0.44, 0.14, 24]} />
+            <meshStandardMaterial color={fill} roughness={0.5} />
+          </mesh>
+          <mesh position={[0, 0.42, 0]}>
+            <coneGeometry args={[0.27, 0.58, 24]} />
+            <meshStandardMaterial
+              color={fill}
+              roughness={0.5}
+              emissive={glow}
+              emissiveIntensity={move ? 0.4 : 0}
+            />
+          </mesh>
+          <mesh position={[0, 0.8, 0]}>
+            <sphereGeometry args={[0.25, 18, 14]} />
+            <meshStandardMaterial color={fill} roughness={0.35} metalness={0.1} />
+          </mesh>
+          {/* Specular catch-light so the head reads as a sphere from above. */}
+          <mesh position={[-0.08, 0.92, 0.1]}>
+            <sphereGeometry args={[0.07, 10, 8]} />
+            <meshStandardMaterial color={gloss} roughness={0.2} />
+          </mesh>
+        </>
+      )}
       {move && (
         <>
           <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>

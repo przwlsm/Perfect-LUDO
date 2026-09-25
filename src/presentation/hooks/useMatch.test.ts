@@ -35,6 +35,81 @@ describe('interactive match lifecycle', () => {
     mockLoad.mockResolvedValue(null);
     mockRandom.mockResolvedValue(6);
   });
+  it('automatically moves the only legal coin after a human rolls', async () => {
+    const m = newMatch(local);
+    mockLoad.mockResolvedValue({
+      ...m,
+      state: {
+        ...m.state,
+        players: m.state.players.map((p, i) =>
+          i
+            ? p
+            : { ...p, pieces: p.pieces.map((piece, j) => (j ? piece : { ...piece, progress: 1 })) },
+        ),
+      },
+    });
+    mockRandom.mockResolvedValue(3);
+    const { result } = await renderHook(() => useMatch(local, true, false));
+    await waitFor(() => expect(result.current.match).not.toBeNull());
+    await act(() => {
+      result.current.roll();
+    });
+    await waitFor(() =>
+      expect(result.current.match?.state.players[0]?.pieces[0]?.progress).toBe(4),
+    );
+    expect(result.current.match?.state.currentPlayerIndex).toBe(1);
+    expect(mockRandom).toHaveBeenCalledTimes(1);
+  });
+  it('leaves a six to the player when exiting the yard is another legal choice', async () => {
+    const m = newMatch(local);
+    mockLoad.mockResolvedValue({
+      ...m,
+      lastDie: 6,
+      state: {
+        ...m.state,
+        lastRoll: 6,
+        consecutiveSixes: 1,
+        players: m.state.players.map((p, i) =>
+          i
+            ? p
+            : { ...p, pieces: p.pieces.map((piece, j) => (j ? piece : { ...piece, progress: 1 })) },
+        ),
+      },
+    });
+    const { result } = await renderHook(() => useMatch(local, true, false));
+    await waitFor(() => expect(result.current.moves).toHaveLength(4));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 450)));
+    expect(result.current.match?.state.players[0]?.pieces[0]?.progress).toBe(1);
+  });
+  it('does not automatically move while paused', async () => {
+    const m = newMatch(local);
+    mockLoad.mockResolvedValue({
+      ...m,
+      lastDie: 3,
+      state: {
+        ...m.state,
+        lastRoll: 3,
+        players: m.state.players.map((p, i) =>
+          i
+            ? p
+            : { ...p, pieces: p.pieces.map((piece, j) => (j ? piece : { ...piece, progress: 1 })) },
+        ),
+      },
+    });
+    const { result, rerender } = await renderHook(
+      ({ paused }: { paused: boolean }) => useMatch(local, true, paused),
+      {
+        initialProps: { paused: true },
+      },
+    );
+    await waitFor(() => expect(result.current.moves).toHaveLength(1));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 450)));
+    expect(result.current.match?.state.players[0]?.pieces[0]?.progress).toBe(1);
+    await rerender({ paused: false });
+    await waitFor(() =>
+      expect(result.current.match?.state.players[0]?.pieces[0]?.progress).toBe(4),
+    );
+  });
   it('waits for a human roll, ignores double taps, and persists the selected move', async () => {
     const { result } = await renderHook(() => useMatch(local, false, false));
     await waitFor(() => expect(result.current.match).not.toBeNull());
@@ -45,6 +120,8 @@ describe('interactive match lifecycle', () => {
     });
     await waitFor(() => expect(result.current.moves).toHaveLength(4));
     expect(mockRandom).toHaveBeenCalledTimes(1);
+    expect(result.current.seatRolls).toEqual({ RED: 6 });
+    expect(result.current.feedback?.cue).toBe('roll');
     await act(() => {
       result.current.move(result.current.moves[0]!);
     });
@@ -53,7 +130,58 @@ describe('interactive match lifecycle', () => {
     );
     expect(mockSave.mock.calls.at(-1)?.[0].state.lastRoll).toBeNull();
     expect(result.current.match?.state.currentPlayerIndex).toBe(0);
+    expect(result.current.feedback?.cue).toBe('enter');
   });
+  it('auto-plays the only legal move instead of waiting for a tap', async () => {
+    const m = newMatch(local);
+    mockLoad.mockResolvedValue({
+      ...m,
+      state: {
+        ...m.state,
+        players: [
+          {
+            ...m.state.players[0]!,
+            pieces: [
+              { id: 'RED-0', color: 'RED', progress: 10 },
+              ...m.state.players[0]!.pieces.slice(1),
+            ],
+          },
+          m.state.players[1]!,
+        ],
+      },
+    });
+    // Not a six, so the three pieces still in the yard stay put and the one
+    // piece already on the track is the single legal move.
+    mockRandom.mockResolvedValue(3);
+    const { result } = await renderHook(() => useMatch(local, true, false));
+    await waitFor(() => expect(result.current.match).not.toBeNull());
+
+    await act(() => {
+      result.current.roll();
+    });
+
+    await waitFor(
+      () => expect(result.current.match?.state.players[0]?.pieces[0]?.progress).toBe(13),
+      { timeout: 5000 },
+    );
+    // The turn moved on without the player ever calling move().
+    expect(result.current.match?.state.currentPlayerIndex).toBe(1);
+  });
+
+  it('still waits for a tap when more than one move is legal', async () => {
+    const { result } = await renderHook(() => useMatch(local, false, false));
+    await waitFor(() => expect(result.current.match).not.toBeNull());
+    await act(() => {
+      result.current.roll();
+    });
+    await waitFor(() => expect(result.current.moves).toHaveLength(4));
+
+    // Well past the auto-play delay: four options must stay the player's call.
+    await new Promise((resolve) => setTimeout(resolve, 1400));
+    expect(result.current.match?.state.players[0]?.pieces[0]?.progress).toBe(0);
+    expect(result.current.moves).toHaveLength(4);
+  });
+
   it('does not roll while paused', async () => {
     const { result } = await renderHook(() => useMatch(local, false, true));
     await waitFor(() => expect(result.current.match).not.toBeNull());
@@ -89,4 +217,14 @@ describe('interactive match lifecycle', () => {
     });
     await waitFor(() => expect(result.current.moves).toHaveLength(4));
   });
+});
+
+it('retries an initial storage failure without creating a replacement game', async () => {
+  mockLoad
+    .mockRejectedValueOnce(new Error('Storage unavailable'))
+    .mockResolvedValue(newMatch(local));
+  const { result } = await renderHook(() => useMatch(local, true, false));
+  await waitFor(() => expect(result.current.error).toBe('Storage unavailable'));
+  await act(() => result.current.retry());
+  await waitFor(() => expect(result.current.match).not.toBeNull());
 });
