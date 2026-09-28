@@ -17,7 +17,8 @@ export interface BoardTheme {
     BLUE: string;
   };
 }
-const classic = { RED: '#ef5464', GREEN: '#22c99a', YELLOW: '#ffc746', BLUE: '#548bff' };
+// Neo-Arcade player colours: crimson, emerald, amber gold, royal blue.
+const classic = { RED: '#ef4444', GREEN: '#10b981', YELLOW: '#f59e0b', BLUE: '#3b82f6' };
 function theme(
   id: string,
   background: string,
@@ -39,7 +40,7 @@ function theme(
   };
 }
 export const BOARD_THEMES: readonly BoardTheme[] = [
-  theme('classic', '#0e1322', '#1a2235', '#ffc568', '#b77739', '#fff8e9'),
+  theme('classic', '#0e1322', '#1a1f2f', '#ffb95f', '#b77739', '#fff8e9'),
   {
     ...theme('heritage', '#191b18', '#282d26', '#dfba72', '#ba8f58', '#eee3c8', {
       RED: '#a94236',
@@ -157,12 +158,26 @@ export function getCardDesign(id?: string | null) {
   };
 }
 export const ui = {
-  text: '#f5f3ff',
-  muted: '#a3adc4',
-  subtle: '#738098',
-  line: '#ffffff12',
+  text: '#dee1f7',
+  muted: '#c2c6d6',
+  subtle: '#8c909f',
+  line: '#ffffff14',
   green: '#4edea3',
-  gold: '#ffc568',
+  gold: '#ffb95f',
   violet: '#a78bfa',
   danger: '#ff8795',
+  /** Royal blue for secondary calls to action and progress. */
+  blue: '#4d8eff',
+  blueSoft: '#adc6ff',
+  /** Gems. */
+  gem: '#c084fc',
+  /** Surface tiers, lowest to highest. */
+  surfaceLow: '#161b2a',
+  surfaceHigh: '#252939',
+  surfaceHighest: '#2f3445',
+  /** Deep inset fields. */
+  inset: '#111728',
+  /** Secondary button body and its bottom rim. */
+  navy: '#232d4b',
+  navyRim: '#111625',
 };

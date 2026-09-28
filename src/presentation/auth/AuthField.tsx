@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { Pressable, View, type TextInputProps } from 'react-native';
+import { Text, TextInput } from '../components/AppText';
 import { Label } from '../components/Kit';
 import { useProfile } from '../state/ProfileProvider';
 import { ui } from '../theme/themes';

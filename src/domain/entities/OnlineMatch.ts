@@ -31,6 +31,14 @@ export interface OnlineMatch {
   /** Server-issued. Null means the player at `turnSeat` still has to roll. */
   readonly lastRoll: DieValue | null;
   readonly winnerSeat: number | null;
+  /** Coins each seat paid to sit down; 0 for a free table. */
+  readonly stake: number;
+  /** Everything paid in. */
+  readonly pool: number;
+  /** What the winner collects from the pool. */
+  readonly prize: number;
+  /** When the current roll or move times out; null once the match is over. */
+  readonly turnDeadline: string | null;
 }
 
 export interface OnlineMatchSnapshot {

@@ -10,7 +10,14 @@ import {
 import { WALLET_STALE_WARNING, type WalletState } from '@/application/auth/AccountProfiles';
 import { pushDisplayName } from '@/application/use-cases/SyncProfileUseCase';
 import { INITIAL_PROFILE, type Profile } from '@/application/store/ProfileService';
-import { SignInRequiredError, WalletRefusedError, type AuthUser } from '@/domain';
+import {
+  NO_STATS,
+  SignInRequiredError,
+  WalletRefusedError,
+  type AuthUser,
+  type MatchStats,
+  type WalletSnapshot,
+} from '@/domain';
 import { getBoardTheme } from '../theme/themes';
 import { getCosmetic } from '@/domain/cosmetics/catalog';
 
@@ -35,7 +42,16 @@ interface ProfileContextValue {
   equip(id: string): Promise<void>;
   claimGift(): Promise<void>;
   /** Resolves `true` when the result reached the account, `false` when it was queued for later. */
-  recordMatch(id: string, won: boolean, rewardEligible: boolean): Promise<boolean>;
+  recordMatch(
+    id: string,
+    won: boolean,
+    rewardEligible: boolean,
+    stats?: MatchStats,
+  ): Promise<boolean>;
+  /** Collects an online match; the server decides the result. Members only. */
+  recordOnlineMatch(matchId: string, stats?: MatchStats): Promise<void>;
+  /** Shows a wallet another server call returned (spin, missions, season pass, prizes). */
+  adoptWallet(snapshot: WalletSnapshot): Promise<void>;
   /** Accepts an already-persisted profile, e.g. the result of cloud sign-in sync. */
   adoptProfile(profile: Profile): void;
 }
@@ -242,7 +258,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   async function equip(id: string) {
     await perform(() => profileService.equip(id));
   }
-  async function recordMatch(id: string, won: boolean, rewardEligible: boolean) {
+  async function recordMatch(
+    id: string,
+    won: boolean,
+    rewardEligible: boolean,
+    stats: MatchStats = NO_STATS,
+  ) {
     if (!isMember(authProvider?.getCurrentUser() ?? null) || !accountProfiles.memberWallet()) {
       // Coins are an account feature: guests keep their stats, not a reward.
       await perform(() => profileService.recordMatch(id, won, false));
@@ -250,12 +271,26 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
     let delivered = true;
     await perform(async () => {
-      const next = await memberWallet().recordMatch(id, won, rewardEligible);
+      const next = await memberWallet().recordMatch(id, won, rewardEligible, stats);
       delivered = !next.pendingRewards.some((r) => r.matchId === id);
       return next;
     });
     setWallet(delivered ? 'ready' : 'stale');
     return delivered;
+  }
+
+  async function recordOnlineMatch(matchId: string, stats: MatchStats = NO_STATS) {
+    if (!isMember(authProvider?.getCurrentUser() ?? null) || !accountProfiles.memberWallet())
+      return;
+    await perform(() => memberWallet().recordOnlineMatch(matchId, stats));
+    setWallet('ready');
+  }
+
+  async function adoptWallet(snapshot: WalletSnapshot) {
+    const account = accountProfiles.memberWallet();
+    if (!account) return;
+    await perform(() => account.adopt(snapshot));
+    setWallet('ready');
   }
 
   function adoptProfile(next: Profile) {
@@ -279,6 +314,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         equip,
         claimGift,
         recordMatch,
+        recordOnlineMatch,
+        adoptWallet,
         adoptProfile,
       }}
     >

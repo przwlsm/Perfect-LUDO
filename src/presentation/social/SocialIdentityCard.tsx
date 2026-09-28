@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, Share, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../components/AppText';
 import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { socialIdentityRepository } from '@/config/container';

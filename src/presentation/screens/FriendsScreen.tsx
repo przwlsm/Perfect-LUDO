@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../components/AppText';
 import { router } from 'expo-router';
 import { challengeRepository } from '@/config/container';
 import { Body, Button, Card, Label, Screen, shared } from '../components/Kit';

@@ -1,4 +1,5 @@
 import type { WalletSnapshot } from '../entities/Wallet';
+import type { MatchStats } from '../entities/Progression';
 
 /**
  * The account wallet on the server. Every call is one atomic operation for
@@ -16,6 +17,20 @@ export interface IWalletRepository {
    */
   purchase(itemId: string, expectedPrice: number): Promise<WalletSnapshot>;
   claimGift(): Promise<WalletSnapshot>;
-  /** Records a finished match once per `matchId`; replays return the wallet unchanged. */
-  awardMatch(matchId: string, won: boolean, rewardEligible: boolean): Promise<WalletSnapshot>;
+  /**
+   * Records a finished game against the computer (or pass & play) once per
+   * `matchId`; replays return the wallet unchanged. The client's word, so
+   * the pay is small and capped per day.
+   */
+  awardMatch(
+    matchId: string,
+    won: boolean,
+    rewardEligible: boolean,
+    stats?: MatchStats,
+  ): Promise<WalletSnapshot>;
+  /**
+   * Collects an online match's reward. The server reads the result from its
+   * own match record, so there is nothing to claim but the id.
+   */
+  awardOnlineMatch(matchId: string, stats?: MatchStats): Promise<WalletSnapshot>;
 }

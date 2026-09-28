@@ -6,13 +6,14 @@ const waiting: QuickMatchTicket = {
   status: 'WAITING',
   lobbyId: null,
   playerCount: 2,
+  stake: 0,
   waiting: 1,
   serverNow: '2026-01-01T00:00:00Z',
 };
 const matched: QuickMatchTicket = { ...waiting, status: 'MATCHED', lobbyId: 'lobby-1', waiting: 0 };
 
 const mockRepository = {
-  join: jest.fn<Promise<QuickMatchTicket>, [number]>(),
+  join: jest.fn<Promise<QuickMatchTicket>, [number, number?]>(),
   leave: jest.fn(async () => undefined),
   subscribe: jest.fn((_userId: string, _onChange: () => void) => mockUnsubscribe),
 };
@@ -64,7 +65,7 @@ describe('useQuickMatch', () => {
       onChange();
     });
     await waitFor(() => expect(result.current.phase).toBe('matched'));
-    expect(mockRepository.join).toHaveBeenLastCalledWith(3);
+    expect(mockRepository.join).toHaveBeenLastCalledWith(3, 0);
   });
 
   it('cancelling leaves the queue and stops the heartbeat', async () => {

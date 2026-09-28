@@ -1,5 +1,6 @@
 import { useAuthSession } from '../state/useAuthSession';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '../components/AppText';
 import { router } from 'expo-router';
 import { getCosmetic } from '@/domain/cosmetics/catalog';
 import { Body, Button, Card, Label, Screen, shared } from '../components/Kit';
@@ -159,6 +160,14 @@ export default function ProfileScreen() {
           Every account starts with 1,000 welcome coins. Claim 250 each day, earn 150 for a win, or
           40 for finishing a game. Spend them on a look you love.
         </Body>
+      </Card>
+      <Card>
+        <Label color={theme.accent}>WE’RE LISTENING</Label>
+        <Text style={shared.sectionTitle}>Found a bug? Have an idea?</Text>
+        <Body>Tell us what’s working, what isn’t, and what you’d like to see next.</Body>
+        <Button secondary compact onPress={() => router.push('/feedback')}>
+          Send feedback
+        </Button>
       </Card>
     </Screen>
   );

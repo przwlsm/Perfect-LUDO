@@ -46,4 +46,6 @@ export interface IAccountAuthProvider extends IAuthProvider {
   ): Promise<void>;
   verifyEmailCode(email: string, token: string, type: EmailVerification): Promise<AuthCompletion>;
   updatePassword(password: string): Promise<void>;
+  /** Permanently deletes the signed-in account and everything tied to it. Cannot be undone. */
+  deleteAccount(): Promise<void>;
 }

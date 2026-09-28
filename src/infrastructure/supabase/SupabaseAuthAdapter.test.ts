@@ -29,10 +29,15 @@ function setup(providerEnabled?: () => Promise<boolean>) {
     refreshSession: jest.fn().mockResolvedValue({ data: { session }, error: null }),
     signOut: jest.fn().mockResolvedValue({ error: null }),
   };
-  const adapter = new SupabaseAuthAdapter({ auth } as unknown as SupabaseClient, providerEnabled);
+  const rpc = jest.fn().mockResolvedValue({ data: null, error: null });
+  const adapter = new SupabaseAuthAdapter(
+    { auth, rpc } as unknown as SupabaseClient,
+    providerEnabled,
+  );
   return {
     adapter,
     auth,
+    rpc,
     emit: (event: string, value: typeof session | null) => listener(event, value),
   };
 }
@@ -177,6 +182,25 @@ describe('account authentication', () => {
     await adapter.signOut();
     expect(adapter.getCurrentUser()).toBeNull();
     expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+  it('deletes the account on the server, then clears the local session', async () => {
+    const { adapter, auth, rpc } = setup();
+    await adapter.restoreSession();
+    await adapter.deleteAccount();
+    expect(rpc).toHaveBeenCalledWith('delete_own_account');
+    expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(adapter.getCurrentUser()).toBeNull();
+  });
+  it('keeps the player signed in when the server refuses to delete the account', async () => {
+    const { adapter, auth, rpc } = setup();
+    await adapter.restoreSession();
+    rpc.mockResolvedValueOnce({
+      data: null,
+      error: new Error('Please sign in again to continue.'),
+    });
+    await expect(adapter.deleteAccount()).rejects.toThrow('sign in again');
+    expect(auth.signOut).not.toHaveBeenCalled();
+    expect(adapter.getCurrentUser()).toEqual(member);
   });
   it('verifies recovery codes through the server', async () => {
     const { adapter, auth } = setup();

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Switch, Text, TextInput, View } from 'react-native';
+import { Switch, View } from 'react-native';
+import { Text, TextInput } from '../components/AppText';
+import { router } from 'expo-router';
 import { profileService } from '@/config/container';
 import { Body, Button, Card, Label, Screen, shared } from '../components/Kit';
 import { useProfile } from '../state/ProfileProvider';
@@ -106,6 +108,9 @@ export default function SettingsScreen() {
           money.
         </Body>
         <Text style={shared.small}>Ludo Club · 1.0.0</Text>
+        <Button secondary compact onPress={() => router.push('/feedback')}>
+          Send feedback or report a bug
+        </Button>
       </Card>
     </Screen>
   );

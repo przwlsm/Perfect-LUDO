@@ -1,58 +1,99 @@
-import { ALL_PLAYER_COLORS, type PlayerColor } from '@/domain';
-
-/** Reserve a perimeter for accessible dice, independently of the board's cell scale. */
-export function tableLayout(width: number, height: number, count = 4) {
-  const size = Math.max(1, Math.min(width - 8, height - 8, 920));
-  const control = size >= 500 ? 60 : 48;
-  const inset = count > 4 ? Math.ceil(control * 0.72) + 4 : control + 4;
-  return { size, control, inset, board: Math.max(1, size - inset * 2) };
-}
+import type { PlayerColor } from '@/domain';
+import { yardBlock } from './boardLayout';
 
 /**
- * A 2-player table keeps the dice out of the board's way, on whichever axis
- * the screen has room to spare: above and below in portrait (where height
- * is plentiful), left and right in landscape (where it is not). Either way
- * the board itself grows to fill the axis that used to be spent on dice
- * margins, instead of the old inset-on-every-side layout that shrank it.
+ * Where everything goes on the game table: the board as large as the screen
+ * allows, and one player panel per seat parked beside that seat's own home
+ * corner — above and below the board in portrait, left and right of it in
+ * landscape. Nothing overlaps the board, so no board space is spent on
+ * margins for dice.
+ *
+ * `before` is the top row (portrait) or left column (landscape); `after` is
+ * the bottom row or right column. A `null` entry is an empty corner (e.g. a
+ * 2-player game on the 4-corner board) kept so the others stay beside their
+ * own yard instead of sliding toward the middle.
  */
-export function twoPlayerLayout(width: number, height: number) {
-  const control = Math.max(width, height) >= 500 ? 60 : 48;
-  const gap = 10;
-  const side = width > height;
-  const boardSize = Math.max(
-    1,
-    Math.min(
-      side ? width - control * 2 - gap * 2 - 16 : width - 16,
-      side ? height - 16 : height - control * 2 - gap * 2,
-      880,
-    ),
-  );
-  return { board: boardSize, control, gap, side };
+export interface TableArrangement {
+  readonly orientation: 'portrait' | 'landscape';
+  readonly board: number;
+  readonly panel: { readonly width: number; readonly height: number };
+  readonly gap: number;
+  readonly before: readonly (PlayerColor | null)[];
+  readonly after: readonly (PlayerColor | null)[];
 }
 
-export function seatPlacement(
-  color: PlayerColor,
-  count: number,
-  layout: ReturnType<typeof tableLayout>,
-) {
-  const { size, board, control, inset } = layout;
+const GAP = 8;
+const EDGE = 12;
+const EPSILON = 1e-6;
+
+/** Screen direction from the board centre to a seat's yard, as unit x/y. */
+function yardDirection(color: PlayerColor, flip: boolean): { x: number; y: number } {
+  const block = yardBlock(color as Parameters<typeof yardBlock>[0], flip);
+  return { x: block.col === 0 ? -1 : 1, y: block.row === 0 ? -1 : 1 };
+}
+
+export function tableArrangement(
+  width: number,
+  height: number,
+  colors: readonly PlayerColor[],
+  flip = false,
+): TableArrangement {
+  const count = colors.length;
+  const landscape = width > height;
   if (count > 4) {
-    const angle = -Math.PI / 2 + ((ALL_PLAYER_COLORS.indexOf(color) + 0.5) * Math.PI * 2) / count;
-    const radius = board / 2 + 3;
+    // The round board has one shared dice in its centre and each name on its
+    // rim, so nothing sits beside it: the board takes the whole short side.
     return {
-      x: size / 2 + Math.cos(angle) * radius,
-      y: size / 2 + Math.sin(angle) * radius,
-      rotation: (angle * 180) / Math.PI - 90,
+      orientation: landscape ? 'landscape' : 'portrait',
+      board: Math.max(1, Math.min(width - EDGE, height - EDGE, 900)),
+      panel: { width: 0, height: 0 },
+      gap: GAP,
+      before: [],
+      after: [],
     };
   }
-  const near = inset + board * 0.2,
-    far = inset + board * 0.8;
-  const edge = control / 2 + 2;
-  const seats = {
-    RED: { x: edge, y: near, rotation: 90 },
-    GREEN: { x: far, y: edge, rotation: 180 },
-    YELLOW: { x: size - edge, y: far, rotation: -90 },
-    BLUE: { x: near, y: size - edge, rotation: 0 },
+  const directions = colors.map((color) => ({ color, ...yardDirection(color, flip) }));
+
+  // Split seats onto the two sides of the board facing their yard.
+  const onBeforeSide = (d: { x: number; y: number }) =>
+    landscape
+      ? d.x < -EPSILON || (Math.abs(d.x) <= EPSILON && d.y < 0)
+      : d.y < -EPSILON || (Math.abs(d.y) <= EPSILON && d.x < 0);
+  const along = (d: { x: number; y: number }) => (landscape ? d.y : d.x);
+
+  // Four fixed corners; empty ones stay as gaps.
+  const at = (sideBefore: boolean, first: boolean) =>
+    directions.find((d) => onBeforeSide(d) === sideBefore && along(d) < 0 === first)?.color ?? null;
+  const before = [at(true, true), at(true, false)];
+  const after = [at(false, true), at(false, false)];
+
+  const perSide = Math.max(before.length, after.length, 1);
+  const short = Math.min(width, height);
+  let panelHeight = Math.round(Math.min(84, Math.max(56, short * 0.17)));
+
+  if (!landscape) {
+    const board = Math.max(1, Math.min(width - EDGE, height - 2 * (panelHeight + GAP) - EDGE, 900));
+    const panelWidth = Math.min(panelHeight * 2.6, (board - (perSide - 1) * GAP) / perSide);
+    return {
+      orientation: 'portrait',
+      board,
+      panel: { width: Math.floor(panelWidth), height: panelHeight },
+      gap: GAP,
+      before,
+      after,
+    };
+  }
+
+  // Landscape: panels stack in a column each side, so they must also fit the height.
+  panelHeight = Math.min(panelHeight, Math.floor((height - EDGE - (perSide - 1) * GAP) / perSide));
+  const panelWidth = Math.round(panelHeight * 2.7);
+  const board = Math.max(1, Math.min(height - EDGE, width - 2 * (panelWidth + GAP) - EDGE, 900));
+  return {
+    orientation: 'landscape',
+    board,
+    panel: { width: panelWidth, height: panelHeight },
+    gap: GAP,
+    before,
+    after,
   };
-  return seats[color as keyof typeof seats];
 }

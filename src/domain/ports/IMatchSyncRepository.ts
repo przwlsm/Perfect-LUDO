@@ -22,6 +22,11 @@ export interface IMatchSyncRepository {
     state: GameState,
     winnerSeat: number | null,
   ): Promise<OnlineMatchSnapshot>;
+  /**
+   * Once the turn clock has run out, asks the server to play the idle seat's
+   * turn. `version` is the board the caller saw, so the turn is played once.
+   */
+  claimTimeout(matchId: string, version: number): Promise<OnlineMatchSnapshot>;
   /** Ends the match for everyone; an escape hatch when somebody walks away. */
   abandon(matchId: string): Promise<OnlineMatchSnapshot>;
   subscribe(

@@ -6,6 +6,7 @@ import { HeuristicMoveStrategy } from '@/application/ai/HeuristicMoveStrategy';
 import {
   newMatch,
   type MatchOptions,
+  type SeatNames,
   type SavedMatch,
 } from '@/application/session/MatchRepository';
 import { matchRepository, randomProvider } from '@/config/container';
@@ -18,7 +19,10 @@ import {
   type Move,
   type PlayerColor,
   type DieValue,
+  NO_STATS,
+  type MatchStats,
 } from '@/domain';
+import { accumulateStats } from './matchStats';
 
 export function useMatch(options: MatchOptions, resume: boolean, paused: boolean, animate = false) {
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -32,8 +36,13 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
   const [error, setError] = useState<string | null>(null);
   const [foreground, setForeground] = useState(AppState.currentState !== 'background');
   const lock = useRef(false);
+  // The human seat's sixes, captures and coins home, for the daily missions.
+  const stats = useRef<{ id: string | null; value: MatchStats }>({ id: null, value: NO_STATS });
   const alive = useRef(false);
   const { mode, players, difficulty } = options;
+  const teams = options.teams === true;
+  // Compared by value: the options object is rebuilt on every render.
+  const namesKey = JSON.stringify(options.names ?? {});
   useEffect(() => {
     alive.current = true;
     let cancelled = false;
@@ -43,7 +52,15 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
         if (cancelled) return;
         if (resume && !loaded)
           throw new Error('No saved match was found. Start a new game from the lobby.');
-        const next = loaded ?? newMatch({ mode, players, difficulty });
+        const next =
+          loaded ??
+          newMatch({
+            mode,
+            players,
+            difficulty,
+            names: JSON.parse(namesKey) as SeatNames,
+            ...(teams ? { teams: true } : {}),
+          });
         await matchRepository.save(next);
         if (!cancelled) {
           setMatch(next);
@@ -63,7 +80,7 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
       finishFeedback.current?.();
       listener.remove();
     };
-  }, [resume, mode, players, difficulty, loadAttempt]);
+  }, [resume, mode, players, difficulty, namesKey, teams, loadAttempt]);
 
   const transition = useCallback(
     async (next: () => Promise<SavedMatch> | SavedMatch, kind: 'rolling' | 'moving') => {
@@ -85,6 +102,16 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
               [getCurrentPlayer(match.state).color]: updated.state.lastRoll!,
             }));
           const cue = match ? getGameCue(match.state, updated.state) : null;
+          if (match) {
+            if (stats.current.id !== updated.id)
+              stats.current = { id: updated.id, value: NO_STATS };
+            stats.current.value = accumulateStats(
+              stats.current.value,
+              match.state,
+              updated.state,
+              'RED',
+            );
+          }
           if (cue) setFeedback({ ...cue, id: ++sequence.current });
         }
         if (alive.current && animate)
@@ -173,6 +200,8 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
   }, [match, busy, paused, foreground, error, humanTurn, roll, transition]);
   return {
     match,
+    /** What the human (red) seat achieved this session, reported with the result. */
+    getStats: () => stats.current.value,
     busy,
     activity,
     feedback,

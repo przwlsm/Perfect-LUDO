@@ -33,6 +33,10 @@ function snapshot(version = 0, lastRoll: 1 | 6 | null = null): OnlineMatchSnapsh
       turnSeat: 0,
       lastRoll,
       winnerSeat: null,
+      stake: 0,
+      pool: 0,
+      prize: 0,
+      turnDeadline: null,
     },
   };
 }

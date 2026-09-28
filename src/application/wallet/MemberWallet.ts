@@ -1,4 +1,10 @@
-import { WalletRefusedError, type IWalletRepository } from '@/domain';
+import {
+  NO_STATS,
+  WalletRefusedError,
+  type IWalletRepository,
+  type MatchStats,
+  type WalletSnapshot,
+} from '@/domain';
 import { getCosmetic } from '@/domain/cosmetics/catalog';
 import type { IProfileService, Profile } from '../store/ProfileService';
 
@@ -48,13 +54,18 @@ export class MemberWallet {
    * result is counted on the device and queued. A refusal (bad id, guest
    * session) is surfaced rather than queued, since retrying cannot fix it.
    */
-  async recordMatch(id: string, won: boolean, rewardEligible: boolean): Promise<Profile> {
+  async recordMatch(
+    id: string,
+    won: boolean,
+    rewardEligible: boolean,
+    stats: MatchStats = NO_STATS,
+  ): Promise<Profile> {
     const local = await this.profiles.load();
     const queued = local.pendingRewards.some((r) => r.matchId === id);
     if (local.rewardedMatches.includes(id) && !queued) return local;
     if (queued) return this.flushPending();
     try {
-      const snapshot = await this.wallet.awardMatch(id, won, rewardEligible);
+      const snapshot = await this.wallet.awardMatch(id, won, rewardEligible, stats);
       // Mark it settled locally too, so a later flush does not resend it.
       await this.profiles.queueReward(id, won, rewardEligible);
       await this.profiles.settleReward(id);
@@ -63,6 +74,25 @@ export class MemberWallet {
       if (e instanceof WalletRefusedError) throw e;
       return this.profiles.queueReward(id, won, rewardEligible);
     }
+  }
+
+  /**
+   * Collects an online match. The server decides the result from its own
+   * record; if it cannot be reached now, the next wallet load collects it
+   * anyway (get_wallet sweeps uncollected matches), so nothing is queued here.
+   */
+  async recordOnlineMatch(matchId: string, stats: MatchStats = NO_STATS): Promise<Profile> {
+    try {
+      return await this.profiles.mirrorWallet(await this.wallet.awardOnlineMatch(matchId, stats));
+    } catch (e) {
+      if (e instanceof WalletRefusedError) throw e;
+      return this.profiles.load();
+    }
+  }
+
+  /** Mirrors a wallet snapshot another server call returned (spin, missions, season pass). */
+  adopt(snapshot: WalletSnapshot): Promise<Profile> {
+    return this.profiles.mirrorWallet(snapshot);
   }
 
   /** Replays queued results in order, stopping at the first the server cannot take right now. */

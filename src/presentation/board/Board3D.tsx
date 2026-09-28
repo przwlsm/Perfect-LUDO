@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Shape } from 'three';
-import { radialTrack, radialHome, radialYard } from './radialLayout';
+import { radialTrack, radialHome, radialHomeTriangle, radialYard } from './radialLayout';
 import {
   type ClassicColor,
   ALL_PLAYER_COLORS,
@@ -8,6 +8,7 @@ import {
   isSafeSquare,
   type GameState,
   type Move,
+  type PlayerColor,
 } from '@/domain';
 import { AnimatedBoardRotation, AnimatedPiece3D } from './AnimatedPiece3D';
 import { Canvas } from './ThreeCanvas';
@@ -38,6 +39,8 @@ export interface Board3DProps {
   readonly motionEnabled?: boolean;
   /** See Board2DProps.flip — same 2-player, opposite-corner relabeling. */
   readonly flip?: boolean;
+  /** See Board2DProps.homeStyle — 5-6 player tables only. */
+  readonly homeStyle?: 'triangle' | 'round';
   onSelectMove(move: Move): void;
 }
 
@@ -86,6 +89,22 @@ function wedgeShapes(half: number): readonly Shape[] {
 }
 
 const STAR = starShape(0.3, 0.13);
+
+/**
+ * A 5-6 player triangle home as a flat shape, in the same plane convention
+ * as STAR (shape x/y become world x/-z once laid FLAT).
+ */
+function homeTriangle(color: PlayerColor, count: number, grid: number): Shape {
+  const { apex, left, right } = radialHomeTriangle(color, count);
+  const shape = new Shape();
+  [apex, left, right].forEach(([row, col], i) => {
+    const [x, , z] = cellToPosition3D(row, col, 1, grid);
+    if (i === 0) shape.moveTo(x, -z);
+    else shape.lineTo(x, -z);
+  });
+  shape.closePath();
+  return shape;
+}
 const WEDGES = wedgeShapes(CENTER_HALF);
 /** Which colour each centre wedge belongs to (top, right, bottom, left). */
 const WEDGE_OWNERS: readonly ClassicColor[] = ['GREEN', 'YELLOW', 'BLUE', 'RED'];
@@ -102,6 +121,7 @@ export function Board3D({
   topDown = false,
   motionEnabled = false,
   flip = false,
+  homeStyle = 'triangle',
 }: Board3DProps): React.JSX.Element {
   const count = state.players.length;
   const extended = count > 4;
@@ -202,6 +222,25 @@ export function Board3D({
               ? radialYard(color, count)
               : [block.row + YARD_BLOCK_SIZE / 2 - 0.5, block.col + YARD_BLOCK_SIZE / 2 - 0.5];
             const [x, , z] = cellToPosition3D(centerRow, centerCol, 1, grid);
+            if (extended && homeStyle === 'triangle')
+              return (
+                <group key={`yard-${color}`}>
+                  {/* Raised coloured triangle filling the wedge between the arms. */}
+                  <mesh position={[0, -0.09, 0]} rotation={FLAT}>
+                    <extrudeGeometry
+                      args={[
+                        homeTriangle(color, count, grid),
+                        { depth: 0.22, bevelEnabled: false },
+                      ]}
+                    />
+                    <meshStandardMaterial color={theme.colors[color]} roughness={0.55} />
+                  </mesh>
+                  <mesh position={[x, 0.14, z]}>
+                    <cylinderGeometry args={[1.45, 1.45, 0.06, 40]} />
+                    <meshStandardMaterial color={theme.tile} roughness={0.9} />
+                  </mesh>
+                </group>
+              );
             return (
               <group key={`yard-${color}`}>
                 <mesh position={[x, 0.02, z]}>

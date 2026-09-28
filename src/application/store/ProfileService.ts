@@ -6,7 +6,7 @@ import {
   type IKeyValueStore,
   type WalletSnapshot,
 } from '@/domain';
-import { COSMETICS, getCosmetic } from '@/domain/cosmetics/catalog';
+import { COSMETICS, DEFAULT_TABLE_STYLE, getCosmetic } from '@/domain/cosmetics/catalog';
 
 /** A finished match whose reward could not reach the account yet. */
 export interface PendingReward {
@@ -23,6 +23,8 @@ export interface Profile {
   readonly board: string;
   readonly dice: string;
   readonly pack: string | null;
+  /** How the 5-6 player round table draws its homes (a `style` cosmetic). */
+  readonly style: string;
   readonly board3d: boolean;
   readonly reducedMotion: boolean;
   readonly soundEnabled: boolean;
@@ -40,6 +42,11 @@ export interface Profile {
    * replay after a crash or a second device can never pay twice.
    */
   readonly pendingRewards: readonly PendingReward[];
+  /** Account mirrors (0 for guests): gems, total XP, and the lucky spin. */
+  readonly gems: number;
+  readonly xp: number;
+  readonly lastSpin: string | null;
+  readonly spinStreak: number;
 }
 export const INITIAL_PROFILE: Profile = {
   version: 1,
@@ -49,6 +56,7 @@ export const INITIAL_PROFILE: Profile = {
   board: 'classic',
   dice: 'ivory',
   pack: null,
+  style: DEFAULT_TABLE_STYLE,
   board3d: false,
   reducedMotion: false,
   soundEnabled: true,
@@ -59,6 +67,10 @@ export const INITIAL_PROFILE: Profile = {
   rewardedMatches: [],
   lastGift: null,
   pendingRewards: [],
+  gems: 0,
+  xp: 0,
+  lastSpin: null,
+  spinStreak: 0,
 };
 export const PROFILE_KEY = 'ludo.profile.v1';
 
@@ -115,7 +127,11 @@ export function parseProfile(raw: string): Profile {
     !Array.isArray(p.rewardedMatches) ||
     !p.rewardedMatches.every((id) => typeof id === 'string') ||
     (p.lastGift !== null && typeof p.lastGift !== 'string') ||
-    (p.pendingRewards !== undefined && !validPending(p.pendingRewards))
+    (p.pendingRewards !== undefined && !validPending(p.pendingRewards)) ||
+    // Older saves predate table styles; present must be a style this profile owns.
+    (p.style !== undefined &&
+      p.style !== DEFAULT_TABLE_STYLE &&
+      (!p.owned.includes(p.style) || getCosmetic(p.style).kind !== 'style'))
   ) {
     throw new Error('Saved profile could not be read. Please retry loading.');
   }
@@ -126,6 +142,13 @@ export function parseProfile(raw: string): Profile {
     streak: p.streak ?? 0,
     bestStreak: p.bestStreak ?? 0,
     pendingRewards: p.pendingRewards ?? [],
+    style: p.style ?? DEFAULT_TABLE_STYLE,
+    gems: Number.isSafeInteger(p.gems) && p.gems >= 0 ? p.gems : 0,
+    xp: Number.isSafeInteger(p.xp) && p.xp >= 0 ? p.xp : 0,
+    lastSpin: typeof p.lastSpin === 'string' ? p.lastSpin : null,
+    spinStreak: Number.isSafeInteger(p.spinStreak) && p.spinStreak >= 0 ? p.spinStreak : 0,
+    // Free items are everyone's; saves from before one existed just lack it.
+    owned: [...new Set([...p.owned, ...FREE_ITEMS])],
   };
 }
 
@@ -151,6 +174,7 @@ export function applyWalletSnapshot(local: Profile, wallet: WalletSnapshot): Pro
     }
   }
   const board = owned.has(local.board) ? local.board : 'classic';
+  const style = owned.has(local.style) ? local.style : DEFAULT_TABLE_STYLE;
   const dice = owned.has(local.dice) ? local.dice : 'ivory';
   const packContents = local.pack ? getCosmetic(local.pack).contents : undefined;
   const pack =
@@ -166,7 +190,12 @@ export function applyWalletSnapshot(local: Profile, wallet: WalletSnapshot): Pro
     board,
     dice,
     pack,
+    style,
     lastGift: wallet.lastGift,
+    gems: wallet.gems,
+    xp: wallet.xp,
+    lastSpin: wallet.lastSpin,
+    spinStreak: wallet.spinStreak,
     games: wallet.games + pending.length,
     wins: wallet.wins + pendingWins,
     streak: wallet.streak,

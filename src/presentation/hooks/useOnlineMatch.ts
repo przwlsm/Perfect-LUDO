@@ -15,7 +15,10 @@ import {
   type Move,
   type OnlineMatchSnapshot,
   type PlayerColor,
+  NO_STATS,
+  type MatchStats,
 } from '@/domain';
+import { accumulateStats } from './matchStats';
 import { getGameCue, type GameFeedback } from '../audio/gameFeedback';
 import { useSocial } from '../state/SocialProvider';
 
@@ -46,6 +49,14 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
   const autoVersion = useRef<number | null>(null),
     cue = useRef(0);
   const actionError = useRef(false);
+  // This seat's sixes, captures and coins home, for the daily missions.
+  const stats = useRef<MatchStats>(NO_STATS);
+  // Server time minus device time, so turn deadlines count down correctly on
+  // a phone whose clock is off.
+  const clockOffset = useRef(0);
+  const claimedVersion = useRef<number | null>(null);
+  const myTurnRef = useRef(false);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const fresh = useCallback(() => mounted.current && scopeRef.current === scope, [scope]);
 
   useEffect(() => {
@@ -73,6 +84,8 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
   const accept = useCallback(
     async (next: OnlineMatchSnapshot) => {
       if (!fresh() || next.match.lobbyId !== lobbyId) return;
+      const serverNow = Date.parse(next.serverNow);
+      if (Number.isFinite(serverNow)) clockOffset.current = serverNow - Date.now();
       const current = latest.current;
       if (
         current &&
@@ -102,6 +115,8 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
       if (changed && previous) {
         const sound = getGameCue(previous.board, board);
         if (sound) setFeedback({ ...sound, id: ++cue.current });
+        const mine = next.mySeat === null ? null : seatColors(next.match.playerCount)[next.mySeat];
+        if (mine) stats.current = accumulateStats(stats.current, previous.board, board, mine);
       }
       if (next.match.lastRoll) {
         const color = seatColors(next.match.playerCount)[next.match.turnSeat];
@@ -163,6 +178,45 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
     () => (board && myTurn ? getValidMovesForCurrentPlayer(board) : []),
     [board, myTurn],
   );
+  useEffect(() => {
+    myTurnRef.current = myTurn;
+  }, [myTurn]);
+
+  // The turn clock: counts down for everyone, and once it has run out on
+  // somebody else's turn, asks the server to play that turn for them.
+  const deadlineIso = snapshot?.match.status === 'IN_PROGRESS' ? snapshot.match.turnDeadline : null;
+  const clockVersion = snapshot?.match.version ?? null;
+  useEffect(() => {
+    if (!deadlineIso || clockVersion === null || !foreground) {
+      setSecondsLeft(null);
+      return;
+    }
+    const deadline = Date.parse(deadlineIso) - clockOffset.current;
+    const tick = () => {
+      if (!fresh()) return;
+      const left = (deadline - Date.now()) / 1000;
+      setSecondsLeft(Math.max(0, Math.ceil(left)));
+      const current = latest.current?.snapshot;
+      if (
+        left < -1.5 &&
+        matchSyncRepository &&
+        current &&
+        current.mySeat !== null &&
+        !myTurnRef.current &&
+        current.match.version === clockVersion &&
+        claimedVersion.current !== clockVersion
+      ) {
+        claimedVersion.current = clockVersion;
+        void matchSyncRepository
+          .claimTimeout(current.match.id, clockVersion)
+          .then(accept)
+          .catch(() => undefined);
+      }
+    };
+    tick();
+    const timer = setInterval(tick, 500);
+    return () => clearInterval(timer);
+  }, [deadlineIso, clockVersion, foreground, fresh, accept]);
 
   const guard = useCallback(
     async (kind: 'rolling' | 'moving', action: () => Promise<OnlineMatchSnapshot>) => {
@@ -281,11 +335,19 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
   );
   return {
     match,
+    /** What this seat achieved so far, reported with the result for missions. */
+    getStats: () => stats.current,
     players: snapshot?.players ?? [],
     myColor,
     mySeat,
     status: snapshot?.match.status ?? null,
     winnerSeat: snapshot?.match.winnerSeat ?? null,
+    /** Coins each seat paid in, the pool, and what the winner collects. */
+    stake: snapshot?.match.stake ?? 0,
+    pool: snapshot?.match.pool ?? 0,
+    prize: snapshot?.match.prize ?? 0,
+    /** Whole seconds left on the current roll or move; null without a clock. */
+    secondsLeft,
     busy: activity !== null,
     activity,
     feedback,

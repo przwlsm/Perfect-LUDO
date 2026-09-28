@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../components/AppText';
 import { router } from 'expo-router';
 import { Body, Button, Card, Label, Sheet, shared } from '../components/Kit';
 import { useProfile } from '../state/ProfileProvider';

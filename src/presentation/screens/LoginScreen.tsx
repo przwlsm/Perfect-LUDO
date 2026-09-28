@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text } from '../components/AppText';
 import { router, useLocalSearchParams } from 'expo-router';
 import { authProvider } from '@/config/container';
-import { Body, Button, Card, Label, Screen, shared } from '../components/Kit';
+import { Body, Button, Card, Label, Screen, Sheet, shared } from '../components/Kit';
 import { useProfile } from '../state/ProfileProvider';
 import { useAuthSession } from '../state/useAuthSession';
 import { AuthField } from '../auth/AuthField';
@@ -34,6 +35,7 @@ export default function LoginScreen() {
   const [verification, setVerification] = useState<EmailVerification>('signup');
   const [cooldown, setCooldown] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   useEffect(() => {
     if (!cooldown) return;
     const timer = setTimeout(() => setCooldown((n) => n - 1), 1000);
@@ -167,6 +169,23 @@ export default function LoginScreen() {
                   ? 'Back to the store'
                   : 'Back to the game'}
             </Button>
+            {/* Tucked away on purpose: this is a permanent, hard-to-undo
+                action, so it should never be the thing a thumb lands on by
+                accident among the ordinary account buttons above. */}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Delete account"
+              disabled={auth.busy}
+              onPress={() => {
+                auth.clearError();
+                setConfirmingDelete(true);
+              }}
+              style={{ alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 8 }}
+            >
+              <Text style={{ fontSize: 12, color: ui.muted, textDecorationLine: 'underline' }}>
+                Delete account
+              </Text>
+            </Pressable>
           </>
         ) : (
           <>
@@ -365,6 +384,41 @@ export default function LoginScreen() {
           </Text>
         )}
       </Card>
+      <Sheet
+        visible={confirmingDelete}
+        onClose={() => {
+          if (!auth.busy) setConfirmingDelete(false);
+        }}
+        title="Delete your account?"
+      >
+        <Body>
+          This permanently deletes your account: your coins, unlocked looks, statistics and friends.
+          It cannot be undone.
+        </Body>
+        <Body>Your device keeps nothing to restore afterward, and this cannot be reversed.</Body>
+        {auth.error && (
+          <Text accessibilityLiveRegion="polite" style={shared.error}>
+            {auth.error}
+          </Text>
+        )}
+        <Button secondary disabled={auth.busy} onPress={() => setConfirmingDelete(false)}>
+          Cancel
+        </Button>
+        <Button
+          danger
+          disabled={auth.busy}
+          onPress={() =>
+            void auth.deleteAccount().then((ok) => {
+              if (ok) {
+                setConfirmingDelete(false);
+                router.replace('/');
+              }
+            })
+          }
+        >
+          {auth.busy ? 'Deleting…' : 'Yes, permanently delete my account'}
+        </Button>
+      </Sheet>
     </Screen>
   );
 }

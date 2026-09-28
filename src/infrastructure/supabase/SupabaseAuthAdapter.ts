@@ -209,6 +209,19 @@ export class SupabaseAuthAdapter implements IAccountAuthProvider {
     this.currentUser = null;
     this.exchanges.clear();
   }
+  /**
+   * Deletes the account server-side first; only on success does it clear the
+   * local session, exactly like signing out. A failed request leaves the
+   * player signed in rather than dropping them into a half-deleted state.
+   */
+  async deleteAccount(): Promise<void> {
+    const { error: rpcError } = await this.client.rpc('delete_own_account');
+    if (rpcError) throw rpcError;
+    const { error } = await this.client.auth.signOut({ scope: 'local' });
+    if (error) throw error;
+    this.currentUser = null;
+    this.exchanges.clear();
+  }
   getCurrentUser(): AuthUser | null {
     return this.currentUser;
   }

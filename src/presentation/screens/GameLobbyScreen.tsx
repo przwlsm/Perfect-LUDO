@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Text } from '../components/AppText';
 import { router, useLocalSearchParams } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 import {
   countJoined,
   displayNameOf,
   isLobbyPlayerDisconnected,
   seatColors,
   type LobbyPlayer,
+  tablePrize,
 } from '@/domain';
 import { Body, Button, Card, Label, Screen, shared, Sheet } from '../components/Kit';
 import { useLobby } from '../hooks/useLobby';
 import { useProfile } from '../state/ProfileProvider';
 import { useSocial } from '../state/SocialProvider';
 import { UserAvatar } from '../social/UserAvatar';
+import { shareInvite } from '../social/inviteLink';
 import { ui } from '../theme/themes';
 
 type SeatState = {
@@ -48,14 +52,16 @@ export default function GameLobbyScreen() {
   const lobby = useLobby(signedIn ? lobbyId : null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const snapshot = lobby.snapshot;
-  // Quick-play tables and guests both belong to the online hub, not the friends list.
+  // Quick-play and link tables, and guests, all belong to the online hub, not the friends list.
   const quick = snapshot?.challenge.kind === 'QUICK';
-  const home = quick || !member ? '/online' : '/friends';
+  const link = snapshot?.challenge.kind === 'LINK';
+  const home = quick || link || !member ? '/online' : '/friends';
   const homeLabel = quick
     ? 'Find another match'
-    : member
+    : member && !link
       ? 'Back to friends'
       : 'Back to online play';
+  const [copied, setCopied] = useState(false);
 
   async function leaveAndExit() {
     if (await lobby.leave()) router.replace(home);
@@ -121,35 +127,82 @@ export default function GameLobbyScreen() {
       nav={false}
       back
       title={closed ? 'Game closed' : 'Game lobby'}
-      subtitle={quick ? 'QUICK PLAY TABLE' : 'A PRIVATE TABLE'}
+      subtitle={
+        quick ? 'QUICK PLAY TABLE' : link ? 'PRIVATE GAME · INVITE LINK' : 'A PRIVATE TABLE'
+      }
     >
       {closed ? (
         <Card>
           <Label color={ui.danger}>
             {challenge.status === 'EXPIRED'
-              ? 'INVITATION EXPIRED'
+              ? link
+                ? 'LINK EXPIRED'
+                : 'INVITATION EXPIRED'
               : quick
                 ? 'TABLE BROKE UP'
-                : 'CHALLENGE CANCELLED'}
+                : link
+                  ? 'GAME CLOSED'
+                  : 'CHALLENGE CANCELLED'}
           </Label>
           <Text style={shared.sectionTitle}>
             {challenge.status === 'EXPIRED'
-              ? 'Nobody answered in time'
-              : quick
-                ? 'Someone left before the start'
-                : 'This game was called off'}
+              ? link
+                ? 'Nobody joined in time'
+                : 'Nobody answered in time'
+              : link
+                ? 'The host closed this game'
+                : quick
+                  ? 'Someone left before the start'
+                  : 'This game was called off'}
           </Text>
           <Body>
-            {challenge.status === 'EXPIRED'
-              ? 'The invitation timed out. Start a fresh challenge whenever you are ready.'
-              : quick
-                ? 'Quick-play tables only start with everyone present. Search again and you will be seated with the next players.'
-                : 'Everyone invited has been told. You can set up another game any time.'}
+            {link
+              ? 'Invite links stay open for 30 minutes. Start a new private game and share the fresh link.'
+              : challenge.status === 'EXPIRED'
+                ? 'The invitation timed out. Start a fresh challenge whenever you are ready.'
+                : quick
+                  ? 'Quick-play tables only start with everyone present. Search again and you will be seated with the next players.'
+                  : 'Everyone invited has been told. You can set up another game any time.'}
           </Body>
           <Button onPress={() => router.replace(home)}>{homeLabel}</Button>
         </Card>
       ) : (
         <>
+          {link && room.inviteCode && room.status === 'WAITING' && (
+            <Card style={{ borderColor: `${theme.accent}60`, gap: 12 }}>
+              <Label color={theme.accent}>INVITE YOUR PLAYERS</Label>
+              <Text
+                accessibilityLabel={`Invite code ${room.inviteCode.split('').join(' ')}`}
+                selectable
+                style={[s.inviteCode, { color: theme.accent }]}
+              >
+                {room.inviteCode}
+              </Text>
+              <Body>
+                {room.maxPlayers - joined > 0
+                  ? `Waiting for ${room.maxPlayers - joined} more. Anyone with the link or code can take a seat.`
+                  : 'Everyone is here.'}
+              </Body>
+              <View style={shared.row}>
+                <View style={{ flex: 1 }}>
+                  <Button compact onPress={() => void shareInvite(room.inviteCode!)}>
+                    Share link
+                  </Button>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    compact
+                    secondary
+                    onPress={() =>
+                      void Clipboard.setStringAsync(room.inviteCode!).then(() => setCopied(true))
+                    }
+                  >
+                    {copied ? '✓ Copied' : 'Copy code'}
+                  </Button>
+                </View>
+              </View>
+            </Card>
+          )}
           <Card style={{ borderColor: `${theme.accent}40`, gap: 16 }}>
             <View style={shared.between}>
               <View style={{ gap: 5 }}>
@@ -163,6 +216,12 @@ export default function GameLobbyScreen() {
                 <Text style={s.count}>
                   {joined} / {room.maxPlayers} players
                 </Text>
+                {room.stake > 0 && (
+                  <Text style={{ color: ui.gold, fontWeight: '800', fontSize: 13 }}>
+                    🪙 {room.stake.toLocaleString()} entry · winner takes{' '}
+                    {tablePrize(room.stake, room.maxPlayers).toLocaleString()}
+                  </Text>
+                )}
               </View>
               {room.status === 'COUNTDOWN' || room.status === 'STARTED' ? (
                 <View style={[s.countdown, { borderColor: theme.accent }]}>
@@ -295,6 +354,7 @@ function CountdownBanner({
 }
 
 const s = StyleSheet.create({
+  inviteCode: { fontSize: 40, fontWeight: '900', letterSpacing: 8, textAlign: 'center' },
   count: { color: ui.text, fontSize: 23, fontWeight: '900', letterSpacing: -0.5 },
   countdown: {
     width: 52,

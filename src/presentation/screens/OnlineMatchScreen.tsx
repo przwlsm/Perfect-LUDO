@@ -1,10 +1,13 @@
-import { useState } from 'react';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { useWindowDimensions, View } from 'react-native';
+import { Text } from '../components/AppText';
 import { router, useIsFocused } from 'expo-router';
-import { displayNameOf, isOnline, PLAYED_COINS, WIN_COINS, type OnlineMatchPlayer } from '@/domain';
+import { displayNameOf, isOnline, REWARDS, type OnlineMatchPlayer } from '@/domain';
+import { useOnlineReactions, useReactionBubbles } from '../hooks/useReactions';
 import { useGameSounds } from '../audio/useGameSounds';
 import { Body, Button, Card, Screen, Sheet, shared } from '../components/Kit';
-import { GameTable, gameTableStyles } from '../game/GameTable';
+import { GameTable } from '../game/GameTable';
+import { ResultPanel } from '../game/ResultPanel';
 import { useMotionEnabled } from '../hooks/useMotionEnabled';
 import { useOnlineMatch } from '../hooks/useOnlineMatch';
 import { useConnectivity } from '../state/ConnectivityProvider';
@@ -16,7 +19,7 @@ import { ui } from '../theme/themes';
 const ONLINE_HOME = '/online';
 
 export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
-  const { profile, theme, recordMatch, member, ready } = useProfile();
+  const { profile, theme, recordOnlineMatch, member, ready } = useProfile();
   useAtBoardPresence();
   const { width, height } = useWindowDimensions();
   const [menu, setMenu] = useState(false);
@@ -32,6 +35,20 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
   const game = useOnlineMatch(lobbyId, menu || rules || !focused || !ready);
   useGameSounds(game.feedback, profile.soundEnabled, focused && !menu && !rules, motionEnabled);
   const { match, humanTurn, busy, players, mySeat, myColor } = game;
+  const reactionBubbles = useReactionBubbles();
+  const seatColors = match?.state.players.map((p) => p.color).join(',') ?? '';
+  const colorOfSeat = useCallback(
+    (seat: number) => match?.state.players[seat]?.color ?? null,
+    // Seats never change colour during a match; the joined list is enough.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [seatColors],
+  );
+  const sendReaction = useOnlineReactions(
+    match?.id ?? null,
+    mySeat,
+    colorOfSeat,
+    reactionBubbles.show,
+  );
   const connectivity = useConnectivity();
   // A dropped link is reported, never treated as the game ending: the seat
   // is kept server-side and play resumes when the connection does.
@@ -53,6 +70,7 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
   }
 
   const won = game.winnerSeat !== null && game.winnerSeat === mySeat;
+  const winner = players.find((p) => p.seatIndex === game.winnerSeat);
   const over = game.status === 'FINISHED' || game.status === 'ABANDONED';
 
   async function finish() {
@@ -61,7 +79,9 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
     try {
       // Recorded against the shared match id, so the once-per-match guard on
       // the account stops a replay from paying out twice.
-      if (game.status === 'FINISHED') await recordMatch(match.id, won, true);
+      // The server reads the result from its own record; abandoned matches
+      // pay the players who stayed.
+      await recordOnlineMatch(match.id, game.getStats());
       router.replace(ONLINE_HOME);
     } catch {
       setNotice('Could not save your result. Tap again to retry.');
@@ -97,17 +117,29 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
                         : match.state.consecutiveSixes === 3
                           ? 'Three sixes! Your turn passes.'
                           : 'No moves this time. Passing the dice…'
-                    : 'Your turn - tap the dice to roll'
+                    : game.secondsLeft !== null && game.secondsLeft <= 5
+                      ? `Hurry! ${game.secondsLeft}s to roll`
+                      : 'Your turn - tap the dice to roll'
                   : `Waiting for ${waitingOn ? displayNameOf(waitingOn) : 'the next player'}…`;
 
   return (
     <GameTable
       game={game}
       // Everyone sees the same board, so which colour is yours has to be said.
-      label={myColor ? `ONLINE · YOU ARE ${myColor}` : 'ONLINE MATCH'}
+      label={
+        (game.pool > 0 ? `🪙 ${game.prize.toLocaleString()} PRIZE · ` : '') +
+        (myColor ? `YOU ARE ${myColor}` : 'ONLINE MATCH')
+      }
+      turnClock={over ? null : game.secondsLeft}
       statusLine={statusLine}
       // Everyone has their own screen, so nothing should be turned upside down.
       seatRotation={false}
+      seatLabel={(color) => {
+        const seat = match?.state.players.findIndex((p) => p.color === color) ?? -1;
+        if (seat === mySeat) return 'You';
+        const player = players.find((p) => p.seatIndex === seat);
+        return player ? displayNameOf(player) : color.charAt(0) + color.slice(1).toLowerCase();
+      }}
       motionEnabled={motionEnabled}
       tableArea={{
         width: tableArea.width || width,
@@ -124,6 +156,10 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
         setMenu(false);
         void game.abandon();
       }}
+      reactions={{
+        bubbles: reactionBubbles.bubbles,
+        send: mySeat === null ? undefined : sendReaction,
+      }}
       resultSheet={
         match && (
           <Sheet
@@ -137,43 +173,45 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
                   : 'That was a good game.'
             }
           >
-            <Text style={{ fontSize: 64, textAlign: 'center' }}>
-              {game.status === 'ABANDONED' ? '👋' : '🏆'}
-            </Text>
-            {game.status !== 'ABANDONED' && (
-              <Text
-                style={[
-                  gameTableStyles.winTitle,
-                  { color: theme.colors[match.state.winnerColor ?? 'RED'] },
-                ]}
-              >
-                {won ? 'YOU WIN' : `${match.state.winnerColor} WINS`}
-              </Text>
-            )}
-            <Seats players={players} mySeat={mySeat} winnerSeat={game.winnerSeat} />
-            {game.status === 'FINISHED' &&
-              (member ? (
-                <Card>
-                  <Text
-                    style={{
-                      color: theme.accent,
-                      fontSize: 30,
-                      fontWeight: '900',
-                      textAlign: 'center',
-                    }}
-                  >
-                    +{won ? WIN_COINS : PLAYED_COINS} coins
-                  </Text>
-                  <Text style={[shared.small, { textAlign: 'center' }]}>
-                    {won ? 'Against real people, too.' : 'Thanks for playing it out.'}
-                  </Text>
-                </Card>
-              ) : (
-                <Text style={[shared.small, { textAlign: 'center' }]}>
-                  Create an account to earn {WIN_COINS} coins for a win and {PLAYED_COINS} for
-                  playing it out.
-                </Text>
-              ))}
+            <ResultPanel
+              outcome={game.status === 'ABANDONED' ? 'abandoned' : won ? 'win' : 'loss'}
+              headline={
+                game.status === 'ABANDONED'
+                  ? 'TABLE CLOSED'
+                  : won
+                    ? 'YOU WIN'
+                    : `${winner ? displayNameOf(winner) : (match.state.winnerColor ?? '')} WINS`.toUpperCase()
+              }
+              accent={theme.colors[match.state.winnerColor ?? 'RED']}
+              subline={
+                game.status === 'ABANDONED'
+                  ? 'Too many players left, so this match ended early.'
+                  : won
+                    ? 'You beat real players. That is a proper win.'
+                    : 'Well played to the end. Rematch?'
+              }
+              stats={game.status === 'FINISHED' ? game.getStats() : null}
+              reward={
+                game.status === 'FINISHED' && member
+                  ? won
+                    ? {
+                        coins: REWARDS.online.win.coins + game.prize,
+                        xp: REWARDS.online.win.xp,
+                      }
+                    : REWARDS.online.played
+                  : null
+              }
+              note={
+                game.status === 'FINISHED' && !member
+                  ? `Create an account to earn ${REWARDS.online.win.coins} coins for every online win.`
+                  : game.status === 'ABANDONED' && game.pool > 0
+                    ? 'The players who stayed split the prize pool. It is added to your coins when you continue.'
+                    : undefined
+              }
+              motionEnabled={motionEnabled}
+            >
+              <Seats players={players} mySeat={mySeat} winnerSeat={game.winnerSeat} />
+            </ResultPanel>
             {notice && <Text style={shared.error}>{notice}</Text>}
             <Button disabled={saving} onPress={() => void finish()}>
               {saving

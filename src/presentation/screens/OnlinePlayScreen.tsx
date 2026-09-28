@@ -1,10 +1,20 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../components/AppText';
 import { router } from 'expo-router';
-import { describeConnection, type QuickMatchPlayerCount } from '@/domain';
+import {
+  describeConnection,
+  parseInviteCode,
+  REWARDS,
+  type QuickMatchPlayerCount,
+  type Stake,
+} from '@/domain';
+import { Ionicons } from '@expo/vector-icons';
+import { challengeRepository } from '@/config/container';
 import { ConnectionPill } from '../components/ConnectionPill';
-import { Body, Button, Card, Label, Screen, shared } from '../components/Kit';
+import { Body, Button, Card, Label, Screen, Sheet, shared } from '../components/Kit';
 import { useQuickMatch } from '../hooks/useQuickMatch';
+import { StakePicker } from '../components/StakePicker';
 import { AccountGateSheet, LOGIN_HREF, SIGN_UP_HREF } from '../social/AccountGate';
 import { UserAvatar } from '../social/UserAvatar';
 import { useConnectivity } from '../state/ConnectivityProvider';
@@ -27,7 +37,58 @@ export default function OnlinePlayScreen() {
   const auth = useAuthSession();
   const quick = useQuickMatch();
   const [seats, setSeats] = useState<QuickMatchPlayerCount>(2);
+  const [stake, setStake] = useState<Stake>(0);
+  const [privateStake, setPrivateStake] = useState<Stake>(0);
   const [gate, setGate] = useState<string | null>(null);
+  // Private game by invite link: pick a table size and share, or join by code.
+  const [privateOpen, setPrivateOpen] = useState(false);
+  const [privateSeats, setPrivateSeats] = useState<QuickMatchPlayerCount>(2);
+  const [codeInput, setCodeInput] = useState('');
+  const [privateBusy, setPrivateBusy] = useState(false);
+  const [privateError, setPrivateError] = useState<string | null>(null);
+
+  /**
+   * Closes the sheet first and moves on once it has gone: an Android dialog
+   * still closing when the next screen opens can be left showing on return.
+   */
+  function openRoom(lobbyId: string) {
+    setPrivateOpen(false);
+    setTimeout(() => router.push({ pathname: '/lobby/[id]', params: { id: lobbyId } }), 250);
+  }
+
+  async function createPrivate() {
+    if (!challengeRepository || privateBusy) return;
+    setPrivateBusy(true);
+    setPrivateError(null);
+    try {
+      const room = await challengeRepository.createLinkRoom(privateSeats, privateStake);
+      openRoom(room.lobbyId);
+    } catch (e) {
+      setPrivateError(e instanceof Error ? e.message : 'Could not create the game. Try again.');
+    } finally {
+      setPrivateBusy(false);
+    }
+  }
+
+  async function joinByCode() {
+    if (!challengeRepository || privateBusy) return;
+    const code = parseInviteCode(codeInput);
+    if (!code) {
+      setPrivateError('That code does not look right. It is six letters and numbers.');
+      return;
+    }
+    setPrivateBusy(true);
+    setPrivateError(null);
+    try {
+      const lobbyId = await challengeRepository.joinLinkRoom(code);
+      setCodeInput('');
+      openRoom(lobbyId);
+    } catch (e) {
+      setPrivateError(e instanceof Error ? e.message : 'Could not join that game. Try again.');
+    } finally {
+      setPrivateBusy(false);
+    }
+  }
 
   const lobbyId = quick.phase === 'matched' ? quick.ticket?.lobbyId : null;
   useEffect(() => {
@@ -129,6 +190,24 @@ export default function OnlinePlayScreen() {
           <ConnectionPill large />
         </View>
       </Card>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Weekly tournament. Open leaderboard"
+        onPress={() => router.push('/tournament')}
+        android_ripple={{ color: `${theme.accent}30` }}
+        style={[s.tourney, { borderColor: `${theme.accent}55` }]}
+      >
+        <View style={[s.tourneyIcon, { backgroundColor: `${theme.accent}22` }]}>
+          <Ionicons name="trophy" size={22} color={theme.accent} />
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={s.tourneyTitle}>Weekly tournament</Text>
+          <Text style={shared.small}>
+            Every win: +{REWARDS.online.win.coins} coins, +{REWARDS.online.win.xp} XP and +3 points.
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={ui.subtle} />
+      </Pressable>
 
       <View style={shared.section}>
         <Text style={shared.sectionTitle}>Quick Play</Text>
@@ -144,7 +223,7 @@ export default function OnlinePlayScreen() {
                   <Text style={shared.small}>
                     {quick.phase === 'matched'
                       ? 'Taking you to the table.'
-                      : `${seats}-player table · ${quick.ticket?.waiting ?? 1} waiting`}
+                      : `${seats}-player ${stake > 0 ? `${stake}-coin ` : ''}table · ${quick.ticket?.waiting ?? 1} waiting`}
                   </Text>
                 </View>
               </View>
@@ -187,12 +266,14 @@ export default function OnlinePlayScreen() {
                   </Pressable>
                 ))}
               </View>
+              <Label>ENTRY</Label>
+              <StakePicker value={stake} players={seats} onChange={setStake} />
               {quick.error && (
                 <Text accessibilityLiveRegion="polite" style={shared.error}>
                   {quick.error}
                 </Text>
               )}
-              <Button disabled={!quick.available} onPress={() => void quick.start(seats)}>
+              <Button disabled={!quick.available} onPress={() => void quick.start(seats, stake)}>
                 Quick Match →
               </Button>
             </>
@@ -227,13 +308,26 @@ export default function OnlinePlayScreen() {
           </View>
           <Text style={[s.arrow, { color: theme.accent }]}>↗</Text>
         </Pressable>
-        <View style={[s.option, { backgroundColor: theme.surface, opacity: 0.6 }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Create a private game or join with a code"
+          onPress={() => {
+            setPrivateError(null);
+            setPrivateOpen(true);
+          }}
+          android_ripple={{ color: `${theme.accent}30` }}
+          style={({ pressed }) => [
+            s.option,
+            { backgroundColor: theme.surface, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
           <Text style={s.optionIcon}>✉</Text>
           <View style={{ flex: 1, gap: 4 }}>
-            <Text style={s.optionTitle}>Create Private Game</Text>
-            <Text style={shared.small}>Invite by link. Coming soon.</Text>
+            <Text style={s.optionTitle}>Private Game</Text>
+            <Text style={shared.small}>Invite anyone with a link, or join with a code.</Text>
           </View>
-        </View>
+          <Text style={[s.arrow, { color: theme.accent }]}>↗</Text>
+        </Pressable>
       </View>
 
       {account === 'guest' && (
@@ -256,11 +350,106 @@ export default function OnlinePlayScreen() {
       )}
 
       <AccountGateSheet feature={gate} visible={gate !== null} onClose={() => setGate(null)} />
+      <Sheet
+        visible={privateOpen}
+        onClose={() => {
+          if (!privateBusy) setPrivateOpen(false);
+        }}
+        title="Private game"
+      >
+        <Label color={theme.accent}>START A TABLE</Label>
+        <Body>Pick the table size. You will get a link and a code to send to anyone.</Body>
+        <View style={shared.row}>
+          {SEATS.map((n) => (
+            <Pressable
+              key={n}
+              accessibilityRole="button"
+              accessibilityLabel={`${n} players`}
+              accessibilityState={{ selected: n === privateSeats }}
+              onPress={() => setPrivateSeats(n)}
+              android_ripple={{ color: `${theme.accent}30` }}
+              style={[
+                s.choice,
+                { backgroundColor: theme.surface },
+                n === privateSeats && { borderColor: theme.accent },
+              ]}
+            >
+              <Text style={s.choiceText}>{n}</Text>
+              <Text style={{ color: ui.muted, fontSize: 9 }}>players</Text>
+            </Pressable>
+          ))}
+        </View>
+        <StakePicker value={privateStake} players={privateSeats} onChange={setPrivateStake} />
+        <Button disabled={privateBusy} onPress={() => void createPrivate()}>
+          {privateBusy ? 'Working…' : 'Create game & get link'}
+        </Button>
+        <Label color={theme.accent}>HAVE A CODE?</Label>
+        <Text style={shared.small}>
+          Type the six-character code, or paste the whole invite message.
+        </Text>
+        <TextInput
+          accessibilityLabel="Invite code"
+          value={codeInput}
+          onChangeText={(t) => {
+            setCodeInput(t);
+            setPrivateError(null);
+          }}
+          editable={!privateBusy}
+          placeholder="e.g. K7Q2MX"
+          placeholderTextColor={ui.muted}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          returnKeyType="go"
+          onSubmitEditing={() => void joinByCode()}
+          style={s.codeInput}
+        />
+        <Button
+          secondary
+          disabled={privateBusy || !codeInput.trim()}
+          onPress={() => void joinByCode()}
+        >
+          Join game
+        </Button>
+        {privateError && (
+          <Text accessibilityLiveRegion="polite" style={shared.error}>
+            {privateError}
+          </Text>
+        )}
+      </Sheet>
     </Screen>
   );
 }
 
 const s = StyleSheet.create({
+  tourney: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    backgroundColor: '#2a2210',
+  },
+  tourneyIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tourneyTitle: { color: ui.text, fontSize: 16, fontWeight: '800' },
+  codeInput: {
+    minHeight: 50,
+    borderWidth: 1,
+    borderColor: '#ffffff28',
+    borderRadius: 12,
+    backgroundColor: '#00000020',
+    color: ui.text,
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 2,
+    paddingHorizontal: 14,
+  },
   welcome: { color: ui.text, fontSize: 19, fontWeight: '800' },
   choice: {
     flex: 1,

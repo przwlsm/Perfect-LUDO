@@ -3,6 +3,7 @@ import type {
   IAccountAuthProvider,
   IChallengeRepository,
   IConnectivityService,
+  IFeedbackRepository,
   IFriendsRepository,
   IKeyValueStore,
   IMatchmakingRepository,
@@ -10,6 +11,8 @@ import type {
   INotificationRepository,
   IPresenceService,
   IRandomProvider,
+  IRewardsRepository,
+  IReactionChannel,
   ISocialIdentityRepository,
   IUserProgressRepository,
   IWalletRepository,
@@ -27,6 +30,9 @@ import { SupabaseMatchmakingRepository } from '@/infrastructure/supabase/Supabas
 import { SupabaseAuthAdapter } from '@/infrastructure/supabase/SupabaseAuthAdapter';
 import { SupabaseUserProgressRepository } from '@/infrastructure/supabase/SupabaseUserProgressRepository';
 import { SupabaseWalletRepository } from '@/infrastructure/supabase/SupabaseWalletRepository';
+import { SupabaseFeedbackRepository } from '@/infrastructure/supabase/SupabaseFeedbackRepository';
+import { SupabaseRewardsRepository } from '@/infrastructure/supabase/SupabaseRewardsRepository';
+import { SupabaseReactionChannel } from '@/infrastructure/supabase/SupabaseReactionChannel';
 import { SupabaseChallengeRepository } from '@/infrastructure/supabase/SupabaseChallengeRepository';
 import { SupabaseFriendsRepository } from '@/infrastructure/supabase/SupabaseFriendsRepository';
 import { SupabaseMatchSyncRepository } from '@/infrastructure/supabase/SupabaseMatchSyncRepository';
@@ -67,6 +73,22 @@ export const userProgressRepository: IUserProgressRepository | null = supabase
  */
 export const walletRepository: IWalletRepository | null = supabase
   ? new SupabaseWalletRepository(supabase)
+  : null;
+/**
+ * Reachable by anyone, signed in or not — reporting a bug should never
+ * require an account. Null only when this build has no Supabase project
+ * configured at all, in which case the feedback screen falls back to email.
+ */
+/** Daily spin, missions, season pass and tournament: members only, server-owned. */
+export const rewardsRepository: IRewardsRepository | null = supabase
+  ? new SupabaseRewardsRepository(supabase)
+  : null;
+/** Emoji between the players of an online match, over Realtime broadcast. */
+export const reactionChannel: IReactionChannel | null = supabase
+  ? new SupabaseReactionChannel(supabase)
+  : null;
+export const feedbackRepository: IFeedbackRepository | null = supabase
+  ? new SupabaseFeedbackRepository(supabase)
   : null;
 
 /**

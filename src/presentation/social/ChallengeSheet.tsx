@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../components/AppText';
 import { displayNameOf, requiredFriendCount, toggleSelection, type Friend } from '@/domain';
 import { Body, Button, Label, shared, Sheet } from '../components/Kit';
 import { useProfile } from '../state/ProfileProvider';

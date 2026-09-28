@@ -218,6 +218,55 @@ for (const fn of ['wallet_json', 'lock_wallet']) {
   check(`${fn} is not exposed to clients`, Boolean(call.error), call.error?.code);
 }
 
+
+// --- Feedback and account deletion (0008, 0009) ------------------------------
+const feedbackRead = await client.from('feedback').select('*').limit(1);
+check(
+  'anonymous cannot read feedback',
+  (feedbackRead.data?.length ?? 0) === 0,
+  feedbackRead.error ? feedbackRead.error.code : `returned ${feedbackRead.data?.length ?? 0} rows`,
+);
+const feedbackInsert = await client
+  .from('feedback')
+  .insert({ category: 'bug', message: 'direct insert probe' });
+check('anonymous cannot write feedback directly', Boolean(feedbackInsert.error), feedbackInsert.error?.code);
+const deleteCall = await client.rpc('delete_own_account', {});
+check('anonymous cannot call delete_own_account', Boolean(deleteCall.error), deleteCall.error?.code);
+
+
+// --- Invite links (0011) -------------------------------------------------------
+for (const [fn, args] of [
+  ['create_link_room', { p_player_count: 2 }],
+  ['join_link_room', { p_code: 'ABCDEF' }],
+]) {
+  const call = await client.rpc(fn, args);
+  check(`anonymous cannot call ${fn}`, Boolean(call.error), call.error?.code);
+}
+const probeCodes = await client.from('lobbies').select('invite_code').limit(1);
+check(
+  'anonymous cannot read invite codes',
+  (probeCodes.data?.length ?? 0) === 0,
+  probeCodes.error ? probeCodes.error.code : `returned ${probeCodes.data?.length ?? 0} rows`,
+);
+
+// --- Progression, stakes and turn timers (0012, 0013) -------------------------
+for (const [fn, args] of [
+  ['get_rewards', {}],
+  ['spin_daily', {}],
+  ['get_tournament', {}],
+  ['join_quick_match', { p_player_count: 2, p_stake: 100 }],
+  ['claim_turn_timeout', { p_match_id: '00000000-0000-0000-0000-000000000000', p_version: 0 }],
+]) {
+  const call = await client.rpc(fn, args);
+  check(`anonymous cannot call ${fn}`, Boolean(call.error), call.error?.code);
+}
+const probeStakes = await client.from('match_stakes').select('*').limit(1);
+check(
+  'anonymous cannot read match stakes',
+  (probeStakes.data?.length ?? 0) === 0,
+  probeStakes.error ? probeStakes.error.code : `returned ${probeStakes.data?.length ?? 0} rows`,
+);
+
 const failed = results.filter((r) => !r.passed);
 if (failed.length > 0) {
   console.error(`\n${failed.length} security check(s) FAILED. Do not ship this.`);

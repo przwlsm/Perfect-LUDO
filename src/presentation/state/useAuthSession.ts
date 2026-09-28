@@ -111,6 +111,14 @@ export function useAuthSession() {
         setUser(null);
         return true;
       }),
+    /** Permanently deletes the account. `run` guards against a double tap, and a
+     * failure leaves the player signed in with the error surfaced as usual. */
+    deleteAccount: () =>
+      run(async () => {
+        await authProvider!.deleteAccount();
+        setUser(null);
+        return true;
+      }),
     requestReset: (email: string) =>
       run(async () => {
         await authProvider!.requestPasswordReset(email, authRedirect(true));

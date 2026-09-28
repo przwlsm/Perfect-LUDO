@@ -182,6 +182,7 @@ export function toQuickMatchTicket(value: unknown): QuickMatchTicket {
     status,
     lobbyId,
     playerCount: int(row.playerCount),
+    stake: row.stake == null ? 0 : int(row.stake),
     waiting: int(row.waiting),
     serverNow: str(row.serverNow),
   };
@@ -197,6 +198,10 @@ function toLobby(value: unknown): Lobby {
     status: oneOf(LOBBY_STATUS, row.status),
     startAt: optionalStr(row.startAt),
     createdAt: str(row.createdAt),
+    // Only LINK tables have one; older servers do not send the field.
+    inviteCode: typeof row.inviteCode === 'string' ? row.inviteCode : null,
+    // Servers before stakes send no field: those tables are free.
+    stake: row.stake == null ? 0 : int(row.stake),
   };
 }
 
@@ -208,7 +213,7 @@ function toChallenge(value: unknown): Challenge {
     playerCount: int(row.playerCount),
     status: oneOf(CHALLENGE_STATUS, row.status),
     // Older servers omit the kind; every table they know about is a friend table.
-    kind: row.kind === 'QUICK' ? 'QUICK' : 'FRIENDS',
+    kind: row.kind === 'QUICK' ? 'QUICK' : row.kind === 'LINK' ? 'LINK' : 'FRIENDS',
     expiresAt: str(row.expiresAt),
     startedAt: optionalStr(row.startedAt),
   };
@@ -310,6 +315,10 @@ export function toMatchSnapshot(value: unknown): OnlineMatchSnapshot {
       turnSeat: int(match.turnSeat),
       lastRoll: lastRoll as GameState['lastRoll'],
       winnerSeat: optionalInt(match.winnerSeat),
+      stake: match.stake == null ? 0 : int(match.stake),
+      pool: match.pool == null ? 0 : int(match.pool),
+      prize: match.prize == null ? 0 : int(match.prize),
+      turnDeadline: optionalStr(match.turnDeadline),
     },
     players: row.players.map(toMatchPlayer),
   };

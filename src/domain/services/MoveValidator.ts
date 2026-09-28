@@ -26,10 +26,11 @@ function findPiecesAtSquare(players: readonly Player[], square: number): Piece[]
 function countByOpponentColor(
   occupants: readonly Piece[],
   movingColor: PlayerColor,
+  friends: readonly PlayerColor[] = [],
 ): Map<PlayerColor, number> {
   const counts = new Map<PlayerColor, number>();
   for (const piece of occupants) {
-    if (piece.color === movingColor) continue;
+    if (piece.color === movingColor || friends.includes(piece.color)) continue;
     counts.set(piece.color, (counts.get(piece.color) ?? 0) + 1);
   }
   return counts;
@@ -43,8 +44,9 @@ function isBlockedForColor(
   players: readonly Player[],
   square: number,
   movingColor: PlayerColor,
+  friends: readonly PlayerColor[] = [],
 ): boolean {
-  const counts = countByOpponentColor(findPiecesAtSquare(players, square), movingColor);
+  const counts = countByOpponentColor(findPiecesAtSquare(players, square), movingColor, friends);
   return [...counts.values()].some((count) => count >= 2);
 }
 
@@ -58,17 +60,25 @@ function getCapturedPieceIds(
   players: readonly Player[],
   square: number,
   movingColor: PlayerColor,
+  friends: readonly PlayerColor[] = [],
 ): string[] {
   if (isSafeSquare(square, players.length)) return [];
-  const occupants = findPiecesAtSquare(players, square).filter((p) => p.color !== movingColor);
-  const counts = countByOpponentColor(occupants, movingColor);
+  const occupants = findPiecesAtSquare(players, square).filter(
+    (p) => p.color !== movingColor && !friends.includes(p.color),
+  );
+  const counts = countByOpponentColor(occupants, movingColor, friends);
   return occupants.filter((p) => counts.get(p.color) === 1).map((p) => p.id);
 }
 
+/**
+ * `friends` are colours on the mover's side in a team game: their coins are
+ * never captured and never block, exactly like the mover's own.
+ */
 export function getValidMoveForPiece(
   players: readonly Player[],
   piece: Piece,
   dieValue: DieValue,
+  friends: readonly PlayerColor[] = [],
 ): Move | null {
   const toProgress = isInYard(piece) ? (dieValue === 6 ? 1 : null) : piece.progress + dieValue;
   if (toProgress === null || toProgress > getFinishProgress(players.length)) return null;
@@ -78,9 +88,9 @@ export function getValidMoveForPiece(
     return { pieceId: piece.id, fromProgress: piece.progress, toProgress, capturedPieceIds: [] };
   }
 
-  if (isBlockedForColor(players, position.square, piece.color)) return null;
+  if (isBlockedForColor(players, position.square, piece.color, friends)) return null;
 
-  const capturedPieceIds = getCapturedPieceIds(players, position.square, piece.color);
+  const capturedPieceIds = getCapturedPieceIds(players, position.square, piece.color, friends);
   return { pieceId: piece.id, fromProgress: piece.progress, toProgress, capturedPieceIds };
 }
 
@@ -88,6 +98,7 @@ export function getValidMoves(
   players: readonly Player[],
   color: PlayerColor,
   dieValue: DieValue,
+  friends: readonly PlayerColor[] = [],
 ): Move[] {
   const player = players.find((p) => p.color === color);
   if (!player) return [];
@@ -95,7 +106,7 @@ export function getValidMoves(
   const moves: Move[] = [];
   for (const piece of player.pieces) {
     if (piece.progress === getFinishProgress(players.length)) continue;
-    const move = getValidMoveForPiece(players, piece, dieValue);
+    const move = getValidMoveForPiece(players, piece, dieValue, friends);
     if (move) moves.push(move);
   }
   return moves;

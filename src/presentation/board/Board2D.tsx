@@ -1,5 +1,6 @@
 import { RadialBoard2D } from './RadialBoard2D';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../components/AppText';
 import {
   PLAYER_COLORS,
   isSafeSquare,
@@ -37,6 +38,8 @@ export interface Board2DProps {
    * each colour uses rather than recomputing any geometry.
    */
   readonly flip?: boolean;
+  /** 5-6 player tables only: triangle homes (default) or the original round ones. */
+  readonly homeStyle?: 'triangle' | 'round';
   onSelectMove(move: Move): void;
 }
 
@@ -59,6 +62,7 @@ export function Board2D({
   theme = getBoardTheme('classic'),
   motionEnabled = false,
   flip = false,
+  homeStyle = 'triangle',
 }: Board2DProps): React.JSX.Element {
   if (state.players.length > 4)
     return (
@@ -68,6 +72,7 @@ export function Board2D({
         size={size}
         theme={theme}
         motionEnabled={motionEnabled}
+        homeStyle={homeStyle}
         onSelectMove={onSelectMove}
       />
     );

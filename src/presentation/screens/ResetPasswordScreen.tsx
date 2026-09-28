@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Text } from 'react-native';
+import { Text } from '../components/AppText';
 import { router } from 'expo-router';
 import { Body, Button, Card, Screen, shared } from '../components/Kit';
 import { AuthField } from '../auth/AuthField';

@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Text } from '../components/AppText';
 import { router } from 'expo-router';
-import { createGame } from '@/domain';
+import { createGame, seatColors } from '@/domain';
 import {
   COSMETICS,
   isCosmeticEquipped,
@@ -9,11 +10,16 @@ import {
   type CosmeticKind,
 } from '@/domain/cosmetics/catalog';
 import { Board2D } from '../board/Board2D';
+import { BoardThumbnail } from '../board/BoardThumbnail';
 import { Dice } from '../components/Dice';
 import { Body, Button, Card, Label, Screen, shared, Sheet } from '../components/Kit';
 import { useProfile } from '../state/ProfileProvider';
 import { getBoardTheme, getCardDesign, ui } from '../theme/themes';
 const preview = createGame(['RED', 'GREEN', 'YELLOW', 'BLUE']);
+/** Table styles only change the 5-6 player table, so that is what they preview. */
+const tablePreview = createGame(seatColors(6));
+const homeStyleOf = (id: string) =>
+  id === 'round-homes' ? ('round' as const) : ('triangle' as const);
 export default function StoreScreen() {
   const { profile, theme, member, wallet, purchase, equip } = useProfile();
   const signIn = () => router.push({ pathname: '/login', params: { intent: 'store' } });
@@ -23,6 +29,13 @@ export default function StoreScreen() {
   const [selected, setSelected] = useState<Cosmetic | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  // The grid is the heavy part: let the header and tabs paint first, so the
+  // tab switch itself feels instant, then fill the cards in.
+  const [gridReady, setGridReady] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setGridReady(true), 0);
+    return () => clearTimeout(timer);
+  }, []);
   const columns = width >= 800 ? 4 : width >= 560 ? 3 : 2;
   const cardWidth = (Math.min(width, 960) - 40 - (columns - 1) * 12) / columns;
   const items = COSMETICS.filter(
@@ -50,7 +63,7 @@ export default function StoreScreen() {
     }
   }
   return (
-    <Screen title="A little more you." subtitle="THE CLUB COLLECTION">
+    <Screen back title="A little more you." subtitle="THE CLUB COLLECTION">
       <Body>
         Individual boards. Signature dice. Complete theme packs.{'\n'}Unlock a new look with the
         coins you earn by playing.
@@ -69,7 +82,7 @@ export default function StoreScreen() {
       </Card>
       <View style={{ gap: 8 }}>
         <View style={s.tabs}>
-          {(['board', 'dice', 'pack'] as const).map((tab) => (
+          {(['board', 'dice', 'pack', 'style'] as const).map((tab) => (
             <Pressable
               key={tab}
               accessibilityRole="button"
@@ -79,8 +92,14 @@ export default function StoreScreen() {
               style={[s.tab, kind === tab && { backgroundColor: theme.accent }]}
             >
               <Text style={[s.tabText, kind === tab && { color: '#211d19' }]}>
-                {tab === 'board' ? 'Boards' : tab === 'dice' ? 'Dice' : 'Theme Packs'} ·{' '}
-                {COSMETICS.filter((item) => item.kind === tab).length}
+                {tab === 'board'
+                  ? 'Boards'
+                  : tab === 'dice'
+                    ? 'Dice'
+                    : tab === 'pack'
+                      ? 'Theme Packs'
+                      : 'Table styles'}{' '}
+                · {COSMETICS.filter((item) => item.kind === tab).length}
               </Text>
             </Pressable>
           ))}
@@ -98,7 +117,7 @@ export default function StoreScreen() {
         </Pressable>
       </View>
       <View style={s.grid}>
-        {items.map((item) => {
+        {(gridReady ? items : []).map((item) => {
           const owned = profile.owned.includes(item.id);
           const equipped = isCosmeticEquipped(profile, item);
           const boardTheme = getBoardTheme(item.contents?.board ?? item.id);
@@ -133,7 +152,7 @@ export default function StoreScreen() {
                 pointerEvents="none"
               >
                 {item.kind === 'pack' ? (
-                  <PackPreview item={item} size={cardWidth * 0.6} />
+                  <PackPreview item={item} size={cardWidth * 0.6} thumbnail />
                 ) : item.kind === 'board' ? (
                   <View
                     style={{
@@ -143,14 +162,17 @@ export default function StoreScreen() {
                       transform: [{ rotateZ: '-8deg' }],
                     }}
                   >
-                    <Board2D
-                      state={preview}
-                      size={cardWidth * 0.65}
-                      validMoves={null}
-                      theme={boardTheme}
-                      onSelectMove={() => undefined}
-                    />
+                    <BoardThumbnail theme={boardTheme} size={cardWidth * 0.65} />
                   </View>
+                ) : item.kind === 'style' ? (
+                  <Board2D
+                    state={tablePreview}
+                    size={cardWidth * 0.78}
+                    validMoves={null}
+                    theme={theme}
+                    homeStyle={homeStyleOf(item.id)}
+                    onSelectMove={() => undefined}
+                  />
                 ) : (
                   <View style={{ transform: [{ rotateZ: '-14deg' }, { scale: 1.4 }] }}>
                     <Dice value={5} finish={item.id} />
@@ -235,6 +257,15 @@ export default function StoreScreen() {
                     onSelectMove={() => undefined}
                   />
                 </View>
+              ) : selected.kind === 'style' ? (
+                <Board2D
+                  state={tablePreview}
+                  size={Math.min(width - 112, 280)}
+                  validMoves={null}
+                  theme={theme}
+                  homeStyle={homeStyleOf(selected.id)}
+                  onSelectMove={() => undefined}
+                />
               ) : (
                 <View style={{ padding: 24, transform: [{ scale: 1.6 }] }}>
                   <Dice value={6} finish={selected.id} />
@@ -319,7 +350,16 @@ export default function StoreScreen() {
     </Screen>
   );
 }
-function PackPreview({ item, size }: { item: Cosmetic; size: number }) {
+function PackPreview({
+  item,
+  size,
+  thumbnail = false,
+}: {
+  item: Cosmetic;
+  size: number;
+  /** Store cards use the still thumbnail; the detail sheet shows the real board. */
+  thumbnail?: boolean;
+}) {
   const t = getBoardTheme(item.contents!.board);
   return (
     <View
@@ -331,13 +371,17 @@ function PackPreview({ item, size }: { item: Cosmetic; size: number }) {
         borderRadius: 12,
       }}
     >
-      <Board2D
-        state={preview}
-        size={size}
-        validMoves={null}
-        theme={t}
-        onSelectMove={() => undefined}
-      />
+      {thumbnail ? (
+        <BoardThumbnail theme={t} size={size} />
+      ) : (
+        <Board2D
+          state={preview}
+          size={size}
+          validMoves={null}
+          theme={t}
+          onSelectMove={() => undefined}
+        />
+      )}
       <View
         style={[
           {
@@ -363,13 +407,16 @@ function PackPreview({ item, size }: { item: Cosmetic; size: number }) {
 const s = StyleSheet.create({
   tabs: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 3,
     backgroundColor: '#ffffff06',
     padding: 4,
     borderRadius: 14,
   },
   tab: {
-    flex: 1,
+    // Two per row: four categories no longer fit across a phone.
+    flexBasis: '48%',
+    flexGrow: 1,
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 12,

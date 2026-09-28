@@ -1,16 +1,20 @@
 import { COSMETICS, getCosmetic } from '../cosmetics/catalog';
 import {
+  BOT_PAID_GAMES_PER_DAY,
   DAILY_GIFT_COINS,
-  PLAYED_COINS,
-  WIN_COINS,
+  levelInfo,
+  REWARDS,
   WalletRefusedError,
   WalletUnavailableError,
   type WalletSnapshot,
 } from '../entities/Wallet';
+import type { MatchStats } from '../entities/Progression';
 import type { IWalletRepository } from '../ports/IWalletRepository';
 
 interface Account {
   coins: number;
+  gems: number;
+  xp: number;
   owned: string[];
   lastGift: string | null;
   games: number;
@@ -18,13 +22,29 @@ interface Account {
   streak: number;
   bestStreak: number;
   rewarded: Set<string>;
+  paidBotGamesToday: number;
 }
 
+const fresh = (): Account => ({
+  coins: 1000,
+  gems: 20,
+  xp: 0,
+  owned: [],
+  lastGift: null,
+  games: 0,
+  wins: 0,
+  streak: 0,
+  bestStreak: 0,
+  rewarded: new Set(),
+  paidBotGamesToday: 0,
+});
+
 /**
- * In-memory IWalletRepository that behaves like migration 0007: per-account
- * state, idempotent purchases and rewards, server-side price and balance
- * checks, guests refused. `offline` makes every call fail as unreachable so
- * tests can walk the retry paths.
+ * In-memory IWalletRepository that behaves like migrations 0007 and 0012:
+ * per-account state, idempotent purchases and rewards, server-side price and
+ * balance checks, capped bot rewards, server-decided online results, XP with
+ * level-up payouts, guests refused. `offline` makes every call fail as
+ * unreachable so tests can walk the retry paths.
  */
 export class InMemoryWalletRepository implements IWalletRepository {
   private readonly accounts = new Map<string, Account>();
@@ -34,6 +54,13 @@ export class InMemoryWalletRepository implements IWalletRepository {
   /** Lets a test pretend a day has passed. */
   today = '2026-09-25';
   calls: string[] = [];
+  /** The server's record of online matches: who won, per match id and uid. */
+  readonly onlineResults = new Map<
+    string,
+    { winner: string | null; players: string[]; leaver?: string }
+  >();
+  /** Last stats reported, for assertions. */
+  lastStats: MatchStats | null = null;
 
   private account(): Account {
     this.calls.push(this.offline ? 'offline' : 'call');
@@ -42,16 +69,7 @@ export class InMemoryWalletRepository implements IWalletRepository {
     if (this.session.guest) throw new WalletRefusedError('Create an account to use this feature.');
     let account = this.accounts.get(this.session.uid);
     if (!account) {
-      account = {
-        coins: 1000,
-        owned: [],
-        lastGift: null,
-        games: 0,
-        wins: 0,
-        streak: 0,
-        bestStreak: 0,
-        rewarded: new Set(),
-      };
+      account = fresh();
       this.accounts.set(this.session.uid, account);
     }
     return account;
@@ -66,21 +84,35 @@ export class InMemoryWalletRepository implements IWalletRepository {
       wins: account.wins,
       streak: account.streak,
       bestStreak: account.bestStreak,
+      gems: account.gems,
+      xp: account.xp,
+      level: levelInfo(account.xp),
+      lastSpin: null,
+      spinStreak: 0,
     };
+  }
+
+  /** Same level-up payouts as the server's grant_xp. */
+  private grantXp(account: Account, amount: number) {
+    const before = levelInfo(account.xp).level;
+    account.xp += amount;
+    const after = levelInfo(account.xp).level;
+    for (let level = before + 1; level <= after; level++) {
+      account.coins += 100 + 20 * level;
+      account.gems += 5 + (level % 5 === 0 ? 20 : 0);
+    }
+  }
+
+  private record(account: Account, won: boolean) {
+    account.games += 1;
+    if (won) account.wins += 1;
+    account.streak = won ? account.streak + 1 : 0;
+    account.bestStreak = Math.max(account.bestStreak, account.streak);
   }
 
   /** Test setup: what an account holds on the server before the app looks. */
   seed(uid: string, state: Partial<Omit<Account, 'rewarded'>>): void {
-    const current = this.accounts.get(uid) ?? {
-      coins: 1000,
-      owned: [],
-      lastGift: null,
-      games: 0,
-      wins: 0,
-      streak: 0,
-      bestStreak: 0,
-      rewarded: new Set<string>(),
-    };
+    const current = this.accounts.get(uid) ?? fresh();
     this.accounts.set(uid, { ...current, ...state, owned: [...(state.owned ?? current.owned)] });
   }
 
@@ -117,16 +149,38 @@ export class InMemoryWalletRepository implements IWalletRepository {
     matchId: string,
     won: boolean,
     rewardEligible: boolean,
+    stats?: MatchStats,
   ): Promise<WalletSnapshot> {
     const account = this.account();
-    if (!matchId || matchId.length > 64) throw new WalletRefusedError('Invalid match id.');
+    if (!matchId || matchId.length > 64 || matchId.startsWith('online:'))
+      throw new WalletRefusedError('Invalid match id.');
     if (account.rewarded.has(matchId)) return this.snapshot(account);
     account.rewarded.add(matchId);
-    account.games += 1;
-    if (won) account.wins += 1;
-    account.streak = won ? account.streak + 1 : 0;
-    account.bestStreak = Math.max(account.bestStreak, account.streak);
-    if (rewardEligible) account.coins += won ? WIN_COINS : PLAYED_COINS;
+    this.lastStats = stats ?? null;
+    this.record(account, won);
+    if (rewardEligible && account.paidBotGamesToday < BOT_PAID_GAMES_PER_DAY) {
+      account.coins += won ? REWARDS.bot.win.coins : REWARDS.bot.played.coins;
+      account.paidBotGamesToday += 1;
+    }
+    this.grantXp(account, rewardEligible ? (won ? REWARDS.bot.win.xp : REWARDS.bot.played.xp) : 10);
+    return this.snapshot(account);
+  }
+
+  async awardOnlineMatch(matchId: string, stats?: MatchStats): Promise<WalletSnapshot> {
+    const account = this.account();
+    const result = this.onlineResults.get(matchId);
+    const uid = this.session!.uid;
+    if (!result || !result.players.includes(uid))
+      throw new WalletRefusedError('You are not in that match.');
+    const key = `online:${matchId}`;
+    if (account.rewarded.has(key)) return this.snapshot(account);
+    account.rewarded.add(key);
+    this.lastStats = stats ?? null;
+    if (result.leaver === uid) return this.snapshot(account);
+    const won = result.winner === uid;
+    this.record(account, won);
+    account.coins += won ? REWARDS.online.win.coins : REWARDS.online.played.coins;
+    this.grantXp(account, won ? REWARDS.online.win.xp : REWARDS.online.played.xp);
     return this.snapshot(account);
   }
 }

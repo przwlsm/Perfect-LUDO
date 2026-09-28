@@ -1,9 +1,17 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '../components/AppText';
 import { ALL_PLAYER_COLORS, isSafeSquare } from '@/domain';
 import type { Board2DProps } from './Board2D';
 import { getBoardTheme } from '../theme/themes';
 import { AnimatedPiece2D } from './AnimatedPiece2D';
-import { radialHome, radialTrack, radialYard, radialPoint, RADIAL_GRID } from './radialLayout';
+import {
+  radialHome,
+  radialHomeTriangle,
+  radialTrack,
+  radialYard,
+  radialPoint,
+  RADIAL_GRID,
+} from './radialLayout';
 import { getCellForPiece } from './getCellForPiece';
 export function RadialBoard2D({
   state,
@@ -11,6 +19,7 @@ export function RadialBoard2D({
   size,
   theme = getBoardTheme('classic'),
   motionEnabled = false,
+  homeStyle = 'triangle',
   onSelectMove,
 }: Board2DProps) {
   const count = state.players.length,
@@ -21,15 +30,18 @@ export function RadialBoard2D({
     p.pieces.map((piece, slot) => ({ piece, slot, cell: getCellForPiece(piece, slot, count) })),
   );
   const occupied = new Map<string, number>();
+  const round = homeStyle === 'round';
   return (
     <View
       style={{
         width: size,
         height: size,
-        borderRadius: size / 2,
-        overflow: 'hidden',
-        backgroundColor: theme.surface,
         borderWidth: 0,
+        // Round homes sit on a round table; triangle homes, arms and centre
+        // together already form the board's outline, so nothing is drawn behind.
+        ...(round
+          ? { borderRadius: size / 2, overflow: 'hidden', backgroundColor: theme.surface }
+          : null),
       }}
     >
       {colors.map((color, seat) => (
@@ -78,25 +90,80 @@ export function RadialBoard2D({
           />
         );
       })}
-      {colors.map((color) => {
-        const [r, c] = radialYard(color, count);
-        return (
-          <View
-            key={color}
-            style={{
-              position: 'absolute',
-              left: (c - 1.35) * cell,
-              top: (r - 1.35) * cell,
-              width: cell * 3.7,
-              height: cell * 3.7,
-              borderRadius: cell * 2,
-              backgroundColor: theme.tile,
-              borderColor: theme.colors[color],
-              borderWidth: cell * 0.3,
-            }}
-          />
-        );
-      })}
+      {!round &&
+        colors.map((color) => {
+          const { apex, left, right } = radialHomeTriangle(color, count);
+          const px = ([r, c]: readonly number[]) => ({
+            x: (c! + 0.5) * cell,
+            y: (r! + 0.5) * cell,
+          });
+          const a = px(apex);
+          const l = px(left);
+          const b = px(right);
+          const mid = { x: (l.x + b.x) / 2, y: (l.y + b.y) / 2 };
+          const base = Math.hypot(b.x - l.x, b.y - l.y);
+          const height = Math.hypot(a.x - mid.x, a.y - mid.y);
+          // Drawn apex-up from borders, then turned so the apex faces the centre.
+          const turn = (Math.atan2(a.y - mid.y, a.x - mid.x) * 180) / Math.PI + 90;
+          const [yr, yc] = radialYard(color, count);
+          return (
+            <View
+              key={color}
+              pointerEvents="none"
+              style={{ position: 'absolute', left: 0, top: 0 }}
+            >
+              <View
+                style={{
+                  position: 'absolute',
+                  left: (a.x + mid.x) / 2 - base / 2,
+                  top: (a.y + mid.y) / 2 - height / 2,
+                  width: 0,
+                  height: 0,
+                  borderLeftWidth: base / 2,
+                  borderRightWidth: base / 2,
+                  borderBottomWidth: height,
+                  borderLeftColor: 'transparent',
+                  borderRightColor: 'transparent',
+                  borderBottomColor: theme.colors[color],
+                  transform: [{ rotate: `${turn}deg` }],
+                }}
+              />
+              <View
+                style={{
+                  position: 'absolute',
+                  left: (yc + 0.5 - 1.45) * cell,
+                  top: (yr + 0.5 - 1.45) * cell,
+                  width: cell * 2.9,
+                  height: cell * 2.9,
+                  borderRadius: cell * 1.45,
+                  backgroundColor: theme.tile,
+                  borderWidth: cell * 0.12,
+                  borderColor: '#00000018',
+                }}
+              />
+            </View>
+          );
+        })}
+      {round &&
+        colors.map((color) => {
+          const [r, c] = radialYard(color, count);
+          return (
+            <View
+              key={color}
+              style={{
+                position: 'absolute',
+                left: (c - 1.35) * cell,
+                top: (r - 1.35) * cell,
+                width: cell * 3.7,
+                height: cell * 3.7,
+                borderRadius: cell * 2,
+                backgroundColor: theme.tile,
+                borderColor: theme.colors[color],
+                borderWidth: cell * 0.3,
+              }}
+            />
+          );
+        })}
       {track.map(([r, c], index) => {
         const [nr, nc] = track[(index + 1) % track.length]!;
         const length = Math.hypot(nr - r, nc - c) * cell;

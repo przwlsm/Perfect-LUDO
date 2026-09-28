@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../components/AppText';
 import { displayNameOf, type Friend } from '@/domain';
 import { Body, Button, Card, shared } from '../components/Kit';
 import { ui } from '../theme/themes';

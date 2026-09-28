@@ -87,10 +87,17 @@ export interface Lobby {
   /** Server-chosen instant the game begins; null until the countdown starts. */
   readonly startAt: string | null;
   readonly createdAt: string;
+  /** LINK tables only: the six-character code anyone with the link joins by. */
+  readonly inviteCode: string | null;
+  /** Coins each seat pays when the match starts; 0 for a free table. */
+  readonly stake: number;
 }
 
-/** FRIENDS tables are invited; QUICK tables are seated from the public queue. */
-export type ChallengeKind = 'FRIENDS' | 'QUICK';
+/**
+ * FRIENDS tables are invited; QUICK tables are seated from the public queue;
+ * LINK tables are opened by a host and joined by anyone holding the invite code.
+ */
+export type ChallengeKind = 'FRIENDS' | 'QUICK' | 'LINK';
 
 export interface Challenge {
   readonly id: string;

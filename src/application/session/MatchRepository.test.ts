@@ -1,5 +1,5 @@
 import { InMemoryKeyValueStore } from '@/domain/testing/InMemoryKeyValueStore';
-import { MatchRepository, newMatch, parseMatch } from './MatchRepository';
+import { cleanSeatNames, MatchRepository, newMatch, parseMatch } from './MatchRepository';
 describe('saved matches', () => {
   it('restores a match including a pending dice roll', async () => {
     const storage = new InMemoryKeyValueStore();
@@ -27,5 +27,34 @@ describe('saved matches', () => {
         JSON.stringify({ ...m, state: { ...m.state, status: 'FINISHED', winnerColor: 'RED' } }),
       ),
     ).toThrow();
+  });
+});
+
+describe('seat names', () => {
+  it('keeps trimmed names for real seats and drops everything else', () => {
+    expect(
+      cleanSeatNames(
+        { RED: '  Priya ', GREEN: '', YELLOW: 'A very long player name', PURPLE: 'Ghost', BLUE: 7 },
+        4,
+      ),
+    ).toEqual({ RED: 'Priya', YELLOW: 'A very long pl' });
+  });
+  it('strips control characters and never throws on junk', () => {
+    expect(cleanSeatNames({ RED: 'Ra\u0000vi\n' }, 2)).toEqual({ RED: 'Ravi' });
+    expect(cleanSeatNames('nonsense', 6)).toEqual({});
+    expect(cleanSeatNames(null, 6)).toEqual({});
+  });
+  it('restores a saved match with its names, dropping a damaged one instead of failing', () => {
+    const match = newMatch({
+      mode: 'local',
+      players: 6,
+      difficulty: 'smart',
+      names: { RED: 'Asha', ORANGE: 'Dev' },
+    });
+    const raw = JSON.stringify({
+      ...match,
+      options: { ...match.options, names: { RED: 'Asha', ORANGE: 42 } },
+    });
+    expect(parseMatch(raw).options.names).toEqual({ RED: 'Asha' });
   });
 });

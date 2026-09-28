@@ -1,5 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { CreatedChallenge, IChallengeRepository, LobbySnapshot, Unsubscribe } from '@/domain';
+import type {
+  CreatedChallenge,
+  IChallengeRepository,
+  LinkRoom,
+  LobbySnapshot,
+  Unsubscribe,
+} from '@/domain';
 import { toLobbySnapshot } from './socialRows';
 import { rpc, removeChannel, uniqueTopic } from './supabaseRpc';
 
@@ -29,6 +35,25 @@ export class SupabaseChallengeRepository implements IChallengeRepository {
 
   async cancelChallenge(challengeId: string): Promise<void> {
     await rpc(this.client, 'cancel_challenge', { p_challenge_id: challengeId });
+  }
+
+  async createLinkRoom(playerCount: number, stake = 0): Promise<LinkRoom> {
+    const data = await rpc<{ lobbyId?: unknown; code?: unknown }>(this.client, 'create_link_room', {
+      p_player_count: playerCount,
+      ...(stake > 0 ? { p_stake: stake } : {}),
+    });
+    if (typeof data?.lobbyId !== 'string' || typeof data?.code !== 'string') {
+      throw new Error('The game could not be created. Please try again.');
+    }
+    return { lobbyId: data.lobbyId, code: data.code };
+  }
+
+  async joinLinkRoom(code: string): Promise<string> {
+    const data = await rpc<{ lobbyId?: unknown }>(this.client, 'join_link_room', { p_code: code });
+    if (typeof data?.lobbyId !== 'string') {
+      throw new Error('Could not join that game. Please try again.');
+    }
+    return data.lobbyId;
   }
 
   async getLobby(lobbyId: string): Promise<LobbySnapshot> {

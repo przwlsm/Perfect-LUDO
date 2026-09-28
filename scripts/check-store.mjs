@@ -163,7 +163,9 @@ await expectFail('daily gift cannot be claimed twice', me, 'claim_daily_gift', {
 const before = await rpc(me, 'get_wallet');
 const matchId = `check-${randomUUID()}`;
 const paid = await rpc(me, 'award_match', { p_match_id: matchId, p_won: true, p_eligible: true });
-ok('a won match pays 150 and counts once', paid.coins === before.coins + 150 && paid.games === before.games + 1);
+// 50 coins for a bot win; the 40 XP it grants may also cross a level, which pays 100 + 20·level.
+const levelBonus = (paid.level ?? 1) > (before.level ?? 1) ? 100 + 20 * paid.level : 0;
+ok('a won match pays 50 (plus any level-up) and counts once', paid.coins === before.coins + 50 + levelBonus && paid.games === before.games + 1);
 const replay = await rpc(me, 'award_match', { p_match_id: matchId, p_won: true, p_eligible: true });
 ok('replaying the same match pays nothing more', replay.coins === paid.coins && replay.games === paid.games);
 const unpaid = await rpc(me, 'award_match', { p_match_id: `check-${randomUUID()}`, p_won: false, p_eligible: false });

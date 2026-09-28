@@ -31,6 +31,7 @@ export function isGameState(value: unknown, expectedPlayers: number): value is G
   }
   if (!([null, 1, 2, 3, 4, 5, 6] as unknown[]).includes(s.lastRoll)) return false;
   if (!['IN_PROGRESS', 'FINISHED'].includes(s.status)) return false;
+  if (s.teams !== undefined && (s.teams !== true || s.players.length !== 4)) return false;
 
   const seats = s.players.length;
   const finish = getFinishProgress(seats);
@@ -56,10 +57,11 @@ export function isGameState(value: unknown, expectedPlayers: number): value is G
 
   // A finished board must name a winner who actually got everybody home, and
   // an unfinished one must not name a winner at all.
-  return s.status === 'IN_PROGRESS'
-    ? s.winnerColor === null
-    : s.players.some(
-        (p) =>
-          p.color === s.winnerColor && p.pieces.every((piece: Piece) => piece.progress === finish),
-      );
+  const home = (index: number) =>
+    s.players[index]!.pieces.every((piece: Piece) => piece.progress === finish);
+  if (s.status === 'IN_PROGRESS') return s.winnerColor === null;
+  const winner = s.players.findIndex((p) => p.color === s.winnerColor);
+  if (winner < 0) return false;
+  // In a team game the winner's partner must be home too.
+  return s.teams ? home(winner) && home((winner + 2) % 4) : home(winner);
 }

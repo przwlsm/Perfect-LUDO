@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  NO_STATS,
   parseWalletSnapshot,
+  type MatchStats,
   WalletRefusedError,
   WalletUnavailableError,
   type IWalletRepository,
@@ -15,7 +17,7 @@ import { toFriendlyError } from './socialRows';
  * the server does not have (PGRST202) — means the request may not have run
  * at all, so the caller must treat it as unknown and retry or re-read.
  */
-function classify(error: { message?: string; code?: string }): Error {
+export function classifyWalletError(error: { message?: string; code?: string }): Error {
   const friendly = toFriendlyError(error);
   const code = error.code ?? '';
   const declined = /^[0-9A-Z]{5}$/.test(code) && !code.startsWith('PGRST');
@@ -32,7 +34,7 @@ export class SupabaseWalletRepository implements IWalletRepository {
     const timeout = setTimeout(() => controller.abort(), 15000);
     try {
       const { data, error } = await this.client.rpc(fn, args).abortSignal(controller.signal);
-      if (error) throw classify(error);
+      if (error) throw classifyWalletError(error);
       return parseWalletSnapshot(data);
     } catch (e) {
       if (e instanceof WalletRefusedError || e instanceof WalletUnavailableError) throw e;
@@ -58,11 +60,28 @@ export class SupabaseWalletRepository implements IWalletRepository {
     return this.call('claim_daily_gift');
   }
 
-  awardMatch(matchId: string, won: boolean, rewardEligible: boolean): Promise<WalletSnapshot> {
+  awardMatch(
+    matchId: string,
+    won: boolean,
+    rewardEligible: boolean,
+    stats: MatchStats = NO_STATS,
+  ): Promise<WalletSnapshot> {
     return this.call('award_match', {
       p_match_id: matchId,
       p_won: won,
       p_eligible: rewardEligible,
+      p_sixes: stats.sixes,
+      p_captures: stats.captures,
+      p_home: stats.home,
+    });
+  }
+
+  awardOnlineMatch(matchId: string, stats: MatchStats = NO_STATS): Promise<WalletSnapshot> {
+    return this.call('award_online_match', {
+      p_match_id: matchId,
+      p_sixes: stats.sixes,
+      p_captures: stats.captures,
+      p_home: stats.home,
     });
   }
 }

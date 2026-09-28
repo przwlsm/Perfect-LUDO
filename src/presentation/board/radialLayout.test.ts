@@ -1,5 +1,11 @@
 import { ALL_PLAYER_COLORS, getFinishProgress } from '@/domain';
-import { radialTrack, radialPieceCell, RADIAL_GRID, radialHome } from './radialLayout';
+import {
+  radialTrack,
+  radialPieceCell,
+  RADIAL_GRID,
+  radialHome,
+  radialHomeTriangle,
+} from './radialLayout';
 describe.each([5, 6])('%i-arm board geometry', (count) => {
   it('has a continuous closed route and distinct visible cells', () => {
     const track = radialTrack(count);
@@ -31,5 +37,38 @@ describe.each([5, 6])('%i-arm board geometry', (count) => {
       ).toBe(true);
     });
     expect(new Set(yards).size).toBe(count * 4);
+  });
+});
+
+describe.each([5, 6])('%i-player triangle homes', (count) => {
+  const colors = ALL_PLAYER_COLORS.slice(0, count);
+  // Signed area test: is point p on the inside of every edge of triangle t?
+  const cross = (a: readonly number[], b: readonly number[], p: readonly number[]) =>
+    (b[1]! - a[1]!) * (p[0]! - a[0]!) - (b[0]! - a[0]!) * (p[1]! - a[1]!);
+  const inside = (t: ReturnType<typeof radialHomeTriangle>, p: readonly number[]) => {
+    const d = [cross(t.apex, t.left, p), cross(t.left, t.right, p), cross(t.right, t.apex, p)];
+    return d.every((v) => v >= 0) || d.every((v) => v <= 0);
+  };
+
+  it.each(colors)('keeps every track and home-lane cell out of %s', (color) => {
+    const t = radialHomeTriangle(color, count);
+    const cells = [...radialTrack(count), ...colors.flatMap((c) => radialHome(c, count))];
+    for (const cell of cells) expect(inside(t, cell)).toBe(false);
+  });
+
+  it.each(colors)('holds all four %s coins waiting at home', (color) => {
+    const t = radialHomeTriangle(color, count);
+    for (let slot = 0; slot < 4; slot++)
+      expect(
+        inside(t, radialPieceCell({ id: `${color}-${slot}`, color, progress: 0 }, slot, count)),
+      ).toBe(true);
+  });
+
+  it('stays inside the round board', () => {
+    for (const color of colors) {
+      const t = radialHomeTriangle(color, count);
+      for (const [r, c] of [t.apex, t.left, t.right])
+        expect(Math.hypot(r! - 9, c! - 9)).toBeLessThanOrEqual(RADIAL_GRID / 2);
+    }
   });
 });

@@ -1,17 +1,30 @@
-import { Component, Suspense, lazy, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Component, Suspense, lazy, useRef, useState, type ReactNode } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../components/AppText';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { profileService } from '@/config/container';
-import type { DieValue, GameState, Move, Player, PlayerColor } from '@/domain';
+import {
+  REACTION_COOLDOWN_MS,
+  REACTIONS,
+  type DieValue,
+  type GameState,
+  type Move,
+  type Player,
+  type PlayerColor,
+  type Reaction,
+} from '@/domain';
+import Animated, { FadeOut, ZoomIn } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
+import type { ReactionBubble } from '../hooks/useReactions';
 import { Board2D } from '../board/Board2D';
 import type { Board3DProps } from '../board/Board3D';
-import { getCellForPiece } from '../board/getCellForPiece';
-import { seatPlacement, tableLayout, twoPlayerLayout } from '../board/tableLayout';
-import { AnimatedDice } from '../components/AnimatedDice';
+import { tableArrangement } from '../board/tableLayout';
+import { PlayerPanel } from './PlayerPanel';
+import { RoundBoardOverlay } from './RoundBoardOverlay';
 import { Body, Button, Card, Label, Screen, shared, Sheet } from '../components/Kit';
 import { useProfile } from '../state/ProfileProvider';
-import { getCardDesign, ui } from '../theme/themes';
+import { ui } from '../theme/themes';
 
 /**
  * Loaded on demand so the 3D renderer never costs the 2D table anything.
@@ -52,6 +65,14 @@ class BoardBoundary extends Component<
  * turns. Offline (AI or pass-and-play) and online matches satisfy this the
  * same way, which is what lets one board render both.
  */
+/** True (and restarts the clock) when a reaction may be sent again. */
+function takeCooldown(last: { current: number }): boolean {
+  const now = Date.now();
+  if (now - last.current < REACTION_COOLDOWN_MS) return false;
+  last.current = now;
+  return true;
+}
+
 export interface GameSource {
   readonly match: {
     readonly id: string;
@@ -94,9 +115,21 @@ export function GameTable({
   exitLabel,
   onExit,
   resultSheet,
+  seatLabel,
+  reactions,
+  turnClock = null,
 }: {
+  /** Seconds left on the current turn (online only); null when untimed. */
+  turnClock?: number | null;
+  /** Emoji at the table: the bubbles to float, and how to send one (absent: no picker). */
+  reactions?: {
+    readonly bubbles: readonly ReactionBubble[];
+    readonly send?: (emoji: Reaction) => void;
+  };
   game: GameSource;
   label: string;
+  /** The name shown on each seat's panel; defaults to the colour. */
+  seatLabel?: (color: PlayerColor) => string;
   statusLine: string;
   /** Pass-and-play turns each control to face its seat; nothing else should. */
   seatRotation: boolean;
@@ -113,10 +146,17 @@ export function GameTable({
   resultSheet: ReactNode;
 }) {
   const { profile, theme, perform } = useProfile();
-  const [stackMoves, setStackMoves] = useState<Move[]>([]);
+  const insets = useSafeAreaInsets();
   const [savingView, setSavingView] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const { match, current, humanTurn, busy, error } = game;
+  const [picker, setPicker] = useState(false);
+  const lastSent = useRef(0);
+  function react(emoji: Reaction) {
+    setPicker(false);
+    if (!reactions?.send || !takeCooldown(lastSent)) return;
+    reactions.send(emoji);
+  }
 
   async function toggleView() {
     if (savingView) return;
@@ -148,24 +188,20 @@ export function GameTable({
     );
   }
 
-  const layout = tableLayout(
+  // Pass & play shares one device between every seat, so "nearest the
+  // player" means nothing there. Otherwise this device's seat is turned to
+  // the bottom of the screen: the classic board can only rotate 180°, which
+  // is exactly what moves a top-corner yard (RED, GREEN) to the bottom.
+  const myColor = seatRotation ? null : game.myColor;
+  const classic = match.state.players.length <= 4;
+  const boardFlip = classic && (myColor === 'RED' || myColor === 'GREEN');
+  const table = tableArrangement(
     tableArea.width || 360,
     tableArea.height || 480,
-    match.state.players.length,
+    match.state.players.map((p) => p.color),
+    boardFlip,
   );
-  const stacked = twoPlayerLayout(tableArea.width || 360, tableArea.height || 480);
-  // Pass & play shares one device between every seat, so "closest to the
-  // player" is meaningless there; it only applies when exactly one seat is
-  // this device's own, in a 2-player game.
-  const myColor = seatRotation ? null : game.myColor;
-  const twoPlayerLocalView = myColor !== null && match.state.players.length === 2;
-  const opponentColor = twoPlayerLocalView
-    ? (match.state.players.find((p) => p.color !== myColor)?.color ?? null)
-    : null;
-  // A 2-player table always seats RED and YELLOW (see seatColors); YELLOW's
-  // default corner is already bottom-right, so only RED needs flipping there.
-  const boardFlip = twoPlayerLocalView && myColor === 'RED';
-  const boardSize = twoPlayerLocalView ? stacked.board : layout.board;
+  const boardSize = table.board;
 
   const boardProps = {
     state: match.state,
@@ -174,115 +210,46 @@ export function GameTable({
     theme,
     motionEnabled,
     flip: boardFlip,
-    onSelectMove: (selected: Move) => {
-      const pieces = match.state.players.flatMap((p) =>
-        p.pieces.map((piece, slot) => ({ piece, slot })),
-      );
-      const target = pieces.find((p) => p.piece.id === selected.pieceId)!;
-      const cell = getCellForPiece(target.piece, target.slot, match.state.players.length).join(',');
-      const choices = game.moves.filter((move) => {
-        const p = pieces.find((entry) => entry.piece.id === move.pieceId)!;
-        return getCellForPiece(p.piece, p.slot, match.state.players.length).join(',') === cell;
-      });
-      if (choices.length > 1) setStackMoves(choices);
-      else game.move(selected);
-    },
+    homeStyle: profile.style === 'round-homes' ? ('round' as const) : ('triangle' as const),
+    // Coins sharing a square are the same colour at the same progress, so
+    // moving any one of them has exactly the same result: move the one tapped.
+    onSelectMove: (selected: Move) => game.move(selected),
   };
 
-  /** The dice icon and label shared by both ways a seat's control can sit on screen. */
-  function diceFace(color: PlayerColor, size: number, active: boolean, canRoll: boolean) {
-    return (
-      <>
-        <AnimatedDice
-          size={size - 13}
-          value={game.seatRolls[color] ?? null}
-          finish={profile.dice}
-          rolling={Boolean(active && game.activity === 'rolling')}
-          ready={canRoll}
-          motionEnabled={motionEnabled}
-        />
-        <Text
-          numberOfLines={1}
-          style={{ fontSize: 7, fontWeight: '900', color: active ? theme.colors[color] : ui.muted }}
-        >
-          {canRoll ? 'ROLL' : color}
-        </Text>
-      </>
-    );
-  }
+  const nameOf = (color: PlayerColor) =>
+    seatLabel?.(color) ?? color.charAt(0) + color.slice(1).toLowerCase();
 
-  /** Floats a seat's control over the board, rotated to face that seat (pass & play, 3+ players). */
-  function seatControl(color: PlayerColor) {
-    if (!match) return null;
-    const seat = match.state.players.find((p) => p.color === color);
-    if (!seat) return null;
-    const active = current?.color === color && match.state.status !== 'FINISHED';
-    const placement = seatPlacement(color, match.state.players.length, layout);
-    const canRoll = Boolean(active && humanTurn && !busy && match.state.lastRoll === null);
-    return (
-      <Pressable
-        key={color}
-        accessibilityRole="button"
-        accessibilityLabel={`Roll dice for ${color}`}
-        accessibilityHint={canRoll ? 'Your turn. Tap to roll.' : 'Wait for your turn.'}
-        disabled={!canRoll}
-        onPress={game.roll}
-        style={[
-          profile.pack && getCardDesign(profile.pack),
-          {
-            position: 'absolute',
-            left: placement.x - layout.control / 2,
-            top: placement.y - layout.control / 2,
-            width: layout.control,
-            height: layout.control,
-            borderRadius: 14,
-            borderWidth: active ? 2 : 1,
-            borderColor: active ? theme.colors[color] : `${theme.colors[color]}60`,
-            backgroundColor: theme.surface,
-            alignItems: 'center',
-            justifyContent: 'center',
-            transform: [{ rotate: `${seatRotation ? placement.rotation : 0}deg` }],
-          },
-        ]}
-      >
-        {diceFace(color, layout.control, active, canRoll)}
-      </Pressable>
-    );
-  }
-
-  /**
-   * A seat's control as its own row above or below the board, rather than an
-   * overlay on top of it — the 2-player layout, where the board has grown to
-   * use the width the old side margins spent on dice.
-   */
-  function stackedDiceControl(color: PlayerColor) {
-    if (!match) return null;
+  /** One seat's panel, or an empty slot that keeps the others beside their own yard. */
+  function panel(color: PlayerColor | null, index: number, side: 'before' | 'after') {
+    const size = { width: table.panel.width, height: table.panel.height };
+    if (!match || !color) return <View key={`empty-${side}-${index}`} style={size} />;
     const active = current?.color === color && match.state.status !== 'FINISHED';
     const canRoll = Boolean(active && humanTurn && !busy && match.state.lastRoll === null);
+    const row = side === 'before' ? table.before : table.after;
+    // Panels on the right-hand end of a row, or in the right column, mirror
+    // so their dice faces the board centre.
+    const mirrored =
+      table.orientation === 'landscape' ? side === 'after' : index === row.length - 1 && index > 0;
     return (
-      <Pressable
+      <PlayerPanel
         key={color}
-        accessibilityRole="button"
-        accessibilityLabel={`Roll dice for ${color}`}
-        accessibilityHint={canRoll ? 'Your turn. Tap to roll.' : 'Wait for your turn.'}
-        disabled={!canRoll}
-        onPress={game.roll}
-        style={[
-          profile.pack && getCardDesign(profile.pack),
-          {
-            width: stacked.control,
-            height: stacked.control,
-            borderRadius: 14,
-            borderWidth: active ? 2 : 1,
-            borderColor: active ? theme.colors[color] : `${theme.colors[color]}60`,
-            backgroundColor: theme.surface,
-            alignItems: 'center',
-            justifyContent: 'center',
-          },
-        ]}
-      >
-        {diceFace(color, stacked.control, active, canRoll)}
-      </Pressable>
+        color={theme.colors[color]}
+        label={nameOf(color)}
+        width={size.width}
+        height={size.height}
+        mirrored={mirrored}
+        rotated={seatRotation && table.orientation === 'portrait' && side === 'before'}
+        active={active}
+        canRoll={canRoll}
+        rolling={Boolean(active && game.activity === 'rolling')}
+        value={game.seatRolls[color] ?? null}
+        diceFinish={profile.dice}
+        surface={theme.surface}
+        accent={theme.accent}
+        motionEnabled={motionEnabled}
+        onRoll={game.roll}
+        secondsLeft={active ? turnClock : null}
+      />
     );
   }
 
@@ -303,7 +270,17 @@ export function GameTable({
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, overflow: 'hidden', backgroundColor: theme.background }}>
+    <View
+      style={{
+        flex: 1,
+        overflow: 'hidden',
+        backgroundColor: theme.background,
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+        paddingLeft: insets.left,
+        paddingRight: insets.right,
+      }}
+    >
       <View style={s.header}>
         <Pressable
           accessibilityRole="button"
@@ -314,12 +291,30 @@ export function GameTable({
         >
           <Text style={s.icon}>{'☰'}</Text>
         </Pressable>
-        <View style={{ alignItems: 'center', gap: 3 }}>
+        {reactions?.send ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Send a reaction"
+            accessibilityState={{ expanded: picker }}
+            onPress={() => setPicker((open) => !open)}
+            android_ripple={{ color: '#ffffff20' }}
+            style={[
+              s.iconButton,
+              { backgroundColor: picker ? `${theme.accent}30` : theme.surface },
+            ]}
+          >
+            <Ionicons name="happy" size={24} color={picker ? theme.accent : ui.muted} />
+          </Pressable>
+        ) : (
+          <View style={{ width: 44 }} />
+        )}
+        <View style={{ flex: 1, alignItems: 'center', gap: 3 }}>
           <Label color={theme.accent}>{label}</Label>
           <Text style={shared.small}>
             {match.state.players.length} players / {profile.board3d ? '3D' : 'Classic'} table
           </Text>
         </View>
+        <View style={{ width: 44 }} />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Switch to ${profile.board3d ? '2D' : '3D'} board`}
@@ -338,28 +333,99 @@ export function GameTable({
         style={{ flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center' }}
         onLayout={({ nativeEvent }) => onTableLayout(nativeEvent.layout)}
       >
-        {twoPlayerLocalView ? (
-          // Portrait: opponent above, me below. Landscape: opponent left, me
-          // right — nearest my corner, so "my" dice stays on my side.
+        {reactions && reactions.bubbles.length > 0 && (
+          <View pointerEvents="none" style={s.bubbles}>
+            {reactions.bubbles.map((bubble) => (
+              <Animated.View
+                key={bubble.id}
+                entering={motionEnabled ? ZoomIn.springify().damping(11) : undefined}
+                exiting={motionEnabled ? FadeOut.duration(250) : undefined}
+                style={[s.bubble, { borderColor: theme.colors[bubble.color] }]}
+              >
+                <View style={[s.bubbleDot, { backgroundColor: theme.colors[bubble.color] }]} />
+                <Text numberOfLines={1} style={s.bubbleName}>
+                  {nameOf(bubble.color)}
+                </Text>
+                <Text style={s.bubbleEmoji}>{bubble.emoji}</Text>
+              </Animated.View>
+            ))}
+          </View>
+        )}
+        {picker && reactions?.send && (
+          <Animated.View
+            entering={motionEnabled ? ZoomIn.duration(160) : undefined}
+            style={[s.picker, { backgroundColor: theme.surface }]}
+          >
+            {REACTIONS.map((emoji) => (
+              <Pressable
+                key={emoji}
+                accessibilityRole="button"
+                accessibilityLabel={`React ${emoji}`}
+                onPress={() => react(emoji)}
+                android_ripple={{ color: '#ffffff25', borderless: true }}
+                style={s.pickerItem}
+              >
+                <Text style={{ fontSize: 26 }}>{emoji}</Text>
+              </Pressable>
+            ))}
+          </Animated.View>
+        )}
+        {!classic ? (
+          <View testID="game-table" style={{ width: boardSize, height: boardSize }}>
+            {board}
+            <RoundBoardOverlay
+              size={boardSize}
+              colors={match.state.players.map((p) => p.color)}
+              palette={theme.colors}
+              nameOf={nameOf}
+              current={match.state.status === 'FINISHED' ? null : current.color}
+              canRoll={Boolean(
+                humanTurn &&
+                !busy &&
+                match.state.lastRoll === null &&
+                match.state.status !== 'FINISHED',
+              )}
+              rolling={game.activity === 'rolling'}
+              value={game.seatRolls[current.color] ?? null}
+              diceFinish={profile.dice}
+              surface={theme.surface}
+              faceSeats={seatRotation}
+              tilted={profile.board3d}
+              motionEnabled={motionEnabled}
+              onRoll={game.roll}
+            />
+          </View>
+        ) : (
           <View
             testID="game-table"
             style={{
-              flexDirection: stacked.side ? 'row' : 'column',
+              flexDirection: table.orientation === 'portrait' ? 'column' : 'row',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: stacked.gap,
+              gap: table.gap,
             }}
           >
-            {opponentColor && stackedDiceControl(opponentColor)}
-            <View style={{ width: boardSize, height: boardSize }}>{board}</View>
-            {myColor && stackedDiceControl(myColor)}
-          </View>
-        ) : (
-          <View testID="game-table" style={{ width: layout.size, height: layout.size }}>
-            <View style={{ position: 'absolute', left: layout.inset, top: layout.inset }}>
-              {board}
+            <View
+              style={{
+                flexDirection: table.orientation === 'portrait' ? 'row' : 'column',
+                justifyContent: 'space-between',
+                width: table.orientation === 'portrait' ? boardSize : table.panel.width,
+                height: table.orientation === 'portrait' ? table.panel.height : boardSize,
+              }}
+            >
+              {table.before.map((color, i) => panel(color, i, 'before'))}
             </View>
-            {match.state.players.map((seat) => seatControl(seat.color))}
+            <View style={{ width: boardSize, height: boardSize }}>{board}</View>
+            <View
+              style={{
+                flexDirection: table.orientation === 'portrait' ? 'row' : 'column',
+                justifyContent: 'space-between',
+                width: table.orientation === 'portrait' ? boardSize : table.panel.width,
+                height: table.orientation === 'portrait' ? table.panel.height : boardSize,
+              }}
+            >
+              {table.after.map((color, i) => panel(color, i, 'after'))}
+            </View>
           </View>
         )}
       </View>
@@ -378,25 +444,6 @@ export function GameTable({
           </Button>
         )}
       </View>
-
-      <Sheet
-        visible={stackMoves.length > 0}
-        onClose={() => setStackMoves([])}
-        title="Choose a stacked coin"
-      >
-        <Body>These coins share a square. Choose which one to move.</Body>
-        {stackMoves.map((move) => (
-          <Button
-            key={move.pieceId}
-            onPress={() => {
-              game.move(move);
-              setStackMoves([]);
-            }}
-          >
-            {move.pieceId.split('-')[0]} coin {Number(move.pieceId.split('-')[1]) + 1}
-          </Button>
-        ))}
-      </Sheet>
 
       <Sheet visible={menu} onClose={() => setMenu(false)} title="Take your time.">
         <Body>{pauseBody}</Body>
@@ -428,7 +475,7 @@ export function GameTable({
       </Sheet>
 
       {resultSheet}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -456,7 +503,7 @@ const RULES: readonly (readonly [string, string, string])[] = [
   [
     '05',
     'Bring everyone home',
-    'The first player to finish all four pieces wins. Signed-in players earn 150 coins for a win and 40 for finishing a game.',
+    'The first player to finish all four pieces wins. Signed-in players earn coins and XP: online wins pay the most, and every online game scores tournament points.',
   ],
 ];
 
@@ -482,6 +529,48 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   icon: { color: ui.muted, fontSize: 23 },
+  bubbles: {
+    position: 'absolute',
+    top: 6,
+    left: 12,
+    right: 12,
+    zIndex: 20,
+    alignItems: 'center',
+    gap: 6,
+  },
+  bubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingLeft: 10,
+    paddingRight: 6,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 2,
+    backgroundColor: '#0e1322ee',
+    boxShadow: '0 6px 18px #00000080',
+    maxWidth: '90%',
+  },
+  bubbleDot: { width: 10, height: 10, borderRadius: 5 },
+  bubbleName: { color: ui.text, fontWeight: '800', fontSize: 13, flexShrink: 1 },
+  bubbleEmoji: { fontSize: 28 },
+  picker: {
+    position: 'absolute',
+    top: 4,
+    left: 12,
+    right: 12,
+    zIndex: 30,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ffffff20',
+    boxShadow: '0 10px 28px #00000090',
+  },
+  pickerItem: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   viewButton: {
     borderWidth: 1,
     paddingHorizontal: 12,

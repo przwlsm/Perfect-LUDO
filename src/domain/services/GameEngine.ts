@@ -1,6 +1,7 @@
 import { getFinishProgress } from '../board';
 import type { GameState } from '../entities/GameState';
-import { getCurrentPlayer } from '../entities/GameState';
+import { getCurrentPlayer, isTeamGame, partnerOf } from '../entities/GameState';
+import { hasPlayerWon } from '../entities/Player';
 import type { Player } from '../entities/Player';
 import { ALL_PLAYER_COLORS, type DieValue, type PlayerColor } from '../entities/PlayerColor';
 import type { IRandomProvider } from '../ports/IRandomProvider';
@@ -10,7 +11,10 @@ import { findWinner } from './WinConditionChecker';
 const PIECES_PER_PLAYER = 4;
 const MAX_CONSECUTIVE_SIXES = 3;
 
-export function createGame(colors: readonly PlayerColor[]): GameState {
+export function createGame(
+  colors: readonly PlayerColor[],
+  options: { teams?: boolean } = {},
+): GameState {
   if (
     colors.length < 2 ||
     colors.length > 6 ||
@@ -39,7 +43,25 @@ export function createGame(colors: readonly PlayerColor[]): GameState {
     consecutiveSixes: 0,
     status: 'IN_PROGRESS',
     winnerColor: null,
+    ...(options.teams && colors.length === 4 ? { teams: true } : {}),
   };
+}
+
+/**
+ * Whose coins the player on turn moves: their own, or — in a team game once
+ * all of theirs are home — their partner's.
+ */
+export function controlledColor(state: GameState): PlayerColor {
+  const player = getCurrentPlayer(state);
+  const partner = partnerOf(state, player.color);
+  if (partner && hasPlayerWon(player, state.players.length)) return partner;
+  return player.color;
+}
+
+/** The mover's side: themselves and, in a team game, their partner. */
+function friendsOf(state: GameState, color: PlayerColor): PlayerColor[] {
+  const partner = partnerOf(state, color);
+  return partner ? [partner] : [];
 }
 
 export async function rollDice(state: GameState, random: IRandomProvider): Promise<GameState> {
@@ -65,7 +87,8 @@ export async function rollDice(state: GameState, random: IRandomProvider): Promi
 export function getValidMovesForCurrentPlayer(state: GameState): Move[] {
   if (state.lastRoll === null) return [];
   if (state.consecutiveSixes >= MAX_CONSECUTIVE_SIXES) return [];
-  return computeValidMoves(state.players, getCurrentPlayer(state).color, state.lastRoll);
+  const color = controlledColor(state);
+  return computeValidMoves(state.players, color, state.lastRoll, friendsOf(state, color));
 }
 
 export function endTurnWithoutMove(state: GameState): GameState {
@@ -107,7 +130,7 @@ export function applyMove(state: GameState, move: Move): GameState {
     }),
   }));
 
-  const winnerColor = findWinner(players);
+  const winnerColor = findWinner(players, isTeamGame(state), getCurrentPlayer(state).color);
   if (winnerColor) {
     return { ...state, players, status: 'FINISHED', winnerColor, lastRoll: null };
   }

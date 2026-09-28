@@ -5,6 +5,12 @@ export interface CreatedChallenge {
   readonly lobbyId: string;
 }
 
+/** A private table opened for sharing: where it is, and the code that gets you in. */
+export interface LinkRoom {
+  readonly lobbyId: string;
+  readonly code: string;
+}
+
 /**
  * Private challenges and the lobby they open.
  *
@@ -18,6 +24,10 @@ export interface IChallengeRepository {
   /** Accepting returns the lobby to enter; declining returns null. */
   respondToChallenge(challengeId: string, accept: boolean): Promise<string | null>;
   cancelChallenge(challengeId: string): Promise<void>;
+  /** Opens a 2-4 seat table joined by code; replaces this host's previous one. */
+  createLinkRoom(playerCount: number, stake?: number): Promise<LinkRoom>;
+  /** Takes the next free seat at the table for `code`; returns its lobby id. */
+  joinLinkRoom(code: string): Promise<string>;
   getLobby(lobbyId: string): Promise<LobbySnapshot>;
   joinLobby(lobbyId: string): Promise<LobbySnapshot>;
   leaveLobby(lobbyId: string): Promise<void>;

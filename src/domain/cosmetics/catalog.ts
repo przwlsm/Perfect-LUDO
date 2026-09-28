@@ -1,4 +1,5 @@
-export type CosmeticKind = 'board' | 'dice' | 'pack';
+/** `style` changes how the 5-6 player round table is drawn, not its colours. */
+export type CosmeticKind = 'board' | 'dice' | 'pack' | 'style';
 export interface Cosmetic {
   readonly id: string;
   readonly kind: CosmeticKind;
@@ -165,9 +166,30 @@ const INDIVIDUALS: readonly Cosmetic[] = [
     rarity: 'Legendary',
   },
 ];
+/** How the homes on the 5-6 player table are drawn. The first is everyone's default. */
+export const DEFAULT_TABLE_STYLE = 'triangle-homes';
+const STYLES: readonly Cosmetic[] = [
+  {
+    id: DEFAULT_TABLE_STYLE,
+    kind: 'style',
+    name: 'Pointed Homes',
+    description: 'Big tables: each home fills the space between the arms.',
+    price: 0,
+    rarity: 'Classic',
+  },
+  {
+    id: 'round-homes',
+    kind: 'style',
+    name: 'Round Homes',
+    description: 'The original round yards for 5 and 6 player tables.',
+    price: 200,
+    rarity: 'Rare',
+  },
+];
 const boards = INDIVIDUALS.filter((item) => item.kind === 'board');
 export const COSMETICS: readonly Cosmetic[] = [
   ...INDIVIDUALS,
+  ...STYLES,
   ...boards.map((board): Cosmetic => ({
     id: board.id + '-dice',
     kind: 'dice',
@@ -187,9 +209,10 @@ export const COSMETICS: readonly Cosmetic[] = [
   })),
 ];
 export function isCosmeticEquipped(
-  profile: { board: string; dice: string; pack: string | null },
+  profile: { board: string; dice: string; pack: string | null; style?: string },
   item: Cosmetic,
 ): boolean {
+  if (item.kind === 'style') return (profile.style ?? DEFAULT_TABLE_STYLE) === item.id;
   return item.kind === 'pack'
     ? profile.pack === item.id &&
         profile.board === item.contents?.board &&

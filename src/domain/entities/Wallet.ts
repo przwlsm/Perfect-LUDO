@@ -1,9 +1,42 @@
 /** What the club pays and gives. The server enforces the same numbers. */
 export const DAILY_GIFT_COINS = 250;
-export const WIN_COINS = 150;
-export const PLAYED_COINS = 40;
+/**
+ * Match rewards: online pays far more than the computer, because online
+ * results are verified by the server and bot games are only the device's
+ * word (and capped at BOT_PAID_GAMES_PER_DAY paid games a day).
+ */
+export const REWARDS = {
+  online: { win: { coins: 250, xp: 120 }, played: { coins: 60, xp: 50 } },
+  bot: { win: { coins: 50, xp: 40 }, played: { coins: 15, xp: 15 } },
+} as const;
+export const BOT_PAID_GAMES_PER_DAY = 25;
+/** @deprecated names kept for the offline guest ledger; see REWARDS. */
+export const WIN_COINS = REWARDS.bot.win.coins;
+export const PLAYED_COINS = REWARDS.bot.played.coins;
+
+/** Where a player is on the level curve: level L needs 100 + 40*(L-1) XP to pass. */
+export interface LevelInfo {
+  readonly level: number;
+  /** XP earned inside the current level. */
+  readonly into: number;
+  /** XP the current level needs in total. */
+  readonly need: number;
+}
+
+/** Mirrors the server's level_info, for showing progress between refreshes. */
+export function levelInfo(xp: number): LevelInfo {
+  let level = 1;
+  let need = 100;
+  let rest = Math.max(0, Math.floor(xp));
+  while (rest >= need) {
+    rest -= need;
+    level += 1;
+    need = 100 + 40 * (level - 1);
+  }
+  return { level, into: rest, need };
+}
 /** Looks every player has without buying them, signed in or not. */
-export const FREE_ITEMS: readonly string[] = ['classic', 'ivory'];
+export const FREE_ITEMS: readonly string[] = ['classic', 'ivory', 'triangle-homes'];
 
 /**
  * An account's wallet as the server holds it. Coins, inventory, the daily
@@ -19,6 +52,13 @@ export interface WalletSnapshot {
   readonly wins: number;
   readonly streak: number;
   readonly bestStreak: number;
+  readonly gems: number;
+  readonly xp: number;
+  readonly level: LevelInfo;
+  /** UTC day of the last free lucky spin, if any. */
+  readonly lastSpin: string | null;
+  /** Consecutive days with a free spin. */
+  readonly spinStreak: number;
 }
 
 /**
@@ -83,6 +123,13 @@ export function parseWalletSnapshot(raw: unknown): WalletSnapshot {
   ) {
     throw new WalletUnavailableError('Received a malformed wallet from the server.');
   }
+  // Fields added by migration 0012; an older server simply lacks them.
+  const xp = count(r.xp) ?? 0;
+  const lvl = r.level as Record<string, unknown> | undefined;
+  const level =
+    lvl && count(lvl.level) && count(lvl.into) !== null && count(lvl.need)
+      ? { level: count(lvl.level)!, into: count(lvl.into)!, need: count(lvl.need)! }
+      : levelInfo(xp);
   return {
     coins,
     owned: owned as string[],
@@ -91,5 +138,10 @@ export function parseWalletSnapshot(raw: unknown): WalletSnapshot {
     wins,
     streak,
     bestStreak,
+    gems: count(r.gems) ?? 0,
+    xp,
+    level,
+    lastSpin: typeof r.lastSpin === 'string' ? r.lastSpin : null,
+    spinStreak: count(r.spinStreak) ?? 0,
   };
 }

@@ -3,15 +3,21 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
   View,
   useWindowDimensions,
   type ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, usePathname } from 'expo-router';
+import { Text } from './AppText';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { levelInfo } from '@/domain';
+import { CoinIcon, GemIcon } from './Currency';
+import { shade } from '../board/shade';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { router, useLocalSearchParams, usePathname } from 'expo-router';
+import Animated, { FadeInLeft, FadeInRight } from 'react-native-reanimated';
 import { useProfile } from '../state/ProfileProvider';
 import { useSocial } from '../state/SocialProvider';
 import { NotificationBell } from '../social/NotificationBell';
@@ -30,52 +36,76 @@ export function Body({ children, style }: { children: ReactNode; style?: ViewSty
     </View>
   );
 }
+/**
+ * Arcade buttons. Primary: a glossy gradient in the theme accent with a
+ * thick darker rim underneath that collapses as it is pressed, like a
+ * molded plastic arcade key. Secondary: raised navy slate.
+ */
 export function Button({
   children,
   onPress,
   secondary,
+  danger,
   disabled,
   compact,
 }: {
   children: ReactNode;
   onPress(): void;
   secondary?: boolean;
+  /** For a destructive, hard-to-undo action (e.g. deleting an account). */
+  danger?: boolean;
   disabled?: boolean;
   compact?: boolean;
 }) {
   const { theme } = useProfile();
+  const accent = danger ? ui.danger : theme.accent;
+  const radius = compact ? 14 : 16;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={onPress}
-      android_ripple={{ color: secondary ? '#ffffff30' : '#00000025' }}
+      android_ripple={{ color: secondary ? '#ffffff22' : '#00000022' }}
       style={({ pressed }) => [
         s.button,
+        { borderRadius: radius, opacity: disabled ? 0.45 : 1 },
         secondary
           ? {
-              backgroundColor: '#ffffff12',
-              borderWidth: 1.5,
-              borderColor: '#ffffff28',
-              borderBottomWidth: 3,
-              borderBottomColor: '#00000035',
+              backgroundColor: danger ? '#3a1d2a' : ui.navy,
+              borderWidth: 1,
+              borderColor: danger ? '#ff879555' : '#ffffff26',
+              borderBottomWidth: pressed ? 1 : 3,
+              borderBottomColor: ui.navyRim,
             }
           : {
-              backgroundColor: theme.accent,
-              borderBottomWidth: 4,
-              borderBottomColor: '#00000045',
-              boxShadow: `0 6px 16px ${theme.accent}4a`,
+              borderBottomWidth: pressed ? 1 : 4,
+              borderBottomColor: shade(accent, -0.5),
+              boxShadow: `0 6px 18px ${accent}40`,
             },
-        { opacity: disabled ? 0.45 : 1 },
-        compact && { paddingVertical: 10, minHeight: 44 },
-        pressed && {
-          transform: [{ translateY: secondary ? 1 : 2 }],
-          borderBottomWidth: secondary ? 1 : 2,
-        },
+        compact && { paddingVertical: 10, minHeight: 46 },
+        pressed && { transform: [{ translateY: secondary ? 2 : 3 }] },
       ]}
     >
-      <Text style={[s.buttonText, { color: secondary ? ui.text : '#251b13' }]}>{children}</Text>
+      {!secondary && (
+        <LinearGradient
+          colors={[shade(accent, 0.18), accent, shade(accent, -0.14)]}
+          style={[StyleSheet.absoluteFill, { borderRadius: radius }]}
+        />
+      )}
+      {!secondary && (
+        <View style={[s.gloss, { borderTopLeftRadius: radius, borderTopRightRadius: radius }]} />
+      )}
+      <Text
+        style={[
+          s.buttonText,
+          secondary
+            ? { color: danger ? ui.danger : ui.text }
+            : { color: shade(accent, -0.78), textTransform: 'uppercase', letterSpacing: 0.9 },
+        ]}
+      >
+        {children}
+      </Text>
     </Pressable>
   );
 }
@@ -99,6 +129,12 @@ export function Card({ children, style }: { children: ReactNode; style?: ViewSty
  * player is offered sign-in instead of a device number; a member whose
  * account could not be reached sees a reload instead of a stale balance.
  */
+/** 1234 -> "1,234"; 125400 -> "125.4K": the header has little room. */
+export function formatCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
+  if (n >= 100_000) return `${(n / 1000).toFixed(1)}K`;
+  return n.toLocaleString();
+}
 export function CoinPill() {
   const { profile, member, wallet, refreshWallet } = useProfile();
   if (!member)
@@ -110,7 +146,8 @@ export function CoinPill() {
         android_ripple={{ color: '#ffc56840' }}
         style={s.coins}
       >
-        <Text style={s.coinText}>◉ Sign in</Text>
+        <CoinIcon size={22} />
+        <Text style={s.coinText}>Sign in</Text>
         <Text style={s.coinPlus}>+</Text>
       </Pressable>
     );
@@ -123,7 +160,8 @@ export function CoinPill() {
         android_ripple={{ color: '#ffc56840' }}
         style={s.coins}
       >
-        <Text style={s.coinText}>◉ —</Text>
+        <CoinIcon size={22} />
+        <Text style={s.coinText}>—</Text>
         <Text style={s.coinPlus}>↻</Text>
       </Pressable>
     );
@@ -135,8 +173,26 @@ export function CoinPill() {
       android_ripple={{ color: '#ffc56840' }}
       style={s.coins}
     >
-      <Text style={s.coinText}>◉ {profile.coins.toLocaleString()}</Text>
+      <CoinIcon size={22} />
+      <Text style={s.coinText}>{formatCount(profile.coins)}</Text>
       <Text style={s.coinPlus}>+</Text>
+    </Pressable>
+  );
+}
+/** Gems, for members once the wallet has loaded; opens the rewards page. */
+export function GemPill() {
+  const { profile, member, wallet } = useProfile();
+  if (!member || wallet !== 'ready') return null;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${profile.gems} gems. Open rewards`}
+      onPress={() => router.push('/rewards')}
+      android_ripple={{ color: '#c084fc40' }}
+      style={[s.coins, { paddingRight: 12, gap: 6 }]}
+    >
+      <GemIcon size={20} />
+      <Text style={s.coinText}>{formatCount(profile.gems)}</Text>
     </Pressable>
   );
 }
@@ -155,14 +211,39 @@ export function Screen({
   back?: boolean;
   immersive?: boolean;
 }) {
-  const { theme, ready, error, reload } = useProfile();
+  const { theme, ready, error, reload, member, wallet, profile } = useProfile();
+  const level = member && wallet === 'ready' ? levelInfo(profile.xp).level : null;
   const { width, height, fontScale } = useWindowDimensions();
-  const compactHeader = width / fontScale < 390;
+  // Insets come from the provider, already known on the first frame. The
+  // native SafeAreaView measures them itself after mounting, so a freshly
+  // opened tab drew one frame without them and then jumped into place.
+  const insets = useSafeAreaInsets();
+  // Set by the bottom bar: which side the tapped tab sits on.
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
+  const entering =
+    tab === 'left'
+      ? FadeInLeft.duration(260)
+      : tab === 'right'
+        ? FadeInRight.duration(260)
+        : undefined;
+  // The gem pill takes room; drop the brand words sooner so nothing overlaps.
+  const compactHeader = width / fontScale < (level !== null ? 440 : 390);
   // Landscape on a phone leaves little height; tighten the chrome so more
   // of each screen's content is on screen without scrolling.
   const landscape = width > height;
   return (
-    <SafeAreaView style={[s.screen, { backgroundColor: theme.background }]}>
+    <View
+      style={[
+        s.screen,
+        {
+          backgroundColor: theme.background,
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
       {!immersive && (
         <View style={[s.header, landscape && { paddingVertical: 8 }]}>
           <Pressable
@@ -174,6 +255,11 @@ export function Screen({
           >
             <View style={[s.brandMark, { backgroundColor: theme.accent }]}>
               <Text style={s.brandDie}>{back ? '‹' : '⚄'}</Text>
+              {level !== null && !back && (
+                <View accessibilityLabel={`Level ${level}`} style={s.levelBadge}>
+                  <Text style={s.levelText}>{level}</Text>
+                </View>
+              )}
             </View>
             {!compactHeader && (
               <View>
@@ -186,6 +272,7 @@ export function Screen({
           </Pressable>
           <View style={s.headerActions}>
             <NotificationBell />
+            <GemPill />
             <CoinPill />
           </View>
         </View>
@@ -202,26 +289,31 @@ export function Screen({
           )}
         </View>
       ) : (
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[
-            s.content,
-            immersive && { paddingHorizontal: 8, paddingTop: 8 },
-            landscape && { paddingTop: 0, gap: 18 },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          {title && (
-            <View style={s.heading}>
-              <Label color={theme.accent}>{subtitle ?? 'MAKE YOUR NEXT MOVE'}</Label>
-              <Title>{title}</Title>
-            </View>
-          )}
-          {children}
-        </ScrollView>
+        // Keyboard-aware: whichever field is being typed in is scrolled up
+        // above the keyboard, on every page that uses Screen.
+        <Animated.View entering={entering} style={{ flex: 1 }}>
+          <KeyboardAwareScrollView
+            bottomOffset={24}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={[
+              s.content,
+              immersive && { paddingHorizontal: 8, paddingTop: 8 },
+              landscape && { paddingTop: 0, gap: 18 },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            {title && (
+              <View style={s.heading}>
+                <Label color={theme.accent}>{subtitle ?? 'MAKE YOUR NEXT MOVE'}</Label>
+                <Title>{title}</Title>
+              </View>
+            )}
+            {children}
+          </KeyboardAwareScrollView>
+        </Animated.View>
       )}
       {nav && <BottomNav compact={landscape} />}
-    </SafeAreaView>
+    </View>
   );
 }
 function BottomNav({ compact }: { compact: boolean }) {
@@ -230,34 +322,42 @@ function BottomNav({ compact }: { compact: boolean }) {
   const { account } = useSocial();
   // Guests still reach Friends, where the account offer explains the lock.
   const locked = (href: string) => account === 'guest' && href === '/friends';
+  const tabs = [
+    ['/', 'game-controller', 'Play'],
+    ['/online', 'globe', 'Online'],
+    ['/rewards', 'gift', 'Rewards'],
+    ['/friends', 'people', 'Friends'],
+    ['/profile', 'person-circle', 'Profile'],
+  ] as const;
+  const here = tabs.findIndex(([href]) => href === path);
+  /** Slides the next tab in from the side it sits on, like native tabs. */
+  function open(href: (typeof tabs)[number][0], index: number) {
+    if (href === path) return;
+    router.replace({ pathname: href, params: { tab: index < here ? 'left' : 'right' } });
+  }
   return (
     <View style={[s.nav, { backgroundColor: theme.background }, compact && { paddingVertical: 4 }]}>
-      {(
-        [
-          ['/', '⌂', 'Play'],
-          ['/online', '◎', 'Online'],
-          ['/friends', '⚈⚈', 'Friends'],
-          ['/store', '▦', 'Store'],
-          ['/profile', '♙', 'Profile'],
-        ] as const
-      ).map(([href, symbol, label]) => (
+      {tabs.map(([href, symbol, label], index) => (
         <Pressable
           key={href}
           accessibilityRole="button"
           accessibilityLabel={locked(href) ? `${label}, account required` : label}
           accessibilityState={{ selected: path === href }}
-          onPress={() => router.replace(href)}
+          onPress={() => open(href, index)}
           android_ripple={{ color: '#ffffff1f' }}
           style={s.navItem}
         >
-          <Text style={[s.navIcon, { color: path === href ? theme.accent : ui.subtle }]}>
-            {symbol}
-          </Text>
+          <View style={[s.navIconWrap, path === href && { backgroundColor: `${theme.accent}22` }]}>
+            <Ionicons
+              name={path === href ? symbol : (`${symbol}-outline` as typeof symbol)}
+              size={23}
+              color={path === href ? theme.accent : ui.subtle}
+            />
+          </View>
           <Text style={[s.navText, { color: path === href ? theme.accent : ui.subtle }]}>
             {label}
             {locked(href) ? ' 🔒' : ''}
           </Text>
-          {path === href && <View style={[s.navDot, { backgroundColor: theme.accent }]} />}
         </Pressable>
       ))}
     </View>
@@ -275,9 +375,25 @@ export function Sheet({
   children: ReactNode;
 }) {
   const { theme } = useProfile();
+  const insets = useSafeAreaInsets();
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={s.overlay}>
+    // Translucent bars so the dialog draws edge to edge like the rest of the
+    // app; that is also what lets the keyboard controller see the keyboard
+    // inside this separate Android window.
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
+      {/* The dialog shrinks to the space above the keyboard, and its content
+          scrolls the focused field into view. */}
+      <KeyboardAvoidingView
+        behavior="padding"
+        style={[s.overlay, { paddingTop: 20 + insets.top, paddingBottom: 20 + insets.bottom }]}
+      >
         <View accessibilityViewIsModal style={[s.sheet, { backgroundColor: theme.background }]}>
           <View style={s.sheetHeader}>
             <Text style={s.sheetTitle}>{title}</Text>
@@ -291,11 +407,16 @@ export function Sheet({
               <Text style={{ color: ui.muted, fontSize: 24 }}>×</Text>
             </Pressable>
           </View>
-          <ScrollView contentContainerStyle={{ gap: 18 }} showsVerticalScrollIndicator={false}>
+          <KeyboardAwareScrollView
+            bottomOffset={16}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ gap: 18 }}
+            showsVerticalScrollIndicator={false}
+          >
             {children}
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -303,7 +424,7 @@ export const shared = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   section: { gap: 14 },
-  sectionTitle: { color: ui.text, fontSize: 19, fontWeight: '800' },
+  sectionTitle: { color: ui.text, fontSize: 20, fontWeight: '700', lineHeight: 26 },
   small: { color: ui.muted, fontSize: 12, lineHeight: 18 },
   error: { color: ui.danger, fontSize: 13, lineHeight: 20 },
   selected: { borderColor: ui.gold, borderWidth: 1 },
@@ -322,6 +443,21 @@ const s = StyleSheet.create({
   },
   brand: { minHeight: 44, flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  levelBadge: {
+    position: 'absolute',
+    right: -7,
+    bottom: -6,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    backgroundColor: ui.blue,
+    borderWidth: 2,
+    borderColor: '#0e1322',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelText: { color: '#fff', fontSize: 10, fontWeight: '900', lineHeight: 13 },
   brandMark: {
     width: 40,
     height: 42,
@@ -336,17 +472,18 @@ const s = StyleSheet.create({
   brandSub: { color: ui.subtle, fontSize: 7, letterSpacing: 1.4, fontWeight: '700', marginTop: 3 },
   coins: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
     alignItems: 'center',
-    paddingLeft: 12,
-    paddingRight: 6,
-    minHeight: 44,
-    backgroundColor: '#ffc56812',
+    paddingLeft: 6,
+    paddingRight: 5,
+    minHeight: 40,
+    backgroundColor: '#0f1423d9',
     borderWidth: 1,
-    borderColor: '#ffc56830',
-    borderRadius: 20,
+    borderColor: '#ffffff1f',
+    borderRadius: 999,
   },
-  coinText: { color: ui.gold, fontWeight: '800', fontSize: 13 },
+
+  coinText: { color: ui.text, fontWeight: '800', fontSize: 14 },
   coinPlus: {
     color: '#1d2030',
     backgroundColor: ui.gold,
@@ -368,25 +505,48 @@ const s = StyleSheet.create({
     gap: 26,
   },
   heading: { gap: 8, marginTop: 8 },
-  title: { color: ui.text, fontSize: 32, fontWeight: '900', letterSpacing: -1 },
-  label: { fontSize: 10, fontWeight: '800', letterSpacing: 1.6 },
-  body: { color: ui.muted, fontSize: 14, lineHeight: 22 },
+  title: {
+    color: ui.text,
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    lineHeight: 38,
+    textShadowColor: '#00000080',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 0,
+  },
+  label: { fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
+  body: { color: ui.muted, fontSize: 14, lineHeight: 21 },
   button: {
-    minHeight: 54,
-    borderRadius: 15,
+    minHeight: 56,
     padding: 16,
-    borderBottomWidth: 4,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  gloss: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1.5,
+    backgroundColor: '#ffffff66',
   },
   buttonText: {
     textAlign: 'center',
     flexShrink: 1,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
     letterSpacing: 0.3,
   },
-  card: { borderRadius: 20, padding: 20, borderWidth: 1, borderColor: ui.line, gap: 14 },
+  card: {
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: ui.line,
+    gap: 14,
+    boxShadow: '0 8px 24px #00000033',
+  },
   nav: {
     borderTopWidth: 1,
     borderColor: ui.line,
@@ -398,8 +558,14 @@ const s = StyleSheet.create({
     alignSelf: 'center',
   },
   navItem: { flex: 1, minHeight: 52, alignItems: 'center', gap: 3 },
-  navIcon: { fontSize: 25, lineHeight: 28 },
-  navText: { fontSize: 10, fontWeight: '700' },
+  navIconWrap: {
+    width: 52,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navText: { fontSize: 11, fontWeight: '700' },
   navDot: { width: 4, height: 4, borderRadius: 2, marginTop: 2 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 },
   overlay: {

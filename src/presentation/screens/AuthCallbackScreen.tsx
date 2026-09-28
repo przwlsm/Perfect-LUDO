@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Text } from 'react-native';
+import { ActivityIndicator, Platform } from 'react-native';
+import { Text } from '../components/AppText';
 import { router, useLocalSearchParams } from 'expo-router';
 import { authProvider } from '@/config/container';
 import { Body, Button, Card, Screen, shared } from '../components/Kit';

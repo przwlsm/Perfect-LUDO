@@ -44,7 +44,7 @@ describe('local cosmetic economy', () => {
     await expect(service.purchase('heritage-pack')).rejects.toThrow('Disk full');
     expect(await service.load()).toMatchObject({
       coins: 1000,
-      owned: ['classic', 'ivory'],
+      owned: ['classic', 'ivory', 'triangle-homes'],
       pack: null,
     });
   });
@@ -110,10 +110,10 @@ describe('local cosmetic economy', () => {
       service.recordMatch('match-1', true, true),
       service.recordMatch('match-1', true, true),
     ]);
-    expect(await service.load()).toMatchObject({ coins: 1150, wins: 1, games: 1 });
+    expect(await service.load()).toMatchObject({ coins: 1050, wins: 1, games: 1 });
     await service.recordMatch('match-2', false, true);
     await service.recordMatch('match-3', true, false);
-    expect(await service.load()).toMatchObject({ coins: 1190, wins: 2, games: 3 });
+    expect(await service.load()).toMatchObject({ coins: 1065, wins: 2, games: 3 });
   });
   it('builds a win streak and resets it on a loss, keeping the best', async () => {
     await service.recordMatch('m1', true, true);
@@ -156,5 +156,33 @@ describe('local cosmetic economy', () => {
     expect((await service.load()).owned).not.toContain('royal');
     await expect(service.purchase('royal')).resolves.toMatchObject({ coins: 400 });
     expect(write).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('table styles', () => {
+  it('gives everyone the triangle homes and lets a bought style be equipped and kept', async () => {
+    const storage = new InMemoryKeyValueStore();
+    const service = new ProfileService(storage);
+    expect((await service.load()).style).toBe('triangle-homes');
+    const bought = await service.purchase('round-homes');
+    expect(bought).toMatchObject({ style: 'round-homes', coins: 800 });
+    await service.equip('triangle-homes');
+    expect((await new ProfileService(storage).load()).style).toBe('triangle-homes');
+  });
+  it('reads a save from before table styles existed', async () => {
+    const storage = new InMemoryKeyValueStore();
+    const { style: _unused, ...old } = INITIAL_PROFILE;
+    await storage.setItem(PROFILE_KEY, JSON.stringify({ ...old, owned: ['classic', 'ivory'] }));
+    const loaded = await new ProfileService(storage).load();
+    expect(loaded.style).toBe('triangle-homes');
+    expect(loaded.owned).toContain('triangle-homes');
+  });
+  it('refuses a save claiming a style it does not own', async () => {
+    const storage = new InMemoryKeyValueStore();
+    await storage.setItem(
+      PROFILE_KEY,
+      JSON.stringify({ ...INITIAL_PROFILE, style: 'round-homes' }),
+    );
+    await expect(new ProfileService(storage).load()).rejects.toThrow('could not be read');
   });
 });

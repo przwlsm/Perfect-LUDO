@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './AppText';
 import type { GameState, PlayerColor } from '@/domain';
 import { PLAYER_COLOR_HEX } from './PlayerColorPalette';
 

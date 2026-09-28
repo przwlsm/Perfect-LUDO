@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './AppText';
 import { describeConnection } from '@/domain';
 import { useConnectivity } from '../state/ConnectivityProvider';
 import { ui } from '../theme/themes';

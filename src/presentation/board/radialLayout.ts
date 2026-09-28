@@ -45,3 +45,25 @@ export function radialPieceCell(piece: Piece, slot: number, count: number): Cell
     ? radialTrack(count)[position.square]!
     : radialHome(piece.color, count)[position.step - 1]!;
 }
+
+/** Half the width of an arm (three cells) plus a hairline gap, in cells. */
+const ARM_HALF_WIDTH = 1.6;
+
+/**
+ * The triangular home between a seat's arm and the next one: its base spans
+ * the two arms' outer ends and its apex points at the centre, filling the
+ * wedge without touching either arm. Grid coordinates, like radialPoint.
+ */
+export function radialHomeTriangle(
+  color: PlayerColor,
+  count: number,
+): { apex: Cell; left: Cell; right: Cell } {
+  const seat = ALL_PLAYER_COLORS.indexOf(color);
+  // Where the two arms' facing edges would meet, plus a little room.
+  const apexRadius = ARM_HALF_WIDTH / Math.sin(Math.PI / count) + 0.15;
+  return {
+    apex: radialPoint(seat + 0.5, count, apexRadius),
+    left: radialPoint(seat, count, 8.5, ARM_HALF_WIDTH),
+    right: radialPoint(seat + 1, count, 8.5, -ARM_HALF_WIDTH),
+  };
+}

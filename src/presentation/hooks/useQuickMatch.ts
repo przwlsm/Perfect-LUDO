@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { matchmakingRepository } from '@/config/container';
-import type { QuickMatchPlayerCount, QuickMatchTicket, Unsubscribe } from '@/domain';
+import type { QuickMatchPlayerCount, QuickMatchTicket, Stake, Unsubscribe } from '@/domain';
 import { useSocial } from '../state/SocialProvider';
 
 /** How often a waiting ticket is refreshed; the server drops tickets quiet for 45 s. */
@@ -13,7 +13,7 @@ export interface QuickMatchState {
   readonly ticket: QuickMatchTicket | null;
   readonly error: string | null;
   readonly available: boolean;
-  start(playerCount: QuickMatchPlayerCount): Promise<void>;
+  start(playerCount: QuickMatchPlayerCount, stake?: Stake): Promise<void>;
   cancel(): Promise<void>;
 }
 
@@ -34,6 +34,7 @@ export function useQuickMatch(): QuickMatchState {
   const mounted = useRef(true);
   const searching = useRef(false);
   const playerCount = useRef<QuickMatchPlayerCount>(2);
+  const stake = useRef<Stake>(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const unsubscribe = useRef<Unsubscribe | null>(null);
   const inFlight = useRef(false);
@@ -62,7 +63,7 @@ export function useQuickMatch(): QuickMatchState {
     if (!matchmakingRepository || !searching.current || inFlight.current) return;
     inFlight.current = true;
     try {
-      accept(await matchmakingRepository.join(playerCount.current));
+      accept(await matchmakingRepository.join(playerCount.current, stake.current));
     } catch (e) {
       // One missed beat is not a failure; the server tolerates several.
       if (mounted.current && searching.current) setError(messageFor(e));
@@ -72,15 +73,16 @@ export function useQuickMatch(): QuickMatchState {
   }, [accept]);
 
   const start = useCallback(
-    async (count: QuickMatchPlayerCount) => {
+    async (count: QuickMatchPlayerCount, entry: Stake = 0) => {
       if (!matchmakingRepository || !userId || searching.current) return;
       playerCount.current = count;
+      stake.current = entry;
       searching.current = true;
       setError(null);
       setTicket(null);
       setPhase('searching');
       try {
-        accept(await matchmakingRepository.join(count));
+        accept(await matchmakingRepository.join(count, entry));
       } catch (e) {
         stopWatching();
         if (mounted.current) {

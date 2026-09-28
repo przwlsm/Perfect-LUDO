@@ -16,6 +16,30 @@ export interface GameState {
   readonly consecutiveSixes: number;
   readonly status: GameStatus;
   readonly winnerColor: PlayerColor | null;
+  /**
+   * 2 v 2: only on a 4-seat board. Opposite seats are partners (red with
+   * yellow, green with blue): they never capture or block each other, a
+   * player whose coins are all home plays for their partner, and the pair
+   * wins together once all eight coins are home. Absent means every seat
+   * plays for itself.
+   */
+  readonly teams?: boolean;
+}
+
+/** Whether this board is played in partnerships. */
+export function isTeamGame(state: Pick<GameState, 'teams' | 'players'>): boolean {
+  return state.teams === true && state.players.length === 4;
+}
+
+/** The partner of `color` in a team game, or null when everyone plays alone. */
+export function partnerOf(
+  state: Pick<GameState, 'teams' | 'players'>,
+  color: PlayerColor,
+): PlayerColor | null {
+  if (!isTeamGame(state)) return null;
+  const index = state.players.findIndex((p) => p.color === color);
+  if (index < 0) return null;
+  return state.players[(index + 2) % 4]?.color ?? null;
 }
 
 export function getCurrentPlayer(state: GameState): Player {
