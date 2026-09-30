@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import {
-  ActivityIndicator,
   Modal,
   Pressable,
   StyleSheet,
@@ -21,6 +20,8 @@ import Animated, { FadeInLeft, FadeInRight } from 'react-native-reanimated';
 import { useProfile } from '../state/ProfileProvider';
 import { useSocial } from '../state/SocialProvider';
 import { NotificationBell } from '../social/NotificationBell';
+import { LudoLoader } from './LudoLoader';
+import { useMotionEnabled } from '../hooks/useMotionEnabled';
 import { getCardDesign, ui } from '../theme/themes';
 
 export function Label({ children, color = ui.muted }: { children: ReactNode; color?: string }) {
@@ -72,11 +73,11 @@ export function Button({
         { borderRadius: radius, opacity: disabled ? 0.45 : 1 },
         secondary
           ? {
-              backgroundColor: danger ? '#3a1d2a' : ui.navy,
               borderWidth: 1,
-              borderColor: danger ? '#ff879555' : '#ffffff26',
+              borderColor: danger ? '#ff879555' : `${accent}45`,
               borderBottomWidth: pressed ? 1 : 3,
-              borderBottomColor: ui.navyRim,
+              borderBottomColor: danger ? '#2c1620' : ui.navyRim,
+              boxShadow: `0 4px 14px #00000040`,
             }
           : {
               borderBottomWidth: pressed ? 1 : 4,
@@ -87,15 +88,17 @@ export function Button({
         pressed && { transform: [{ translateY: secondary ? 2 : 3 }] },
       ]}
     >
-      {!secondary && (
-        <LinearGradient
-          colors={[shade(accent, 0.18), accent, shade(accent, -0.14)]}
-          style={[StyleSheet.absoluteFill, { borderRadius: radius }]}
-        />
-      )}
-      {!secondary && (
-        <View style={[s.gloss, { borderTopLeftRadius: radius, borderTopRightRadius: radius }]} />
-      )}
+      <LinearGradient
+        colors={
+          secondary
+            ? danger
+              ? ['#472436', '#3a1d2a', '#2c1620']
+              : ['#303c66', ui.navy, '#1c2440']
+            : [shade(accent, 0.18), accent, shade(accent, -0.14)]
+        }
+        style={[StyleSheet.absoluteFill, { borderRadius: radius }]}
+      />
+      <View style={[s.gloss, { borderTopLeftRadius: radius, borderTopRightRadius: radius }]} />
       <Text
         style={[
           s.buttonText,
@@ -138,17 +141,19 @@ export function formatCount(n: number): string {
 export function CoinPill() {
   const { profile, member, wallet, refreshWallet } = useProfile();
   if (!member)
+    // A guest's header shows the vault filling up; tapping it opens Rewards,
+    // where the sign-in claim lives.
     return (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Sign in to use coins"
-        onPress={() => router.push({ pathname: '/login', params: { intent: 'store' } })}
+        accessibilityLabel={`${profile.vaultCoins} coins in your vault. Open rewards`}
+        onPress={() => router.push('/rewards')}
         android_ripple={{ color: '#ffc56840' }}
         style={s.coins}
       >
         <CoinIcon size={22} />
-        <Text style={s.coinText}>Sign in</Text>
-        <Text style={s.coinPlus}>+</Text>
+        <Text style={s.coinText}>{formatCount(profile.vaultCoins)}</Text>
+        <Text style={[s.coinPlus, { fontSize: 11 }]}>🔒</Text>
       </Pressable>
     );
   if (wallet !== 'ready')
@@ -212,6 +217,7 @@ export function Screen({
   immersive?: boolean;
 }) {
   const { theme, ready, error, reload, member, wallet, profile } = useProfile();
+  const loaderMotion = useMotionEnabled(profile.reducedMotion, !ready);
   const level = member && wallet === 'ready' ? levelInfo(profile.xp).level : null;
   const { width, height, fontScale } = useWindowDimensions();
   // Insets come from the provider, already known on the first frame. The
@@ -248,7 +254,7 @@ export function Screen({
         <View style={[s.header, landscape && { paddingVertical: 8 }]}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={back ? 'Back' : 'Ludo Club home'}
+            accessibilityLabel={back ? 'Back' : 'Ludo Rumble home'}
             onPress={() => (back && router.canGoBack() ? router.back() : router.replace('/'))}
             android_ripple={{ color: '#ffffff1f' }}
             style={s.brand}
@@ -264,7 +270,7 @@ export function Screen({
             {!compactHeader && (
               <View>
                 <Text style={s.brandText}>
-                  LUDO<Text style={{ color: theme.accent }}> CLUB</Text>
+                  LUDO<Text style={{ color: theme.accent }}> RUMBLE</Text>
                 </Text>
                 <Text style={s.brandSub}>GOOD TIMES. GREAT MOVES.</Text>
               </View>
@@ -285,7 +291,7 @@ export function Screen({
               <Button onPress={() => void reload()}>Retry loading</Button>
             </>
           ) : (
-            <ActivityIndicator color={theme.accent} />
+            <LudoLoader motionEnabled={loaderMotion} />
           )}
         </View>
       ) : (

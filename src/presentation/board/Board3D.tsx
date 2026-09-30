@@ -1,6 +1,12 @@
 import { useMemo } from 'react';
 import { Shape } from 'three';
-import { radialTrack, radialHome, radialHomeTriangle, radialYard } from './radialLayout';
+import {
+  radialGrid,
+  radialTrack,
+  radialHome,
+  radialHomeTriangle,
+  radialYard,
+} from './radialLayout';
 import {
   type ClassicColor,
   ALL_PLAYER_COLORS,
@@ -127,7 +133,9 @@ export function Board3D({
   const extended = count > 4;
   // Radial (>4-player) boards have no "flip" concept; nothing enables it there.
   const flipClassic = flip && !extended;
-  const grid = extended ? 19 : GRID_SIZE;
+  const grid = extended ? radialGrid(count) : GRID_SIZE;
+  // The camera backs off in step with the grid so a bigger table still fits the frame.
+  const reach = extended ? grid / 19 : 1;
   const colors = extended ? ALL_PLAYER_COLORS.slice(0, count) : PLAYER_COLORS;
   const track = extended ? radialTrack(count) : TRACK_CELLS;
   const yardSize = extended ? 3.7 : YARD_BLOCK_SIZE;
@@ -177,7 +185,7 @@ export function Board3D({
             ? { position: [0, 30, 0], up: [0, 0, -1], zoom: size / grid }
             : // Tilted just enough to show the pieces' height and the frame's
               // depth while the whole board still fits a square viewport.
-              { position: extended ? [0, 23, 14.5] : [0, 17.8, 12.4], fov: 42 }
+              { position: extended ? [0, 23 * reach, 14.5 * reach] : [0, 17.8, 12.4], fov: 42 }
         }
         // Aimed a touch in front of centre so the tilted board sits mid-frame
         // instead of leaving its top quarter empty.

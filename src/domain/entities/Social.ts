@@ -1,3 +1,4 @@
+import type { GameVariant } from './Variant';
 /** Backend-independent vocabulary for friends, challenges and private lobbies. */
 
 /** IN_GAME is a kind of present: only OFFLINE means absent. */
@@ -24,6 +25,7 @@ export type LobbyPlayerStatus = 'INVITED' | 'JOINED' | 'LEFT' | 'DECLINED';
 export type NotificationType =
   | 'FRIEND_REQUEST'
   | 'FRIEND_REQUEST_ACCEPTED'
+  | 'GIFT'
   | 'CHALLENGE_INVITE'
   | 'CHALLENGE_ACCEPTED'
   | 'CHALLENGE_DECLINED'
@@ -91,6 +93,14 @@ export interface Lobby {
   readonly inviteCode: string | null;
   /** Coins each seat pays when the match starts; 0 for a free table. */
   readonly stake: number;
+  /** The game mode everyone at this table plays. */
+  readonly variant: GameVariant;
+  /** 2 v 2 table: opposite seats are partners. */
+  readonly teams: boolean;
+  /** A 2 v 2 pair's room open to quick play, waiting for opponents. */
+  readonly seeking: boolean;
+  /** Set when this room's pair was moved to another table to play. */
+  readonly movedTo: string | null;
 }
 
 /**

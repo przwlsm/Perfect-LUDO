@@ -24,6 +24,12 @@ export interface GameState {
    * plays for itself.
    */
   readonly teams?: boolean;
+  /** Quick game: the first player with this many coins home wins (absent: all four). */
+  readonly goal?: 1 | 2;
+  /** Kill & Go: a coin may not enter its home path until its player has captured. */
+  readonly killToEnter?: boolean;
+  /** Kill & Go: colours that have captured at least once, in the order they first did. */
+  readonly hunters?: readonly PlayerColor[];
 }
 
 /** Whether this board is played in partnerships. */

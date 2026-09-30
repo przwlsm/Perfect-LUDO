@@ -2,7 +2,7 @@ import { InMemoryKeyValueStore } from '@/domain/testing/InMemoryKeyValueStore';
 import { InMemoryUserProgressRepository } from '@/domain/testing/InMemoryUserProgressRepository';
 import { InMemoryWalletRepository } from '@/domain/testing/InMemoryWalletRepository';
 import { INITIAL_PROFILE, ProfileService } from '../store/ProfileService';
-import { AccountProfiles } from './AccountProfiles';
+import { AccountProfiles, CLOUD_WAIT_MS } from './AccountProfiles';
 
 function setup() {
   const storage = new InMemoryKeyValueStore();
@@ -16,7 +16,7 @@ describe('shared-device account profiles', () => {
     const { accounts, profiles } = setup();
     await profiles.update({ name: 'Guest name' });
     await accounts.activate('account-a');
-    await profiles.update({ name: 'Account A' });
+    await profiles.replace({ ...INITIAL_PROFILE, name: 'Account A', coins: 30000 });
     await profiles.purchase('heritage-pack');
     const guest = await accounts.activate(null);
     expect(guest.profile.name).toBe('Guest name');
@@ -91,6 +91,20 @@ describe('account wallet on sign-in', () => {
     const result = await accounts.activate('ghost', true);
     expect(result.wallet).toBe('none');
     expect(wallet.calls).toEqual([]);
+  });
+  it('does not wait forever on a server that never answers', async () => {
+    jest.useFakeTimers();
+    try {
+      const { accounts, wallet } = setupWithWallet();
+      wallet.session = { uid: 'account-a', guest: false };
+      jest.spyOn(wallet, 'getWallet').mockReturnValue(new Promise(() => undefined));
+      const activating = accounts.activate('account-a');
+      await jest.advanceTimersByTimeAsync(CLOUD_WAIT_MS + 10);
+      const result = await activating;
+      expect(result.wallet).toBe('stale');
+    } finally {
+      jest.useRealTimers();
+    }
   });
   it('keeps the last mirror and flags it stale when the account is unreachable', async () => {
     const { accounts, wallet } = setupWithWallet();

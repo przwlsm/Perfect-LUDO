@@ -2,10 +2,23 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Text } from '../components/AppText';
 import { router } from 'expo-router';
-import { createGame, seatColors } from '@/domain';
+import {
+  createGame,
+  IAP_PRODUCTS,
+  PIGGY_CAP,
+  seatColors,
+  type Friend,
+  type StoreListing,
+} from '@/domain';
+import { friendsRepository, iapService, rewardedAds } from '@/config/container';
+import { AdTile } from '../components/AdTile';
+import { CoinIcon, GemIcon } from '../components/Currency';
+import { ProgressBar, timeLeft } from '../components/Progress';
 import {
   COSMETICS,
+  cosmeticCurrency,
   isCosmeticEquipped,
+  isCosmeticExpired,
   type Cosmetic,
   type CosmeticKind,
 } from '@/domain/cosmetics/catalog';
@@ -21,8 +34,103 @@ const tablePreview = createGame(seatColors(6));
 const homeStyleOf = (id: string) =>
   id === 'round-homes' ? ('round' as const) : ('triangle' as const);
 export default function StoreScreen() {
-  const { profile, theme, member, wallet, purchase, equip } = useProfile();
+  const { profile, theme, member, wallet, purchase, equip, adoptWallet, giftItem, startTrial } =
+    useProfile();
   const signIn = () => router.push({ pathname: '/login', params: { intent: 'store' } });
+
+  // ---- Guests can borrow a paid board for a day after a rewarded ad.
+  const [trialBusy, setTrialBusy] = useState(false);
+  const trialActive = (id: string) =>
+    profile.trialBoard === id &&
+    profile.trialUntil !== null &&
+    new Date(profile.trialUntil).getTime() > new Date().getTime();
+  async function tryLook(id: string) {
+    if (trialBusy) return;
+    setTrialBusy(true);
+    setMessage(null);
+    try {
+      if (!(await rewardedAds.show())) {
+        setMessage('The ad did not finish. Try again in a moment.');
+        return;
+      }
+      await startTrial(id);
+      setMessage('Enjoy it for the next 24 hours — sign in to make it yours forever.');
+      setSelected(null);
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'The trial could not start.');
+    } finally {
+      setTrialBusy(false);
+    }
+  }
+
+  // ---- Gifting: pick a friend, pay their unlock from your balance.
+  const [giftOpen, setGiftOpen] = useState(false);
+  const [friends, setFriends] = useState<readonly Friend[] | null>(null);
+  const [giftBusy, setGiftBusy] = useState<string | null>(null);
+  const [giftMessage, setGiftMessage] = useState<string | null>(null);
+  function openGift() {
+    setGiftMessage(null);
+    setGiftOpen(true);
+    if (friends === null && friendsRepository) {
+      void friendsRepository
+        .listFriends()
+        .then(setFriends)
+        .catch(() => setFriends([]));
+    }
+  }
+  async function sendGift(friend: Friend) {
+    if (!selected || giftBusy) return;
+    setGiftBusy(friend.id);
+    setGiftMessage(null);
+    try {
+      await giftItem(friend.id, selected.id);
+      setGiftMessage(`${selected.name} is on its way to ${friend.displayName || friend.username}!`);
+    } catch (e) {
+      setGiftMessage(e instanceof Error ? e.message : 'The gift could not be sent.');
+    } finally {
+      setGiftBusy(null);
+    }
+  }
+
+  // ---- The real-money shop: hidden entirely unless the store lists prices.
+  const [shopOpen, setShopOpen] = useState(false);
+  const [listings, setListings] = useState<readonly StoreListing[]>([]);
+  const [shopBusy, setShopBusy] = useState<string | null>(null);
+  const [shopMessage, setShopMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (!member || !iapService?.supported()) return;
+    let alive = true;
+    void iapService.listings().then((next) => {
+      if (alive) setListings(next);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [member]);
+  const shopItems = IAP_PRODUCTS.map((product) => ({
+    product,
+    price: listings.find((l) => l.sku === product.sku)?.price,
+  })).filter((entry): entry is { product: (typeof IAP_PRODUCTS)[number]; price: string } =>
+    Boolean(entry.price),
+  );
+  const piggyItem = shopItems.find((x) => x.product.kind === 'piggy');
+  const clubItem = shopItems.find((x) => x.product.kind === 'club');
+  const bundles = shopItems.filter((x) => x.product.kind !== 'piggy' && x.product.kind !== 'club');
+  const clubActive =
+    profile.clubUntil !== null && new Date(profile.clubUntil).getTime() > new Date().getTime();
+  async function buy(sku: string) {
+    if (!iapService || shopBusy) return;
+    setShopBusy(sku);
+    setShopMessage(null);
+    try {
+      await adoptWallet(await iapService.purchase(sku));
+      setShopMessage('Purchase complete. Enjoy!');
+    } catch (e) {
+      setShopMessage(e instanceof Error ? e.message : 'The purchase did not go through.');
+    } finally {
+      setShopBusy(null);
+    }
+  }
   const { width } = useWindowDimensions();
   const [kind, setKind] = useState<CosmeticKind>('pack');
   const [ownedOnly, setOwnedOnly] = useState(false);
@@ -36,10 +144,18 @@ export default function StoreScreen() {
     const timer = setTimeout(() => setGridReady(true), 0);
     return () => clearTimeout(timer);
   }, []);
+  // '◉' is a coin price, '◆' a gem price; legendaries cost gems.
+  const mark = (item: Cosmetic) => (cosmeticCurrency(item) === 'gems' ? '◆' : '◉');
+  const balanceFor = (item: Cosmetic) =>
+    cosmeticCurrency(item) === 'gems' ? profile.gems : profile.coins;
   const columns = width >= 800 ? 4 : width >= 560 ? 3 : 2;
   const cardWidth = (Math.min(width, 960) - 40 - (columns - 1) * 12) / columns;
+  // A past event's look stays visible only for the players who have it.
   const items = COSMETICS.filter(
-    (c) => c.kind === kind && (!ownedOnly || profile.owned.includes(c.id)),
+    (c) =>
+      c.kind === kind &&
+      (!ownedOnly || profile.owned.includes(c.id)) &&
+      (!isCosmeticExpired(c) || profile.owned.includes(c.id)),
   );
   async function confirm() {
     if (!selected || busy) return;
@@ -80,6 +196,28 @@ export default function StoreScreen() {
           <Text style={{ fontSize: 36, color: '#c5a5ff' }}>✧</Text>
         </View>
       </Card>
+      {shopItems.length > 0 && (
+        <Card style={{ borderColor: `${ui.gem}40` }}>
+          <View style={shared.between}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Label color={ui.gem}>TOP UP</Label>
+              <Text style={shared.sectionTitle}>Get gems & coins</Text>
+              <Text style={shared.small}>
+                Skip the grind when you feel like it — playing always stays free.
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open the top up shop"
+              onPress={() => setShopOpen(true)}
+              style={s.shopButton}
+            >
+              <GemIcon size={16} />
+              <Text style={{ color: ui.text, fontWeight: '900' }}>Shop</Text>
+            </Pressable>
+          </View>
+        </Card>
+      )}
       <View style={{ gap: 8 }}>
         <View style={s.tabs}>
           {(['board', 'dice', 'pack', 'style'] as const).map((tab) => (
@@ -125,7 +263,7 @@ export default function StoreScreen() {
             <Pressable
               key={item.id}
               accessibilityRole="button"
-              accessibilityLabel={`Preview ${item.name}, ${equipped ? 'equipped' : owned ? 'owned' : `${item.price} coins`}`}
+              accessibilityLabel={`Preview ${item.name}, ${equipped ? 'equipped' : owned ? 'owned' : `${item.price} ${cosmeticCurrency(item)}`}`}
               onPress={() => {
                 setSelected(item);
                 setMessage(null);
@@ -195,6 +333,13 @@ export default function StoreScreen() {
                     {item.rarity.toUpperCase()}
                   </Text>
                 </View>
+                {item.availableUntil && !isCosmeticExpired(item) && (
+                  <View style={s.limited}>
+                    <Text style={[s.rarityText, { color: '#1f1500' }]}>
+                      ENDS IN {timeLeft(item.availableUntil).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
               </View>
               <View style={s.productInfo}>
                 <Text style={s.productTitle}>{item.name}</Text>
@@ -209,7 +354,7 @@ export default function StoreScreen() {
                       fontWeight: '800',
                     }}
                   >
-                    {equipped ? '✓ Equipped' : owned ? 'Owned' : `◉ ${item.price}`}
+                    {equipped ? '✓ Equipped' : owned ? 'Owned' : `${mark(item)} ${item.price}`}
                   </Text>
                   <Text style={{ color: ui.muted }}>↗</Text>
                 </View>
@@ -229,6 +374,129 @@ export default function StoreScreen() {
           ? 'Your coins and collection are kept on your account.'
           : 'Sign in to unlock looks; coins and your collection stay on your account.'}
       </Text>
+      <Sheet
+        visible={shopOpen}
+        onClose={() => {
+          if (!shopBusy) setShopOpen(false);
+        }}
+        title="Top up"
+      >
+        {clubItem && (
+          <Card style={{ padding: 14, gap: 8, borderColor: `${ui.gem}55` }}>
+            <View style={shared.between}>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Label color={ui.gem}>{clubActive ? 'CLUB MEMBER' : 'SUBSCRIPTION'}</Label>
+                <Text style={{ color: ui.text, fontWeight: '800', fontSize: 15 }}>
+                  {clubItem.product.name}
+                </Text>
+                <Text style={shared.small}>
+                  {clubActive
+                    ? `Active until ${new Date(profile.clubUntil!).toLocaleDateString()}. Extra spins are free and every gift brings gems.`
+                    : clubItem.product.blurb}
+                </Text>
+              </View>
+              {!clubActive && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Join Ludo Club for ${clubItem.price} a month`}
+                  disabled={shopBusy !== null}
+                  onPress={() => void buy(clubItem.product.sku)}
+                  style={[s.priceButton, shopBusy !== null && { opacity: 0.5 }]}
+                >
+                  <Text style={{ color: '#003824', fontWeight: '900' }}>
+                    {shopBusy === clubItem.product.sku ? '…' : `${clubItem.price}/mo`}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          </Card>
+        )}
+        {piggyItem && (
+          <Card style={{ padding: 14, gap: 8, borderColor: `${ui.gold}55` }}>
+            <View style={shared.between}>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Label color={ui.gold}>PIGGY BANK</Label>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <CoinIcon size={15} />
+                  <Text style={{ color: ui.text, fontWeight: '800', fontSize: 15 }}>
+                    {profile.piggyCoins.toLocaleString()} saved
+                  </Text>
+                </View>
+                <Text style={shared.small}>{piggyItem.product.blurb}</Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Crack the piggy bank open for ${piggyItem.price}`}
+                disabled={shopBusy !== null || profile.piggyCoins < 1000}
+                onPress={() => void buy(piggyItem.product.sku)}
+                style={[
+                  s.priceButton,
+                  (shopBusy !== null || profile.piggyCoins < 1000) && { opacity: 0.5 },
+                ]}
+              >
+                <Text style={{ color: '#003824', fontWeight: '900' }}>
+                  {shopBusy === piggyItem.product.sku
+                    ? '…'
+                    : profile.piggyCoins < 1000
+                      ? 'Filling…'
+                      : piggyItem.price}
+                </Text>
+              </Pressable>
+            </View>
+            <ProgressBar value={Math.min(1, profile.piggyCoins / PIGGY_CAP)} height={8} />
+          </Card>
+        )}
+        {bundles.map(({ product, price }) => (
+          <Card key={product.sku} style={{ padding: 14, gap: 8 }}>
+            <View style={shared.between}>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={{ color: ui.text, fontWeight: '800', fontSize: 15 }}>
+                  {product.name}
+                </Text>
+                <Text style={shared.small}>{product.blurb}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  {product.gems > 0 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <GemIcon size={14} />
+                      <Text style={{ color: ui.gem, fontWeight: '800', fontSize: 12 }}>
+                        +{product.gems.toLocaleString()}
+                      </Text>
+                    </View>
+                  )}
+                  {product.coins > 0 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <CoinIcon size={14} />
+                      <Text style={{ color: ui.gold, fontWeight: '800', fontSize: 12 }}>
+                        +{product.coins.toLocaleString()}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Buy ${product.name} for ${price}`}
+                disabled={shopBusy !== null}
+                onPress={() => void buy(product.sku)}
+                style={[s.priceButton, shopBusy !== null && { opacity: 0.5 }]}
+              >
+                <Text style={{ color: '#003824', fontWeight: '900' }}>
+                  {shopBusy === product.sku ? '…' : price}
+                </Text>
+              </Pressable>
+            </View>
+          </Card>
+        ))}
+        {shopMessage && (
+          <Text accessibilityLiveRegion="polite" style={[shared.small, { color: ui.green }]}>
+            {shopMessage}
+          </Text>
+        )}
+        <Text style={[shared.small, { textAlign: 'center' }]}>
+          Payments go through your app store. Coins and gems are for playing here — they never
+          convert back to money.
+        </Text>
+      </Sheet>
       <Sheet
         visible={selected !== null}
         onClose={() => {
@@ -287,7 +555,9 @@ export default function StoreScreen() {
               <Card>
                 <View style={shared.between}>
                   <Text style={shared.small}>Unlock price</Text>
-                  <Text style={{ color: theme.accent, fontWeight: '800' }}>◉ {selected.price}</Text>
+                  <Text style={{ color: theme.accent, fontWeight: '800' }}>
+                    {mark(selected)} {selected.price}
+                  </Text>
                 </View>
                 {!member ? (
                   <Text style={shared.small}>
@@ -302,11 +572,11 @@ export default function StoreScreen() {
                     <Text style={shared.small}>Your balance after purchase</Text>
                     <Text
                       style={{
-                        color: profile.coins >= selected.price ? ui.text : ui.danger,
+                        color: balanceFor(selected) >= selected.price ? ui.text : ui.danger,
                         fontWeight: '700',
                       }}
                     >
-                      ◉ {profile.coins - selected.price}
+                      {mark(selected)} {balanceFor(selected) - selected.price}
                     </Text>
                   </View>
                 )}
@@ -323,7 +593,7 @@ export default function StoreScreen() {
                 isCosmeticEquipped(profile, selected) ||
                 (!profile.owned.includes(selected.id) &&
                   member &&
-                  (wallet !== 'ready' || profile.coins < selected.price))
+                  (wallet !== 'ready' || balanceFor(selected) < selected.price))
               }
               onPress={() => void confirm()}
             >
@@ -337,14 +607,85 @@ export default function StoreScreen() {
                       ? 'Sign in to unlock'
                       : wallet !== 'ready'
                         ? 'Reconnect to unlock'
-                        : profile.coins < selected.price
-                          ? 'Earn more coins to unlock'
-                          : `Unlock & equip · ${selected.price} coins`}
+                        : balanceFor(selected) < selected.price
+                          ? `Earn more ${cosmeticCurrency(selected)} to unlock`
+                          : `Unlock & equip · ${selected.price} ${cosmeticCurrency(selected)}`}
             </Button>
+            {member && selected.price > 0 && !isCosmeticExpired(selected) && (
+              <Button secondary onPress={openGift}>
+                {`Gift to a friend · ${selected.price} ${cosmeticCurrency(selected)}`}
+              </Button>
+            )}
+            {!member &&
+              selected.kind === 'board' &&
+              selected.price > 0 &&
+              !isCosmeticExpired(selected) &&
+              rewardedAds.supported() && (
+                <AdTile
+                  compact
+                  title={
+                    trialActive(selected.id)
+                      ? `Trying it now · ${timeLeft(profile.trialUntil!)} left`
+                      : 'Try it free for 24 hours'
+                  }
+                  reward="Watch one short ad"
+                  caption={
+                    trialActive(selected.id)
+                      ? 'Enjoy! Sign in any time to make it yours forever.'
+                      : 'The whole app dresses in this board for a day.'
+                  }
+                  busy={trialBusy}
+                  disabled={trialActive(selected.id)}
+                  onPress={() => void tryLook(selected.id)}
+                />
+              )}
             <Text style={[shared.small, { textAlign: 'center' }]}>
               One unlock. Yours on every board view.
             </Text>
           </>
+        )}
+      </Sheet>
+      <Sheet
+        visible={giftOpen}
+        onClose={() => {
+          if (!giftBusy) setGiftOpen(false);
+        }}
+        title="Send as a gift"
+      >
+        {selected && (
+          <Body>
+            {selected.name} · {selected.price} {cosmeticCurrency(selected)} from your balance. Your
+            friend keeps it forever.
+          </Body>
+        )}
+        {friends === null && <Text style={shared.small}>Loading your friends…</Text>}
+        {friends !== null && friends.length === 0 && (
+          <Text style={shared.small}>
+            No friends yet — add some from the Friends screen and share the fun.
+          </Text>
+        )}
+        {friends?.map((friend) => (
+          <View key={friend.id} style={s.friendRow}>
+            <Text numberOfLines={1} style={{ color: ui.text, fontWeight: '700', flex: 1 }}>
+              {friend.displayName || friend.username}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Send to ${friend.displayName || friend.username}`}
+              disabled={giftBusy !== null}
+              onPress={() => void sendGift(friend)}
+              style={[s.priceButton, giftBusy !== null && { opacity: 0.5 }]}
+            >
+              <Text style={{ color: '#003824', fontWeight: '900' }}>
+                {giftBusy === friend.id ? '…' : 'Send'}
+              </Text>
+            </Pressable>
+          </View>
+        ))}
+        {giftMessage && (
+          <Text accessibilityLiveRegion="polite" style={[shared.small, { color: ui.green }]}>
+            {giftMessage}
+          </Text>
         )}
       </Sheet>
     </Screen>
@@ -435,6 +776,45 @@ const s = StyleSheet.create({
     borderRadius: 5,
   },
   rarityText: { fontWeight: '800', fontSize: 7, letterSpacing: 1 },
+  limited: {
+    position: 'absolute',
+    right: 10,
+    top: 10,
+    backgroundColor: '#ffcf6f',
+    padding: 5,
+    borderRadius: 5,
+  },
+  friendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ui.line,
+    backgroundColor: ui.surfaceLow,
+  },
   productInfo: { padding: 13, gap: 9 },
   productTitle: { fontSize: 14, fontWeight: '800', color: ui.text },
+  shopButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: '#9333ea',
+    borderBottomWidth: 3,
+    borderBottomColor: '#581c87',
+  },
+  priceButton: {
+    minWidth: 84,
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: ui.green,
+    borderBottomWidth: 3,
+    borderBottomColor: '#047857',
+  },
 });

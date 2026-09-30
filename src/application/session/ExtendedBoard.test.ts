@@ -11,7 +11,7 @@ import {
 } from '@/domain';
 import { newMatch, parseMatch } from './MatchRepository';
 
-describe.each([5, 6] as const)('%i-player games', (count) => {
+describe.each([5, 6, 7, 8] as const)('%i-player games', (count) => {
   it('uses equally spaced entries and restores all players', () => {
     const m = newMatch({ mode: 'local', players: count, difficulty: 'smart' });
     expect(parseMatch(JSON.stringify(m))).toEqual(m);

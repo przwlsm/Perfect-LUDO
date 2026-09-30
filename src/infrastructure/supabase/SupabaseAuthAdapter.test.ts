@@ -1,11 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { SupabaseAuthAdapter } from './SupabaseAuthAdapter';
+import { RESTORE_WAIT_MS, SupabaseAuthAdapter } from './SupabaseAuthAdapter';
 
 const user = { id: 'account-a', email: 'player@example.test' };
 const guestUser = { id: 'account-a', email: null, is_anonymous: true };
 const session = { user };
 const member = { uid: user.id, email: user.email, isGuest: false };
-function setup(providerEnabled?: () => Promise<boolean>) {
+function setup(
+  providerEnabled?: () => Promise<boolean>,
+  storedUser?: () => Promise<typeof member | null>,
+) {
   let listener: (event: string, value: typeof session | null) => void = () => {};
   const auth = {
     onAuthStateChange: jest.fn((fn) => {
@@ -33,6 +36,7 @@ function setup(providerEnabled?: () => Promise<boolean>) {
   const adapter = new SupabaseAuthAdapter(
     { auth, rpc } as unknown as SupabaseClient,
     providerEnabled,
+    storedUser,
   );
   return {
     adapter,
@@ -229,5 +233,44 @@ describe('account authentication', () => {
       email: user.email,
       options: { emailRedirectTo: 'perfectludo://auth/callback' },
     });
+  });
+});
+
+describe('restoring the login offline', () => {
+  const offline = { name: 'AuthRetryableFetchError', status: 0, message: 'Network request failed' };
+
+  it('continues as the saved login when the server is unreachable', async () => {
+    const { adapter, auth } = setup(undefined, async () => member);
+    auth.getSession.mockResolvedValueOnce({ data: { session: null }, error: offline });
+    expect(await adapter.restoreSession()).toEqual(member);
+    expect(adapter.getCurrentUser()).toEqual(member);
+  });
+
+  it('does not wait on a slow server for more than a few seconds', async () => {
+    jest.useFakeTimers();
+    try {
+      const { adapter, auth } = setup(undefined, async () => member);
+      auth.getSession.mockReturnValueOnce(new Promise(() => undefined));
+      const restoring = adapter.restoreSession();
+      await jest.advanceTimersByTimeAsync(RESTORE_WAIT_MS + 10);
+      await expect(restoring).resolves.toEqual(member);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('still signs out a login the server rejects', async () => {
+    const { adapter, auth } = setup(undefined, async () => member);
+    auth.getSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: { name: 'AuthApiError', status: 400, message: 'Invalid Refresh Token' },
+    });
+    await expect(adapter.restoreSession()).rejects.toThrow('sign in again');
+  });
+
+  it('reports the failure when nothing is saved on the device', async () => {
+    const { adapter, auth } = setup(undefined, async () => null);
+    auth.getSession.mockResolvedValueOnce({ data: { session: null }, error: offline });
+    await expect(adapter.restoreSession()).rejects.toThrow('sign in again');
   });
 });

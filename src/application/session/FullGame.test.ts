@@ -18,7 +18,7 @@ class SeededRandom implements IRandomProvider {
   }
 }
 describe('complete offline matches', () => {
-  it.each([2, 3, 4, 5, 6])(
+  it.each([2, 3, 4, 5, 6, 7, 8])(
     'finishes a %i-player match without an invalid transition',
     async (count) => {
       const random = new SeededRandom(count * 1349);

@@ -28,6 +28,29 @@ export interface ActivatedProfile {
 export const WALLET_STALE_WARNING =
   'Signed in, but your coins could not be loaded. Reconnect and retry from your profile.';
 
+/**
+ * How long sign-in waits on the cloud before carrying on with the copy on
+ * this device. Offline, a request can otherwise hang until the network
+ * stack gives up, and the player would stare at a spinner.
+ */
+export const CLOUD_WAIT_MS = 5000;
+
+function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('The server took too long to answer.')), ms);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      },
+    );
+  });
+}
+
 /** Serial account switches preserve guest progress and isolate accounts sharing a device. */
 export class AccountProfiles {
   private queue: Promise<unknown> = Promise.resolve();
@@ -64,9 +87,12 @@ export class AccountProfiles {
                 };
         }
         let warning: string | null = null;
+        // One budget for every cloud call below, not one each.
+        const deadline = Date.now() + CLOUD_WAIT_MS;
+        const remaining = () => Math.max(500, deadline - Date.now());
         if (uid && this.cloud) {
           try {
-            local = await syncOnSignIn(this.cloud, uid, local);
+            local = await withTimeout(syncOnSignIn(this.cloud, uid, local), remaining());
           } catch {
             warning =
               'Signed in. Cloud sync is unavailable; your progress is saved on this device.';
@@ -79,7 +105,7 @@ export class AccountProfiles {
         const member = uid !== null && !guest ? this.memberWallet() : null;
         if (member) {
           try {
-            profile = await member.refresh();
+            profile = await withTimeout(member.refresh(), remaining());
             wallet = 'ready';
           } catch {
             wallet = 'stale';

@@ -106,30 +106,32 @@ export const FINISH_CELL: Record<ClassicColor, Cell> = {
   BLUE: [8, 7],
 };
 
+// Fractional cells: resting pieces sit pulled toward their yard's centre
+// (±1.25 cells from it) instead of hugging the inner box's border.
 export const YARD_REST_SPOTS: Record<ClassicColor, readonly Cell[]> = {
   RED: [
-    [1, 1],
-    [1, 4],
-    [4, 1],
-    [4, 4],
+    [1.25, 1.25],
+    [1.25, 3.75],
+    [3.75, 1.25],
+    [3.75, 3.75],
   ],
   GREEN: [
-    [1, 10],
-    [1, 13],
-    [4, 10],
-    [4, 13],
+    [1.25, 10.25],
+    [1.25, 12.75],
+    [3.75, 10.25],
+    [3.75, 12.75],
   ],
   YELLOW: [
-    [10, 10],
-    [10, 13],
-    [13, 10],
-    [13, 13],
+    [10.25, 10.25],
+    [10.25, 12.75],
+    [12.75, 10.25],
+    [12.75, 12.75],
   ],
   BLUE: [
-    [10, 1],
-    [10, 4],
-    [13, 1],
-    [13, 4],
+    [10.25, 1.25],
+    [10.25, 3.75],
+    [12.75, 1.25],
+    [12.75, 3.75],
   ],
 };
 

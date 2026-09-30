@@ -1,22 +1,38 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
+  AD_RESCUE_BOOST_COINS,
+  AD_REWARD_CAPS,
   EXTRA_SPIN_GEMS,
+  GIFT_CYCLE_COINS,
+  GIFT_STREAK_GEMS,
+  giftCalendar,
+  GUEST_VAULT_AD_COINS,
+  GUEST_VAULT_ADS_PER_DAY,
+  GUEST_VAULT_CAP,
+  GUEST_VAULT_WIN,
+  RESCUE_COINS,
+  RESCUE_THRESHOLD,
   SEASON_PREMIUM_GEMS,
   SEASON_TIER_XP,
   SEASON_TIERS,
   SPIN_SLOTS,
   SPINS_PER_DAY,
   seasonTierReward,
+  type AdRewardKind,
   type Mission,
   type SpinResult,
 } from '@/domain';
+import { rewardedAds } from '@/config/container';
 import { Text } from '../components/AppText';
 import { Body, Button, Card, Label, Screen, shared, Sheet } from '../components/Kit';
 import { CoinIcon, GemIcon } from '../components/Currency';
+import { AdTile } from '../components/AdTile';
 import { LuckyWheel } from '../components/LuckyWheel';
+import { Shine } from '../components/Live';
 import { ProgressBar, RewardChips, timeLeft } from '../components/Progress';
 import { useRewards } from '../hooks/useRewards';
 import { useMotionEnabled } from '../hooks/useMotionEnabled';
@@ -24,29 +40,17 @@ import { useProfile } from '../state/ProfileProvider';
 import { ui } from '../theme/themes';
 
 export default function RewardsScreen() {
-  const { theme, profile, member } = useProfile();
+  const { theme, profile, member, claimGift, claimRescue, claimVault } = useProfile();
   const rewards = useRewards();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [claimError, setClaimError] = useState<string | null>(null);
   const motionEnabled = useMotionEnabled(profile.reducedMotion, true);
   const [wheelOpen, setWheelOpen] = useState(false);
   const [landing, setLanding] = useState<SpinResult | null>(null);
   const [spinKey, setSpinKey] = useState(0);
   const [revealed, setRevealed] = useState<SpinResult | null>(null);
 
-  if (!member)
-    return (
-      <Screen title="Rewards" subtitle="SPIN · MISSIONS · SEASON PASS">
-        <Card>
-          <Text style={shared.sectionTitle}>Rewards are kept on your account</Text>
-          <Body>
-            Sign in to spin the lucky wheel every day, finish daily missions, climb the season pass
-            and earn gems.
-          </Body>
-          <Button onPress={() => router.push({ pathname: '/login', params: { intent: 'store' } })}>
-            Sign in to start earning
-          </Button>
-        </Card>
-      </Screen>
-    );
+  if (!member) return <GuestRewards />;
 
   const data = rewards.data;
   const spinsToday = data?.spinsToday ?? 0;
@@ -67,9 +71,159 @@ export default function RewardsScreen() {
   const tierReached = season ? Math.min(SEASON_TIERS, Math.floor(season.xp / SEASON_TIER_XP)) : 0;
   const intoTier = season ? season.xp - tierReached * SEASON_TIER_XP : 0;
 
+  const todayUtc = new Date().toISOString().slice(0, 10);
+  const gift = giftCalendar(profile.lastGift, profile.giftStreak, todayUtc);
+  const rescueUsed = profile.lastRescue !== null && profile.lastRescue >= todayUtc;
+
+  async function claim(kind: 'gift' | 'rescue' | 'vault') {
+    setBusy(kind);
+    setClaimError(null);
+    try {
+      await (kind === 'gift' ? claimGift() : kind === 'rescue' ? claimRescue() : claimVault());
+    } catch (e) {
+      setClaimError(e instanceof Error ? e.message : 'Could not claim that right now.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const adsOk = rewardedAds.supported();
+  const adsUsed = data?.ads ?? { gem: 0, spin: 0, 'rescue-boost': 0 };
+  const adsLeft = (kind: AdRewardKind) => Math.max(0, AD_REWARD_CAPS[kind] - adsUsed[kind]);
+
+  /** Shows one rewarded ad; the server pays only when the view finished. */
+  async function watchAd(kind: AdRewardKind): Promise<boolean> {
+    setBusy(`ad:${kind}`);
+    setClaimError(null);
+    try {
+      if (!(await rewardedAds.show())) {
+        setClaimError('The ad did not finish. Try again in a moment.');
+        return false;
+      }
+      return (await rewards.claimAdReward(kind)) !== null;
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <Screen title="Rewards" subtitle="SPIN · MISSIONS · SEASON PASS">
       {rewards.error && <Text style={shared.error}>{rewards.error}</Text>}
+
+      {/* ---- Guest vault carried onto this account ---- */}
+      {profile.vaultCoins > 0 && (
+        <Card style={{ borderColor: ui.gold, backgroundColor: '#2a2210' }}>
+          <View style={shared.between}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Label color={ui.gold}>YOUR GUEST WINNINGS</Label>
+              <Text style={shared.sectionTitle}>
+                {profile.vaultCoins.toLocaleString()} coins from before you signed in
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Claim ${profile.vaultCoins} vault coins`}
+              disabled={busy !== null}
+              onPress={() => void claim('vault')}
+              style={[s.rescueButton, busy !== null && { opacity: 0.5 }]}
+            >
+              <CoinIcon size={18} />
+              <Text style={{ color: '#3b2400', fontWeight: '900' }}>
+                {busy === 'vault' ? '…' : 'Claim'}
+              </Text>
+            </Pressable>
+          </View>
+        </Card>
+      )}
+
+      {/* ---- Daily reward calendar ---- */}
+      <Card style={{ borderColor: `${ui.green}40` }}>
+        <View style={{ gap: 4 }}>
+          <Label color={ui.green}>DAILY REWARD</Label>
+          <Text style={shared.sectionTitle}>
+            {gift.claimedToday
+              ? `Day ${gift.day} collected — back tomorrow`
+              : `Day ${gift.day} is ready`}
+          </Text>
+        </View>
+        <View style={s.giftRow}>
+          {GIFT_CYCLE_COINS.map((coins, i) => {
+            const day = i + 1;
+            const collected = day < gift.day || (gift.claimedToday && day === gift.day);
+            const active = !gift.claimedToday && day === gift.day;
+            return (
+              <View
+                key={day}
+                style={[
+                  s.giftDay,
+                  collected && { opacity: 0.45 },
+                  active && { borderColor: ui.green, boxShadow: `0 0 10px ${ui.green}55` },
+                ]}
+              >
+                <Text style={s.giftDayLabel}>D{day}</Text>
+                {day === 7 ? <GemIcon size={14} /> : <CoinIcon size={14} />}
+                <Text style={s.giftDayAmount}>{day === 7 ? `+${GIFT_STREAK_GEMS}` : coins}</Text>
+                {collected && <Ionicons name="checkmark" size={12} color={ui.green} />}
+              </View>
+            );
+          })}
+        </View>
+        <Text style={shared.small}>
+          Claim every day to climb the calendar. Day 7 pays {GIFT_CYCLE_COINS[6]} coins and{' '}
+          {GIFT_STREAK_GEMS} gems — miss a day and it starts over.
+        </Text>
+        <Button disabled={gift.claimedToday || busy !== null} onPress={() => void claim('gift')}>
+          {busy === 'gift'
+            ? 'Claiming…'
+            : gift.claimedToday
+              ? 'Collected — back tomorrow'
+              : `Claim day ${gift.day} · ${GIFT_CYCLE_COINS[gift.day - 1]} coins${gift.day === 7 ? ` + ${GIFT_STREAK_GEMS} gems` : ''}`}
+        </Button>
+      </Card>
+
+      {/* ---- Comeback rescue: only while nearly broke ---- */}
+      {profile.coins < RESCUE_THRESHOLD &&
+        (() => {
+          const boost = rescueUsed && adsOk && adsLeft('rescue-boost') > 0;
+          const spent = rescueUsed && !boost;
+          return (
+            <Card style={{ borderColor: `${ui.gold}55` }}>
+              <View style={shared.between}>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Label color={ui.gold}>COMEBACK RESCUE</Label>
+                  <Text style={shared.sectionTitle}>Low on coins?</Text>
+                  <Text style={shared.small}>
+                    {boost
+                      ? `Watch an ad to add ${AD_RESCUE_BOOST_COINS} more coins to today’s rescue.`
+                      : spent
+                        ? 'Today’s rescue is used. Free tables always stay open.'
+                        : `Claim ${RESCUE_COINS} coins to get back to the tables. Once a day.`}
+                  </Text>
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    boost
+                      ? `Watch an ad for ${AD_RESCUE_BOOST_COINS} more coins`
+                      : `Claim ${RESCUE_COINS} rescue coins`
+                  }
+                  disabled={spent || busy !== null}
+                  onPress={() => void (boost ? watchAd('rescue-boost') : claim('rescue'))}
+                  style={[s.rescueButton, (spent || busy !== null) && { opacity: 0.5 }]}
+                >
+                  {boost && <Ionicons name="play-circle" size={18} color="#3b2400" />}
+                  <CoinIcon size={18} />
+                  <Text style={{ color: '#3b2400', fontWeight: '900' }}>
+                    {busy === 'rescue' || busy === 'ad:rescue-boost'
+                      ? '…'
+                      : `+${boost ? AD_RESCUE_BOOST_COINS : RESCUE_COINS}`}
+                  </Text>
+                </Pressable>
+              </View>
+            </Card>
+          );
+        })()}
+      {claimError && <Text style={shared.error}>{claimError}</Text>}
 
       {/* ---- Daily lucky spin ---- */}
       <Card style={{ borderColor: `${ui.gold}40` }}>
@@ -109,6 +263,25 @@ export default function RewardsScreen() {
               : 'Back tomorrow'}
         </Button>
       </Card>
+
+      {/* ---- Free gems for a rewarded ad ---- */}
+      {adsOk && (
+        <AdTile
+          title="Watch an ad, earn a gem"
+          reward="+1 gem"
+          icon="gem"
+          caption={
+            adsLeft('gem') > 0
+              ? 'About 30 seconds. Always your choice.'
+              : 'All collected for today — back tomorrow.'
+          }
+          busy={busy === 'ad:gem'}
+          disabled={adsLeft('gem') <= 0 || busy !== null}
+          left={adsLeft('gem')}
+          total={AD_REWARD_CAPS.gem}
+          onPress={() => void watchAd('gem')}
+        />
+      )}
 
       {/* ---- Daily missions ---- */}
       <View style={shared.section}>
@@ -244,8 +417,141 @@ export default function RewardsScreen() {
                 ? `Spin again · ${EXTRA_SPIN_GEMS} gems`
                 : 'No spins left today'}
         </Button>
+        {adsOk && !freeSpin && spinsToday < SPINS_PER_DAY && adsLeft('spin') > 0 && (
+          <AdTile
+            compact
+            title="Spin free instead"
+            reward="Watch one short ad"
+            busy={busy === 'ad:spin'}
+            disabled={busy !== null || rewards.busy !== null || spinning}
+            left={adsLeft('spin')}
+            total={AD_REWARD_CAPS.spin}
+            onPress={() =>
+              void watchAd('spin').then((ok) => {
+                if (ok) void spin();
+              })
+            }
+          />
+        )}
         {rewards.error && <Text style={shared.error}>{rewards.error}</Text>}
       </Sheet>
+    </Screen>
+  );
+}
+
+/**
+ * The guest Rewards screen: everything earned goes into a locked vault that
+ * signing in pays out. Playing fills it; up to three opt-in ads a day top
+ * it up faster. Nothing here ever plays an ad uninvited.
+ */
+function GuestRewards() {
+  const { profile, claimGuestAd } = useProfile();
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const motion = useMotionEnabled(profile.reducedMotion, true);
+  const adsOk = rewardedAds.supported();
+  const todayUtc = new Date().toISOString().slice(0, 10);
+  const adsUsed = profile.vaultAdDay === todayUtc ? profile.vaultAdsToday : 0;
+  const adsLeft = Math.max(0, GUEST_VAULT_ADS_PER_DAY - adsUsed);
+  const full = profile.vaultCoins >= GUEST_VAULT_CAP;
+
+  async function watchAd() {
+    setBusy(true);
+    setNotice(null);
+    try {
+      if (!(await rewardedAds.show())) {
+        setNotice('The ad did not finish. Try again in a moment.');
+        return;
+      }
+      await claimGuestAd();
+      setNotice(`+${GUEST_VAULT_AD_COINS} coins in your vault!`);
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'Could not add that right now.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Screen title="Rewards" subtitle="YOUR VAULT IS FILLING">
+      <View style={s.vaultCard}>
+        <LinearGradient
+          colors={['#3d2f0f', '#221a0a', '#1a1408']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.vaultInner}
+        >
+          <Shine active={motion} width={360} every={2600} />
+          <View style={shared.between}>
+            <View style={[shared.row, { gap: 10 }]}>
+              <View style={s.vaultBadge}>
+                <Ionicons name="lock-closed" size={22} color="#3b2400" />
+              </View>
+              <View>
+                <Label color={ui.gold}>YOUR VAULT</Label>
+                <Text style={{ color: ui.muted, fontSize: 11, fontWeight: '700' }}>
+                  Everything here becomes yours
+                </Text>
+              </View>
+            </View>
+            <Text style={{ color: ui.subtle, fontSize: 10, fontWeight: '800' }}>
+              MAX {GUEST_VAULT_CAP.toLocaleString()}
+            </Text>
+          </View>
+          <View style={[shared.row, { justifyContent: 'center', gap: 10, paddingVertical: 6 }]}>
+            <CoinIcon size={34} />
+            <Text style={s.vaultAmount}>{profile.vaultCoins.toLocaleString()}</Text>
+          </View>
+          <ProgressBar
+            value={Math.min(1, profile.vaultCoins / GUEST_VAULT_CAP)}
+            colors={[ui.gold, '#f59e0b']}
+            height={10}
+          />
+          <Text style={[shared.small, { textAlign: 'center' }]}>
+            {full
+              ? 'Your vault is full! Sign in to claim it all.'
+              : `Win a game: +${GUEST_VAULT_WIN} coins. It all unlocks the moment you sign in.`}
+          </Text>
+          <Button onPress={() => router.push({ pathname: '/login', params: { intent: 'store' } })}>
+            {profile.vaultCoins > 0
+              ? `Sign in & claim ${profile.vaultCoins.toLocaleString()} coins`
+              : 'Sign in to start earning'}
+          </Button>
+        </LinearGradient>
+      </View>
+
+      {adsOk && (
+        <AdTile
+          title="Watch an ad"
+          reward={`+${GUEST_VAULT_AD_COINS} to your vault`}
+          icon="coin"
+          caption={
+            full
+              ? 'Your vault is full — sign in to claim it first.'
+              : adsLeft > 0
+                ? 'About 30 seconds. Always your choice.'
+                : 'All collected for today — back tomorrow.'
+          }
+          busy={busy}
+          disabled={adsLeft <= 0 || full}
+          left={adsLeft}
+          total={GUEST_VAULT_ADS_PER_DAY}
+          onPress={() => void watchAd()}
+        />
+      )}
+      {notice && (
+        <Text accessibilityLiveRegion="polite" style={[shared.small, { color: ui.green }]}>
+          {notice}
+        </Text>
+      )}
+
+      <Card>
+        <Text style={shared.sectionTitle}>An account unlocks the rest</Text>
+        <Body>
+          The lucky wheel, daily missions, the season pass, leagues, gems and online tables for
+          coins — all of it lives on your free account, along with everything in your vault.
+        </Body>
+      </Card>
     </Screen>
   );
 }
@@ -376,12 +682,55 @@ function TierColumn({
 }
 
 const s = StyleSheet.create({
+  giftRow: { flexDirection: 'row', gap: 6 },
+  giftDay: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: ui.navy,
+    borderWidth: 1.5,
+    borderColor: '#ffffff1a',
+  },
+  giftDayLabel: { color: ui.subtle, fontSize: 10, fontWeight: '800' },
+  giftDayAmount: { color: ui.text, fontSize: 11, fontWeight: '800' },
+  rescueButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: ui.gold,
+    borderBottomWidth: 3,
+    borderBottomColor: '#b77739',
+  },
   streakDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
     backgroundColor: '#ffffff1a',
   },
+  vaultCard: {
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: `${ui.gold}88`,
+    boxShadow: `0 0 24px ${ui.gold}22`,
+  },
+  vaultInner: { padding: 16, gap: 10, overflow: 'hidden' },
+  vaultBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: ui.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: '#b77739',
+  },
+  vaultAmount: { color: ui.text, fontWeight: '900', fontSize: 40 },
   wheelThumb: {
     width: 64,
     height: 64,

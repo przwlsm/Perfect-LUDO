@@ -1,6 +1,10 @@
 {
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-3940256099942544~3347511713",
+    "ios_app_id": "ca-app-pub-3940256099942544~1458002511"
+  },
   "expo": {
-    "name": "Ludo Club",
+    "name": "Ludo Rumble",
     "slug": "Ludo",
     "version": "1.0.0",
     "scheme": "perfectludo",
@@ -8,10 +12,11 @@
     "icon": "./assets/brand/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.devmindslabs.ludoRumble"
     },
     "android": {
-      "package": "com.ludoclub.app",
+      "package": "com.devmindslabs.ludoRumble",
       "adaptiveIcon": {
         "backgroundColor": "#0e1322",
         "foregroundImage": "./assets/brand/icon.png"
@@ -24,6 +29,15 @@
     "plugins": [
       "expo-router",
       "expo-asset",
+      "expo-iap",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "userTrackingUsageDescription": "This lets us show ads that are more relevant to you."
+        }
+      ],
       [
         "expo-audio",
         {
@@ -33,7 +47,20 @@
           "enableBackgroundRecording": false
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0e1322",
+          "image": "./assets/brand/splash-icon.png",
+          "imageWidth": 288,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#0e1322",
+            "image": "./assets/brand/splash-icon.png"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

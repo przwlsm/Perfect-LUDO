@@ -31,22 +31,24 @@ describe('member wallet', () => {
 
   it('charges the account and equips the item, with the server as the only ledger', async () => {
     const { profiles, server, wallet } = setup();
+    server.seed('alice', { coins: 10000 });
     const profile = await wallet.purchase('neon-pack');
     expect(profile).toMatchObject({
-      coins: 450,
+      coins: 625,
       board: 'neon',
       dice: 'neon-dice',
       pack: 'neon-pack',
     });
-    expect((await server.getWallet()).coins).toBe(450);
-    expect(await profiles.load()).toMatchObject({ coins: 450 });
+    expect((await server.getWallet()).coins).toBe(625);
+    expect(await profiles.load()).toMatchObject({ coins: 625 });
   });
 
   it('refuses when the account cannot afford it and leaves the device untouched', async () => {
     const { profiles, server, wallet } = setup();
     server.seed('alice', { coins: 100 });
     await wallet.refresh();
-    await expect(wallet.purchase('royal')).rejects.toThrow(/Not enough coins/);
+    // Royal is a gem legendary now; the default 20 gems fall short.
+    await expect(wallet.purchase('royal')).rejects.toThrow(/Not enough gems/);
     expect(await profiles.load()).toMatchObject({ coins: 100, board: 'classic' });
     expect(await profiles.load()).not.toHaveProperty('owned', expect.arrayContaining(['royal']));
   });
@@ -62,23 +64,25 @@ describe('member wallet', () => {
 
   it('never charges twice: a retry after a lost response and a double tap both settle once', async () => {
     const { server, wallet } = setup();
+    server.seed('alice', { coins: 3000 });
     await Promise.all([wallet.purchase('gold'), wallet.purchase('gold')]);
     await wallet.purchase('gold');
-    expect((await server.getWallet()).coins).toBe(700);
+    expect((await server.getWallet()).coins).toBe(600);
     expect((await server.getWallet()).owned).toEqual(['gold']);
   });
 
   it('recovers a purchase the app was killed after: the item is there on the next refresh', async () => {
     const { profiles, server, wallet } = setup();
+    server.seed('alice', { coins: 3000 });
     // The server charged, but the mirror never got written.
-    await server.purchase('ruby', 250);
+    await server.purchase('ruby', 2000);
     expect((await profiles.load()).owned).not.toContain('ruby');
     const profile = await wallet.refresh();
     expect(profile.owned).toContain('ruby');
-    expect(profile.coins).toBe(750);
+    expect(profile.coins).toBe(1000);
     // And equipping it costs nothing further.
     expect((await wallet.purchase('ruby')).dice).toBe('ruby');
-    expect((await server.getWallet()).coins).toBe(750);
+    expect((await server.getWallet()).coins).toBe(1000);
   });
 
   it('refuses a stale price rather than charging a different amount', async () => {
@@ -86,12 +90,32 @@ describe('member wallet', () => {
     await expect(server.purchase('royal', 1)).rejects.toThrow(/price.*changed/i);
   });
 
-  it('claims the daily gift once per day on the account', async () => {
+  it('claims the daily gift once per day, climbing the 7-day calendar', async () => {
     const { server, wallet } = setup();
-    expect((await wallet.claimGift()).coins).toBe(1250);
+    // Day 1 pays 100.
+    expect((await wallet.claimGift()).coins).toBe(1100);
     await expect(wallet.claimGift()).rejects.toThrow(/claimed/);
+    // The next day continues the streak: day 2 pays 150.
     server.today = '2026-09-26';
-    expect((await wallet.claimGift()).coins).toBe(1500);
+    const day2 = await wallet.claimGift();
+    expect(day2.coins).toBe(1250);
+    expect(day2.giftStreak).toBe(2);
+    // Missing a day restarts the calendar at day 1.
+    server.today = '2026-09-28';
+    const restarted = await wallet.claimGift();
+    expect(restarted.coins).toBe(1350);
+    expect(restarted.giftStreak).toBe(1);
+  });
+
+  it('rescues a nearly broke account once a day, and only a nearly broke one', async () => {
+    const { server, wallet } = setup();
+    await expect(wallet.claimRescue()).rejects.toThrow(/nearly out of coins/);
+    server.seed('alice', { coins: 40 });
+    expect((await wallet.claimRescue()).coins).toBe(340);
+    server.seed('alice', { coins: 20 });
+    await expect(wallet.claimRescue()).rejects.toThrow(/rescue is used/);
+    server.today = '2026-09-26';
+    expect((await wallet.claimRescue()).coins).toBe(320);
   });
 
   it('pays a match once, even when the same result is recorded again', async () => {
@@ -133,7 +157,8 @@ describe('member wallet', () => {
     expect((await profiles.load()).coins).toBe(1000);
     server.offline = false;
     const paid = await wallet.refresh();
-    expect(paid.coins).toBe(1065);
+    // Only the win pays; a finished loss earns XP, not coins.
+    expect(paid.coins).toBe(1050);
     expect(paid.pendingRewards).toEqual([]);
   });
 
@@ -187,23 +212,23 @@ describe('online rewards and levels', () => {
     const { server, wallet } = setup();
     server.onlineResults.set('m-online', { winner: 'alice', players: ['alice', 'bob'] });
     const paid = await wallet.recordOnlineMatch('m-online', { sixes: 2, captures: 1, home: 0 });
-    // 250 for the win, plus 140 for reaching level 2 on the 120 XP.
-    expect(paid).toMatchObject({ coins: 1390, xp: 120, gems: 25, wins: 1 });
+    // 100 for the win, plus 140 for reaching level 2 on the 120 XP.
+    expect(paid).toMatchObject({ coins: 1240, xp: 120, gems: 25, wins: 1 });
     expect(server.lastStats).toEqual({ sixes: 2, captures: 1, home: 0 });
     const again = await wallet.recordOnlineMatch('m-online');
-    expect(again.coins).toBe(1390);
+    expect(again.coins).toBe(1240);
   });
 
-  it('pays a finish but no win to the other player, and nothing to a player who left', async () => {
+  it('pays the loser and a player who left nothing', async () => {
     const { server, wallet } = setup();
     server.onlineResults.set('lost', { winner: 'bob', players: ['alice', 'bob'] });
-    expect((await wallet.recordOnlineMatch('lost')).coins).toBe(1060);
+    expect((await wallet.recordOnlineMatch('lost')).coins).toBe(1000);
     server.onlineResults.set('walked', {
       winner: null,
       players: ['alice', 'bob'],
       leaver: 'alice',
     });
-    expect((await wallet.recordOnlineMatch('walked')).coins).toBe(1060);
+    expect((await wallet.recordOnlineMatch('walked')).coins).toBe(1000);
   });
 
   it('refuses to collect a match the player was not in', async () => {
@@ -223,11 +248,11 @@ describe('online rewards and levels', () => {
 
   it('caps paid bot games per day', async () => {
     const { server, wallet } = setup();
-    for (let i = 0; i < 26; i++) await wallet.recordMatch(`bot-${i}`, false, true);
-    // 25 paid losses at 15 coins; the 26th pays nothing (level-up coins aside).
+    for (let i = 0; i < 26; i++) await wallet.recordMatch(`bot-${i}`, true, true);
+    // 25 paid wins at 50 coins; the 26th pays nothing (level-up coins aside).
     const { coins, xp } = await server.getWallet();
-    const levelCoins = coins - 1000 - 25 * 15;
+    const levelCoins = coins - 1000 - 25 * 50;
     expect(levelCoins).toBeGreaterThanOrEqual(0);
-    expect(xp).toBe(26 * 15);
+    expect(xp).toBe(26 * 40);
   });
 });

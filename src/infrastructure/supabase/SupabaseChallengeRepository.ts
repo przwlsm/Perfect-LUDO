@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   CreatedChallenge,
+  GameVariant,
   IChallengeRepository,
   LinkRoom,
   LobbySnapshot,
@@ -37,10 +38,18 @@ export class SupabaseChallengeRepository implements IChallengeRepository {
     await rpc(this.client, 'cancel_challenge', { p_challenge_id: challengeId });
   }
 
-  async createLinkRoom(playerCount: number, stake = 0): Promise<LinkRoom> {
+  async createLinkRoom(
+    playerCount: number,
+    stake = 0,
+    variant: GameVariant = 'classic',
+    teams = false,
+  ): Promise<LinkRoom> {
+    // Defaults are left out, so free classic rooms work on older servers too.
     const data = await rpc<{ lobbyId?: unknown; code?: unknown }>(this.client, 'create_link_room', {
       p_player_count: playerCount,
-      ...(stake > 0 ? { p_stake: stake } : {}),
+      ...(stake > 0 || variant !== 'classic' || teams ? { p_stake: stake } : {}),
+      ...(variant !== 'classic' || teams ? { p_variant: variant } : {}),
+      ...(teams ? { p_teams: true } : {}),
     });
     if (typeof data?.lobbyId !== 'string' || typeof data?.code !== 'string') {
       throw new Error('The game could not be created. Please try again.');
@@ -71,6 +80,18 @@ export class SupabaseChallengeRepository implements IChallengeRepository {
   async setReady(lobbyId: string, ready: boolean): Promise<LobbySnapshot> {
     return toLobbySnapshot(
       await rpc(this.client, 'set_lobby_ready', { p_lobby_id: lobbyId, p_ready: ready }),
+    );
+  }
+
+  async moveSeat(lobbyId: string, seat: number): Promise<LobbySnapshot> {
+    return toLobbySnapshot(
+      await rpc(this.client, 'move_lobby_seat', { p_lobby_id: lobbyId, p_seat: seat }),
+    );
+  }
+
+  async seekOpponents(lobbyId: string, on: boolean): Promise<LobbySnapshot> {
+    return toLobbySnapshot(
+      await rpc(this.client, 'seek_opponents', { p_lobby_id: lobbyId, p_on: on }),
     );
   }
 

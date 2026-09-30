@@ -1,4 +1,4 @@
-import { getBoardPosition, isSafeSquare, getFinishProgress } from '../board';
+import { getBoardPosition, isSafeSquare, getFinishProgress, getTrackLength } from '../board';
 import { isInYard, type Piece } from '../entities/Piece';
 import type { Player } from '../entities/Player';
 import type { DieValue, PlayerColor } from '../entities/PlayerColor';
@@ -79,9 +79,12 @@ export function getValidMoveForPiece(
   piece: Piece,
   dieValue: DieValue,
   friends: readonly PlayerColor[] = [],
+  homeLocked = false,
 ): Move | null {
   const toProgress = isInYard(piece) ? (dieValue === 6 ? 1 : null) : piece.progress + dieValue;
   if (toProgress === null || toProgress > getFinishProgress(players.length)) return null;
+  // Kill & Go: no entering the home path before this player has captured.
+  if (homeLocked && toProgress >= getTrackLength(players.length)) return null;
 
   const position = getBoardPosition(piece.color, toProgress, players.length);
   if (position?.zone !== 'SHARED_TRACK') {
@@ -99,6 +102,7 @@ export function getValidMoves(
   color: PlayerColor,
   dieValue: DieValue,
   friends: readonly PlayerColor[] = [],
+  homeLocked = false,
 ): Move[] {
   const player = players.find((p) => p.color === color);
   if (!player) return [];
@@ -106,8 +110,24 @@ export function getValidMoves(
   const moves: Move[] = [];
   for (const piece of player.pieces) {
     if (piece.progress === getFinishProgress(players.length)) continue;
-    const move = getValidMoveForPiece(players, piece, dieValue, friends);
+    const move = getValidMoveForPiece(players, piece, dieValue, friends, homeLocked);
     if (move) moves.push(move);
   }
   return moves;
+}
+
+/**
+ * The genuinely different choices among one player's moves. Coins of the
+ * same colour on the same square (or all waiting at home) make identical
+ * moves, so they count once: the first coin stands in for the rest. When
+ * this leaves a single choice, there is nothing for the player to decide.
+ */
+export function distinctMoves(moves: readonly Move[]): Move[] {
+  const seen = new Set<string>();
+  return moves.filter((move) => {
+    const key = `${move.fromProgress}>${move.toProgress}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }

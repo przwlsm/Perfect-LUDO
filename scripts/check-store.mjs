@@ -91,12 +91,14 @@ if (signedIn.error) {
 const uid = signedIn.data.user.id;
 console.log(`Signed in as ${EMAIL}\n`);
 
-const catalogRows = (await me.from('store_items').select('id, kind, price, board, dice')).data ?? [];
+const catalogRows =
+  (await me.from('store_items').select('id, kind, price, currency, board, dice')).data ?? [];
 const byId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 const expected = CATALOG.map((c) => ({
   id: c.id,
   kind: c.kind,
   price: c.price,
+  currency: c.currency ?? 'coins',
   board: c.contents?.board ?? null,
   dice: c.contents?.dice ?? null,
 })).sort(byId);
@@ -141,20 +143,31 @@ ok('a free unlock costs nothing', free.coins === wallet.coins);
 const again = await rpc(me, 'purchase_item', { p_item_id: 'classic-pack', p_expected_price: 0 });
 ok('buying an owned item again is a no-op', again.coins === free.coins && again.owned.length === free.owned.length);
 
-const unaffordable = CATALOG.filter((c) => c.price > wallet.coins && !wallet.owned.includes(c.id));
+const unaffordable = CATALOG.filter(
+  (c) =>
+    c.price > ((c.currency ?? 'coins') === 'gems' ? (wallet.gems ?? 0) : wallet.coins) &&
+    !wallet.owned.includes(c.id),
+);
 if (unaffordable.length)
   await expectFail(
     'cannot spend more than the balance',
     me,
     'purchase_item',
     { p_item_id: unaffordable[0].id, p_expected_price: unaffordable[0].price },
-    /Not enough coins/i,
+    /Not enough (coins|gems)/i,
   );
 else skipped('cannot spend more than the balance', `balance ${wallet.coins} covers every item`);
 
+// Day 1..7 of the streak calendar; mirrors GIFT_CYCLE_COINS in Wallet.ts.
+const GIFT_CYCLE = [100, 150, 200, 300, 400, 500, 750];
 try {
   const gifted = await rpc(me, 'claim_daily_gift');
-  ok('daily gift adds 250', gifted.coins === free.coins + 250, `${free.coins} -> ${gifted.coins}`);
+  const day = ((Math.max(gifted.giftStreak ?? 1, 1) - 1) % 7) + 1;
+  ok(
+    `daily gift pays the calendar (day ${day})`,
+    gifted.coins === free.coins + GIFT_CYCLE[day - 1],
+    `${free.coins} -> ${gifted.coins}`,
+  );
 } catch (e) {
   ok('daily gift refused only because it was already claimed today', /claimed/i.test(e.message), e.message);
 }
@@ -164,7 +177,8 @@ const before = await rpc(me, 'get_wallet');
 const matchId = `check-${randomUUID()}`;
 const paid = await rpc(me, 'award_match', { p_match_id: matchId, p_won: true, p_eligible: true });
 // 50 coins for a bot win; the 40 XP it grants may also cross a level, which pays 100 + 20·level.
-const levelBonus = (paid.level ?? 1) > (before.level ?? 1) ? 100 + 20 * paid.level : 0;
+const levelOf = (w) => (typeof w.level === 'object' ? w.level?.level : w.level) ?? 1;
+const levelBonus = levelOf(paid) > levelOf(before) ? 100 + 20 * levelOf(paid) : 0;
 ok('a won match pays 50 (plus any level-up) and counts once', paid.coins === before.coins + 50 + levelBonus && paid.games === before.games + 1);
 const replay = await rpc(me, 'award_match', { p_match_id: matchId, p_won: true, p_eligible: true });
 ok('replaying the same match pays nothing more', replay.coins === paid.coins && replay.games === paid.games);

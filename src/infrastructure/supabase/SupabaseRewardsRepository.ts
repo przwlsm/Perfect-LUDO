@@ -1,14 +1,19 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  parseLeague,
   parseRewards,
   parseSpin,
   parseTournament,
+  parseWalletSnapshot,
   WalletRefusedError,
   WalletUnavailableError,
+  type AdRewardKind,
   type IRewardsRepository,
+  type LeagueView,
   type RewardsSnapshot,
   type SpinResult,
   type TournamentView,
+  type WalletSnapshot,
 } from '@/domain';
 import { toFriendlyError } from './socialRows';
 import { classifyWalletError } from './SupabaseWalletRepository';
@@ -59,5 +64,11 @@ export class SupabaseRewardsRepository implements IRewardsRepository {
   }
   claimTournamentPrize(): Promise<TournamentView> {
     return this.call('claim_tournament_prize', parseTournament);
+  }
+  claimAdReward(kind: AdRewardKind): Promise<WalletSnapshot> {
+    return this.call('claim_ad_reward', parseWalletSnapshot, { p_kind: kind });
+  }
+  getLeague(): Promise<LeagueView> {
+    return this.call('get_league', parseLeague);
   }
 }

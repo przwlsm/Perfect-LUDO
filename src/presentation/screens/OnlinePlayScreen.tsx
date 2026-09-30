@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../components/AppText';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   describeConnection,
+  MAX_PRIVATE_STAKE,
   parseInviteCode,
   REWARDS,
+  VARIANT_INFO,
   type QuickMatchPlayerCount,
   type Stake,
+  type GameVariant,
 } from '@/domain';
 import { Ionicons } from '@expo/vector-icons';
 import { challengeRepository } from '@/config/container';
@@ -15,6 +18,10 @@ import { ConnectionPill } from '../components/ConnectionPill';
 import { Body, Button, Card, Label, Screen, Sheet, shared } from '../components/Kit';
 import { useQuickMatch } from '../hooks/useQuickMatch';
 import { StakePicker } from '../components/StakePicker';
+import { MatchmakingOverlay } from '../social/MatchmakingOverlay';
+import { useMotionEnabled } from '../hooks/useMotionEnabled';
+import { VariantPicker } from '../components/VariantPicker';
+import { TeamsToggle } from '../components/TeamsToggle';
 import { AccountGateSheet, LOGIN_HREF, SIGN_UP_HREF } from '../social/AccountGate';
 import { UserAvatar } from '../social/UserAvatar';
 import { useConnectivity } from '../state/ConnectivityProvider';
@@ -36,12 +43,29 @@ export default function OnlinePlayScreen() {
   const { enabled, signedIn, account, identity } = useSocial();
   const auth = useAuthSession();
   const quick = useQuickMatch();
-  const [seats, setSeats] = useState<QuickMatchPlayerCount>(2);
+  const searchMotion = useMotionEnabled(profile.reducedMotion, quick.phase === 'searching');
+  // The home screen can open this with a table size, or straight to a private room.
+  const params = useLocalSearchParams<{
+    seats?: string;
+    private?: string;
+    teams?: string;
+    teamup?: string;
+  }>();
+  const [seats, setSeats] = useState<QuickMatchPlayerCount>(
+    params.seats === '4' ? 4 : params.seats === '3' ? 3 : 2,
+  );
   const [stake, setStake] = useState<Stake>(0);
   const [privateStake, setPrivateStake] = useState<Stake>(0);
+  const [variant, setVariant] = useState<GameVariant>('classic');
+  const [privateVariant, setPrivateVariant] = useState<GameVariant>('classic');
+  const [teams, setTeams] = useState(params.teams === '1');
+  const [teamUpBusy, setTeamUpBusy] = useState(false);
+  const [teamUpError, setTeamUpError] = useState<string | null>(null);
+  const teamUpStarted = useRef(false);
+  const [privateTeams, setPrivateTeams] = useState(false);
   const [gate, setGate] = useState<string | null>(null);
   // Private game by invite link: pick a table size and share, or join by code.
-  const [privateOpen, setPrivateOpen] = useState(false);
+  const [privateOpen, setPrivateOpen] = useState(params.private === '1');
   const [privateSeats, setPrivateSeats] = useState<QuickMatchPlayerCount>(2);
   const [codeInput, setCodeInput] = useState('');
   const [privateBusy, setPrivateBusy] = useState(false);
@@ -56,12 +80,34 @@ export default function OnlinePlayScreen() {
     setTimeout(() => router.push({ pathname: '/lobby/[id]', params: { id: lobbyId } }), 250);
   }
 
+  /** 2 v 2 with a friend: a team room with an invite code, ready to search together. */
+  async function teamUp() {
+    if (!challengeRepository || teamUpBusy) return;
+    setTeamUpBusy(true);
+    setTeamUpError(null);
+    try {
+      const room = await challengeRepository.createLinkRoom(4, stake, variant, true);
+      openRoom(room.lobbyId);
+    } catch (e) {
+      setTeamUpError(
+        e instanceof Error ? e.message : 'Could not create your team room. Try again.',
+      );
+    } finally {
+      setTeamUpBusy(false);
+    }
+  }
+
   async function createPrivate() {
     if (!challengeRepository || privateBusy) return;
     setPrivateBusy(true);
     setPrivateError(null);
     try {
-      const room = await challengeRepository.createLinkRoom(privateSeats, privateStake);
+      const room = await challengeRepository.createLinkRoom(
+        privateSeats,
+        privateStake,
+        privateVariant,
+        privateTeams && privateSeats === 4,
+      );
       openRoom(room.lobbyId);
     } catch (e) {
       setPrivateError(e instanceof Error ? e.message : 'Could not create the game. Try again.');
@@ -89,6 +135,16 @@ export default function OnlinePlayScreen() {
       setPrivateBusy(false);
     }
   }
+
+  // The home screen's "2 v 2 with a friend" opens straight into a team room.
+  useEffect(() => {
+    if (params.teamup !== '1' || teamUpStarted.current) return;
+    if (!signedIn || !connectivity.online || !challengeRepository) return;
+    teamUpStarted.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- arriving from the home shortcut is the trigger
+    void teamUp();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.teamup, signedIn, connectivity.online]);
 
   const lobbyId = quick.phase === 'matched' ? quick.ticket?.lobbyId : null;
   useEffect(() => {
@@ -203,7 +259,8 @@ export default function OnlinePlayScreen() {
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={s.tourneyTitle}>Weekly tournament</Text>
           <Text style={shared.small}>
-            Every win: +{REWARDS.online.win.coins} coins, +{REWARDS.online.win.xp} XP and +3 points.
+            Every game +1 point, every win +3. Free tables pay up to +{REWARDS.online.win.coins}{' '}
+            coins by finish; staked tables pay the pot.
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={ui.subtle} />
@@ -223,7 +280,7 @@ export default function OnlinePlayScreen() {
                   <Text style={shared.small}>
                     {quick.phase === 'matched'
                       ? 'Taking you to the table.'
-                      : `${seats}-player ${stake > 0 ? `${stake}-coin ` : ''}table · ${quick.ticket?.waiting ?? 1} waiting`}
+                      : `${seats}-player ${variant !== 'classic' ? `${VARIANT_INFO[variant].title} ` : ''}${stake > 0 ? `${stake}-coin ` : ''}table · ${quick.ticket?.waiting ?? 1} waiting`}
                   </Text>
                 </View>
               </View>
@@ -266,6 +323,9 @@ export default function OnlinePlayScreen() {
                   </Pressable>
                 ))}
               </View>
+              <Label>GAME MODE</Label>
+              <VariantPicker value={variant} onChange={setVariant} />
+              {seats === 4 && <TeamsToggle value={teams} onChange={setTeams} />}
               <Label>ENTRY</Label>
               <StakePicker value={stake} players={seats} onChange={setStake} />
               {quick.error && (
@@ -273,11 +333,73 @@ export default function OnlinePlayScreen() {
                   {quick.error}
                 </Text>
               )}
-              <Button disabled={!quick.available} onPress={() => void quick.start(seats, stake)}>
+              <Button
+                disabled={!quick.available}
+                onPress={() => void quick.start(seats, stake, variant, teams && seats === 4)}
+              >
                 Quick Match →
               </Button>
             </>
           )}
+        </Card>
+      </View>
+
+      <View style={shared.section}>
+        <Text style={shared.sectionTitle}>2 v 2 teams</Text>
+        <Card style={{ gap: 12, borderColor: `${ui.gem}55` }}>
+          <Text style={shared.small}>
+            Partners sit opposite, never capture each other, and win together.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Random 2 v 2"
+            accessibilityHint="Play with three players from the queue"
+            disabled={!quick.available || searching}
+            onPress={() => {
+              setSeats(4);
+              setTeams(true);
+              void quick.start(4, stake, variant, true);
+            }}
+            android_ripple={{ color: `${ui.gem}30` }}
+            style={({ pressed }) => [
+              s.option,
+              { backgroundColor: theme.surface, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <Ionicons name="shuffle" size={26} color={ui.gem} />
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={s.optionTitle}>Random 2 v 2</Text>
+              <Text style={shared.small}>
+                Four players from the queue. Your partner is picked for you.
+              </Text>
+            </View>
+            <Text style={[s.arrow, { color: ui.gem }]}>↗</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Team up with a friend"
+            accessibilityHint="Get a code for your friend, then find another team together"
+            disabled={teamUpBusy}
+            onPress={() => void teamUp()}
+            android_ripple={{ color: `${ui.gem}30` }}
+            style={({ pressed }) => [
+              s.option,
+              { backgroundColor: theme.surface, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <Ionicons name="people" size={26} color={ui.gem} />
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={s.optionTitle}>
+                {teamUpBusy ? 'Creating your team…' : 'Team up with a friend'}
+              </Text>
+              <Text style={shared.small}>
+                Send your friend a code. Together you play another team of friends.
+              </Text>
+            </View>
+            <Text style={[s.arrow, { color: ui.gem }]}>↗</Text>
+          </Pressable>
+          {teamUpError && <Text style={shared.error}>{teamUpError}</Text>}
+          <Text style={shared.small}>Uses the game mode and entry you picked above.</Text>
         </Card>
       </View>
 
@@ -349,6 +471,19 @@ export default function OnlinePlayScreen() {
         </Card>
       )}
 
+      <MatchmakingOverlay
+        visible={searching || quick.phase === 'matched'}
+        matched={quick.phase === 'matched'}
+        seats={seats}
+        variant={variant}
+        teams={teams && seats === 4}
+        stake={stake}
+        waiting={quick.ticket?.waiting ?? null}
+        you={{ id: identity?.id ?? 'me', name, avatar: identity?.avatar ?? null }}
+        error={quick.error}
+        motionEnabled={searchMotion}
+        onCancel={() => void quick.cancel()}
+      />
       <AccountGateSheet feature={gate} visible={gate !== null} onClose={() => setGate(null)} />
       <Sheet
         visible={privateOpen}
@@ -379,7 +514,14 @@ export default function OnlinePlayScreen() {
             </Pressable>
           ))}
         </View>
-        <StakePicker value={privateStake} players={privateSeats} onChange={setPrivateStake} />
+        <VariantPicker value={privateVariant} onChange={setPrivateVariant} />
+        {privateSeats === 4 && <TeamsToggle value={privateTeams} onChange={setPrivateTeams} />}
+        <StakePicker
+          value={privateStake}
+          players={privateSeats}
+          maxStake={MAX_PRIVATE_STAKE}
+          onChange={setPrivateStake}
+        />
         <Button disabled={privateBusy} onPress={() => void createPrivate()}>
           {privateBusy ? 'Working…' : 'Create game & get link'}
         </Button>

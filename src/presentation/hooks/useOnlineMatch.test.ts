@@ -37,6 +37,9 @@ function snapshot(version = 0, lastRoll: 1 | 6 | null = null): OnlineMatchSnapsh
       pool: 0,
       prize: 0,
       turnDeadline: null,
+      variant: 'classic',
+      lifelines: 5,
+      teams: false,
     },
   };
 }

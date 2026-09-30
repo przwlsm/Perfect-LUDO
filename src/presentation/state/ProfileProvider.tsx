@@ -41,6 +41,18 @@ interface ProfileContextValue {
   purchase(id: string): Promise<void>;
   equip(id: string): Promise<void>;
   claimGift(): Promise<void>;
+  /** The comeback rescue: once a day while nearly broke. Members only. */
+  claimRescue(): Promise<void>;
+  /** Buys a look for a friend, charging this account. Members only. */
+  giftItem(toUserId: string, id: string): Promise<void>;
+  /** Pays the guest vault onto the signed-in account, once ever. */
+  claimVault(): Promise<void>;
+  /** A guest's watch-an-ad vault bonus (device-side, capped per day). */
+  claimGuestAd(): Promise<void>;
+  /** A guest's online placement prize, into the vault, once per match. */
+  creditGuestVault(matchId: string, coins: number): Promise<void>;
+  /** A guest tries a paid board for a day after a rewarded ad. */
+  startTrial(boardId: string): Promise<void>;
   /** Resolves `true` when the result reached the account, `false` when it was queued for later. */
   recordMatch(
     id: string,
@@ -255,6 +267,24 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   async function claimGift() {
     await spend((account) => account.claimGift());
   }
+  async function claimRescue() {
+    await spend((account) => account.claimRescue());
+  }
+  async function giftItem(toUserId: string, id: string) {
+    await spend((account) => account.gift(toUserId, id));
+  }
+  async function claimVault() {
+    await spend((account) => account.claimVault());
+  }
+  async function claimGuestAd() {
+    await perform(() => profileService.claimVaultAd());
+  }
+  async function creditGuestVault(matchId: string, coins: number) {
+    await perform(() => profileService.creditVaultOnce(`online:${matchId}`, coins));
+  }
+  async function startTrial(boardId: string) {
+    await perform(() => profileService.startTrial(boardId));
+  }
   async function equip(id: string) {
     await perform(() => profileService.equip(id));
   }
@@ -313,6 +343,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         purchase,
         equip,
         claimGift,
+        claimRescue,
+        giftItem,
+        claimVault,
+        claimGuestAd,
+        creditGuestVault,
+        startTrial,
         recordMatch,
         recordOnlineMatch,
         adoptWallet,
@@ -326,7 +362,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 export function useProfile() {
   const value = useContext(ProfileContext);
   if (!value) throw new Error('ProfileProvider is required.');
-  const boardTheme = getBoardTheme(value.profile.board);
+  // A running ad trial dresses the whole app in the borrowed board.
+  const trial =
+    value.profile.trialBoard !== null &&
+    value.profile.trialUntil !== null &&
+    new Date(value.profile.trialUntil).getTime() > new Date().getTime() &&
+    !value.profile.owned.includes(value.profile.trialBoard)
+      ? value.profile.trialBoard
+      : null;
+  const boardTheme = getBoardTheme(trial ?? value.profile.board);
   const packTheme = value.profile.pack
     ? getBoardTheme(getCosmetic(value.profile.pack).contents!.board)
     : boardTheme;

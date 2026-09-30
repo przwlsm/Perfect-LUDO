@@ -1,88 +1,118 @@
-import { useAuthSession } from '../state/useAuthSession';
-import { View } from 'react-native';
-import { Text } from '../components/AppText';
+import { StyleSheet, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { levelInfo } from '@/domain';
 import { getCosmetic } from '@/domain/cosmetics/catalog';
+import { useAuthSession } from '../state/useAuthSession';
+import { Text } from '../components/AppText';
 import { Body, Button, Card, Label, Screen, shared } from '../components/Kit';
+import { CoinIcon, GemIcon } from '../components/Currency';
 import { Dice } from '../components/Dice';
+import { ProgressBar } from '../components/Progress';
 import { useProfile } from '../state/ProfileProvider';
 import { SocialIdentityCard } from '../social/SocialIdentityCard';
 import { ui } from '../theme/themes';
+
 export default function ProfileScreen() {
   const { profile, theme, syncWarning, reload, member, wallet, refreshWallet } = useProfile();
   const auth = useAuthSession();
+  const level = levelInfo(profile.xp);
+  const winRate = profile.games ? Math.round((profile.wins / profile.games) * 100) : 0;
   return (
     <Screen title="Your corner of the club." subtitle="PLAYER PROFILE">
-      <Card>
-        <View style={shared.row}>
-          <View
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: 23,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: `${theme.accent}20`,
-              borderWidth: 1,
-              borderColor: `${theme.accent}50`,
-            }}
-          >
-            <Text style={{ fontSize: 46, color: theme.accent }}>♙</Text>
+      {/* ---- Who you are ---- */}
+      <View style={[s.hero, { borderColor: `${theme.accent}55` }]}>
+        <LinearGradient
+          colors={[`${theme.accent}26`, `${theme.accent}0d`, '#00000000']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.heroInner}
+        >
+          <View style={shared.row}>
+            <View
+              style={[
+                s.avatar,
+                { backgroundColor: `${theme.accent}22`, borderColor: `${theme.accent}66` },
+              ]}
+            >
+              <Text style={{ fontSize: 44, color: theme.accent }}>♙</Text>
+              {member && (
+                <View style={[s.levelBadge, { backgroundColor: theme.accent }]}>
+                  <Text style={s.levelBadgeText}>{level.level}</Text>
+                </View>
+              )}
+            </View>
+            <View style={{ gap: 6, flex: 1 }}>
+              <Text style={{ fontSize: 26, fontWeight: '900', color: ui.text }}>
+                {profile.name}
+              </Text>
+              <Label color={theme.accent}>
+                {profile.wins >= 25
+                  ? 'CLUB CHAMPION'
+                  : profile.wins >= 5
+                    ? 'TABLE REGULAR'
+                    : 'WELCOME TO THE CLUB'}
+              </Label>
+            </View>
           </View>
-          <View style={{ gap: 7, flex: 1 }}>
-            <Text style={{ fontSize: 26, fontWeight: '900', color: ui.text }}>{profile.name}</Text>
-            <Label color={theme.accent}>
-              {profile.wins >= 25
-                ? 'CLUB CHAMPION'
-                : profile.wins >= 5
-                  ? 'TABLE REGULAR'
-                  : 'WELCOME TO THE CLUB'}
-            </Label>
-          </View>
-        </View>
-        <Button secondary compact onPress={() => router.push('/settings')}>
-          Edit profile
-        </Button>
-      </Card>
+          {member && (
+            <View style={{ gap: 6 }}>
+              <ProgressBar value={level.into / level.need} height={9} />
+              <View style={shared.between}>
+                <Text style={shared.small}>Level {level.level}</Text>
+                <Text style={shared.small}>
+                  {level.into} / {level.need} XP to level {level.level + 1}
+                </Text>
+              </View>
+            </View>
+          )}
+          <Button secondary compact onPress={() => router.push('/settings')}>
+            Edit profile
+          </Button>
+        </LinearGradient>
+      </View>
+
       <SocialIdentityCard />
+
+      {/* ---- The record ---- */}
       <View style={shared.row}>
-        {[
-          ['Played', profile.games],
-          ['Wins', profile.wins],
-          ['Win rate', `${profile.games ? Math.round((profile.wins / profile.games) * 100) : 0}%`],
-        ].map(([label, value]) => (
-          <Card key={label} style={{ flex: 1, padding: 14, alignItems: 'center' }}>
-            <Text style={{ color: theme.accent, fontSize: 26, fontWeight: '900' }}>{value}</Text>
-            <Text style={shared.small}>{label}</Text>
-          </Card>
-        ))}
+        <Stat icon="game-controller" label="Played" value={profile.games} accent={theme.accent} />
+        <Stat icon="trophy" label="Wins" value={profile.wins} accent={ui.gold} />
+        <Stat icon="stats-chart" label="Win rate" value={`${winRate}%`} accent={ui.green} />
       </View>
       <View style={shared.row}>
-        {[
-          ['Win streak', profile.streak],
-          ['Best streak', profile.bestStreak],
-        ].map(([label, value]) => (
-          <Card key={label} style={{ flex: 1, padding: 14, alignItems: 'center' }}>
-            <Text style={{ color: theme.accent, fontSize: 26, fontWeight: '900' }}>{value}</Text>
-            <Text style={shared.small}>{label}</Text>
-          </Card>
-        ))}
+        <Stat icon="flame" label="Win streak" value={profile.streak} accent="#ff8c5a" />
+        <Stat icon="star" label="Best streak" value={profile.bestStreak} accent={ui.blueSoft} />
       </View>
       <Text style={shared.small}>
         {member
           ? 'Completed matches on your account. In pass & play, wins track the red seat.'
           : 'Completed matches on this device. In pass & play, wins track the red seat.'}
       </Text>
+
+      {/* ---- The wallet ---- */}
       {member && (
         <Card>
-          <Label color={theme.accent}>YOUR COINS</Label>
           <View style={shared.between}>
-            <Text style={{ color: theme.accent, fontSize: 30, fontWeight: '900' }}>
-              ◉ {wallet === 'ready' ? profile.coins.toLocaleString() : '—'}
-            </Text>
+            <Label color={theme.accent}>YOUR BALANCE</Label>
             <Button secondary compact onPress={() => router.push('/store')}>
               Open store
             </Button>
+          </View>
+          <View style={[shared.row, { gap: 18 }]}>
+            <View style={s.balance}>
+              <CoinIcon size={24} />
+              <Text style={s.balanceText}>
+                {wallet === 'ready' ? profile.coins.toLocaleString() : '—'}
+              </Text>
+            </View>
+            <View style={s.balance}>
+              <GemIcon size={22} />
+              <Text style={s.balanceText}>
+                {wallet === 'ready' ? profile.gems.toLocaleString() : '—'}
+              </Text>
+            </View>
           </View>
           {wallet !== 'ready' ? (
             <>
@@ -106,6 +136,7 @@ export default function ProfileScreen() {
           )}
         </Card>
       )}
+
       {/* Guests get their offer in the identity card above; this one is for accounts. */}
       {!auth.user?.isGuest && (
         <Card>
@@ -130,6 +161,8 @@ export default function ProfileScreen() {
           </Button>
         </Card>
       )}
+
+      {/* ---- The look ---- */}
       <Card>
         <Label color={theme.accent}>YOUR SIGNATURE LOOK</Label>
         <View style={shared.between}>
@@ -153,12 +186,13 @@ export default function ProfileScreen() {
           Explore your collection · {profile.owned.length} items
         </Button>
       </Card>
+
       <Card>
         <Label color={theme.accent}>SMALL WINS ADD UP</Label>
         <Text style={shared.sectionTitle}>Play. Collect. Make it yours.</Text>
         <Body>
-          Every account starts with 1,000 welcome coins. Claim 250 each day, earn 150 for a win, or
-          40 for finishing a game. Spend them on a look you love.
+          Claim the daily calendar, spin the wheel, finish missions, and win online for the big
+          payouts. Coins buy the looks; gems unlock the legendary ones.
         </Body>
       </Card>
       <Card>
@@ -172,3 +206,62 @@ export default function ProfileScreen() {
     </Screen>
   );
 }
+
+function Stat({
+  icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: number | string;
+  accent: string;
+}) {
+  return (
+    <Card style={s.stat}>
+      <View style={[s.statIcon, { backgroundColor: `${accent}1f` }]}>
+        <Ionicons name={icon} size={16} color={accent} />
+      </View>
+      <Text style={{ color: ui.text, fontSize: 24, fontWeight: '900' }}>{value}</Text>
+      <Text style={shared.small}>{label}</Text>
+    </Card>
+  );
+}
+
+const s = StyleSheet.create({
+  hero: { borderRadius: 22, overflow: 'hidden', borderWidth: 1.5 },
+  heroInner: { padding: 16, gap: 14 },
+  avatar: {
+    width: 76,
+    height: 76,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+  },
+  levelBadge: {
+    position: 'absolute',
+    right: -7,
+    bottom: -7,
+    minWidth: 26,
+    height: 26,
+    borderRadius: 13,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#0e1322',
+  },
+  levelBadgeText: { color: '#1d2030', fontWeight: '900', fontSize: 12 },
+  stat: { flex: 1, padding: 12, alignItems: 'center', gap: 4 },
+  statIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  balance: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  balanceText: { color: ui.text, fontSize: 26, fontWeight: '900' },
+});

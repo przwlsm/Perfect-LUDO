@@ -11,7 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { ALL_PLAYER_COLORS, type DieValue, type PlayerColor } from '@/domain';
 import { AnimatedDice } from '../components/AnimatedDice';
-import { RADIAL_GRID, radialPoint } from '../board/radialLayout';
+import { radialGrid, radialPoint, radialShift } from '../board/radialLayout';
 
 /**
  * The 5-6 player table's controls, laid over the round board itself: one
@@ -52,7 +52,7 @@ export function RoundBoardOverlay({
   motionEnabled: boolean;
   onRoll(): void;
 }) {
-  const cell = size / RADIAL_GRID;
+  const cell = size / radialGrid(colors.length);
   const tile = Math.max(46, Math.round(size * 0.12));
   const pulse = useSharedValue(0);
 
@@ -98,7 +98,11 @@ export function RoundBoardOverlay({
       {colors.map((color) => {
         const seat = ALL_PLAYER_COLORS.indexOf(color);
         // Just outside the home circle, on the rim, along the home's own direction.
-        const [row, col] = radialPoint(seat + 0.5, colors.length, 8.55);
+        const [row, col] = radialPoint(
+          seat + 0.5,
+          colors.length,
+          8.55 + radialShift(colors.length),
+        );
         const at = place((col + 0.5) * cell, (row + 0.5) * cell);
         const angle = -90 + ((seat + 0.5) * 360) / colors.length;
         const active = color === current;

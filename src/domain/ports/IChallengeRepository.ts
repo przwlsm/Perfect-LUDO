@@ -1,3 +1,4 @@
+import type { GameVariant } from '../entities/Variant';
 import type { LobbySnapshot, Unsubscribe } from '../entities/Social';
 
 export interface CreatedChallenge {
@@ -25,7 +26,12 @@ export interface IChallengeRepository {
   respondToChallenge(challengeId: string, accept: boolean): Promise<string | null>;
   cancelChallenge(challengeId: string): Promise<void>;
   /** Opens a 2-4 seat table joined by code; replaces this host's previous one. */
-  createLinkRoom(playerCount: number, stake?: number): Promise<LinkRoom>;
+  createLinkRoom(
+    playerCount: number,
+    stake?: number,
+    variant?: GameVariant,
+    teams?: boolean,
+  ): Promise<LinkRoom>;
   /** Takes the next free seat at the table for `code`; returns its lobby id. */
   joinLinkRoom(code: string): Promise<string>;
   getLobby(lobbyId: string): Promise<LobbySnapshot>;
@@ -34,5 +40,9 @@ export interface IChallengeRepository {
   setReady(lobbyId: string, ready: boolean): Promise<LobbySnapshot>;
   /** Rejected until the server's own start time has passed. Idempotent. */
   startMatch(lobbyId: string): Promise<LobbySnapshot>;
+  /** Moves the caller to an empty seat while the room is waiting (changing sides in 2 v 2). */
+  moveSeat(lobbyId: string, seat: number): Promise<LobbySnapshot>;
+  /** Host of a 2 v 2 invite room with their pair seated: find opponents from quick play. */
+  seekOpponents(lobbyId: string, on: boolean): Promise<LobbySnapshot>;
   subscribeToLobby(lobbyId: string, onChange: () => void): Unsubscribe;
 }

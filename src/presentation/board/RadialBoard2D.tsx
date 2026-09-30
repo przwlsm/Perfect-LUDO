@@ -5,12 +5,13 @@ import type { Board2DProps } from './Board2D';
 import { getBoardTheme } from '../theme/themes';
 import { AnimatedPiece2D } from './AnimatedPiece2D';
 import {
+  radialGrid,
   radialHome,
   radialHomeTriangle,
+  radialShift,
   radialTrack,
   radialYard,
   radialPoint,
-  RADIAL_GRID,
 } from './radialLayout';
 import { getCellForPiece } from './getCellForPiece';
 export function RadialBoard2D({
@@ -23,7 +24,10 @@ export function RadialBoard2D({
   onSelectMove,
 }: Board2DProps) {
   const count = state.players.length,
-    cell = size / RADIAL_GRID;
+    grid = radialGrid(count),
+    cell = size / grid,
+    // Bigger tables push the arms out; the hub grows by the same amount.
+    hub = 3.15 + radialShift(count);
   const colors = ALL_PLAYER_COLORS.slice(0, count),
     track = radialTrack(count);
   const pieces = state.players.flatMap((p) =>
@@ -59,12 +63,12 @@ export function RadialBoard2D({
             style={{
               position: 'absolute',
               top: size / 2,
-              left: size / 2 - 3.15 * Math.tan(Math.PI / count) * cell,
+              left: size / 2 - hub * Math.tan(Math.PI / count) * cell,
               width: 0,
               height: 0,
-              borderLeftWidth: 3.15 * Math.tan(Math.PI / count) * cell,
-              borderRightWidth: 3.15 * Math.tan(Math.PI / count) * cell,
-              borderBottomWidth: 3.15 * cell,
+              borderLeftWidth: hub * Math.tan(Math.PI / count) * cell,
+              borderRightWidth: hub * Math.tan(Math.PI / count) * cell,
+              borderBottomWidth: hub * cell,
               borderLeftColor: 'transparent',
               borderRightColor: 'transparent',
               borderBottomColor: theme.colors[color],
@@ -73,7 +77,7 @@ export function RadialBoard2D({
         </View>
       ))}
       {colors.map((color, seat) => {
-        const [r, c] = radialPoint(seat, count, 5.5);
+        const [r, c] = radialPoint(seat, count, 5.5 + radialShift(count));
         return (
           <View
             key={`arm-${color}`}
@@ -234,8 +238,8 @@ export function RadialBoard2D({
       <View
         style={{
           position: 'absolute',
-          left: cell * 8.7,
-          top: cell * 8.7,
+          left: size / 2 - cell * 0.8,
+          top: size / 2 - cell * 0.8,
           width: cell * 1.6,
           height: cell * 1.6,
           borderRadius: cell,

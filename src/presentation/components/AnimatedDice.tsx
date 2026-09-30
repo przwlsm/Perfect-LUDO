@@ -9,6 +9,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import type { DieValue } from '@/domain';
 import { Dice } from './Dice';
+
+/**
+ * A rolled die settles perfectly face-on: the number is what matters, and
+ * this cube only renders cleanly fully angled or fully flat — anything in
+ * between shows the side faces as detached slivers.
+ */
+const REST_TILT = 0;
 export function AnimatedDice({
   value,
   finish,
@@ -26,18 +33,18 @@ export function AnimatedDice({
 }) {
   const spin = useSharedValue(0),
     lift = useSharedValue(0);
-  const tilt = useSharedValue(value === null ? 1 : 0);
+  const tilt = useSharedValue(value === null ? 1 : REST_TILT);
   useEffect(() => {
     cancelAnimation(spin);
     cancelAnimation(lift);
     cancelAnimation(tilt);
     if (!motionEnabled) {
       spin.value = 0;
-      tilt.value = value === null ? 1 : 0;
+      tilt.value = value === null ? 1 : REST_TILT;
       lift.value = 0;
       return;
     }
-    tilt.value = withTiming(rolling || value === null ? 1 : 0, {
+    tilt.value = withTiming(rolling || value === null ? 1 : REST_TILT, {
       duration: 180,
       easing: Easing.out(Easing.cubic),
     });

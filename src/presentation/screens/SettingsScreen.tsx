@@ -100,14 +100,14 @@ export default function SettingsScreen() {
         <Label color={theme.accent}>ABOUT THE CLUB</Label>
         <Text style={shared.sectionTitle}>Good times, wherever you are.</Text>
         <Body>
-          Ludo Club works offline. Matches and settings are stored on this device; coins and your
+          Ludo Rumble works offline. Matches and settings are stored on this device; coins and your
           collection are kept on your account when you sign in.
         </Body>
         <Body>
-          Daily gifts reset at midnight UTC. Coins cannot be purchased, transferred, or redeemed for
-          money.
+          Daily gifts reset at midnight UTC. Coins and gems can be earned by playing or bought in
+          the app, but they can never be transferred or redeemed for money.
         </Body>
-        <Text style={shared.small}>Ludo Club · 1.0.0</Text>
+        <Text style={shared.small}>Ludo Rumble · 1.0.0</Text>
         <Button secondary compact onPress={() => router.push('/feedback')}>
           Send feedback or report a bug
         </Button>

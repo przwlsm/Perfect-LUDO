@@ -202,9 +202,9 @@ export default function LoginScreen() {
                 </View>
               </View>
             )}
-            {(mode === 'signIn' || signingUp) && !guest && (
+            {(mode === 'signIn' || signingUp) && (
               <>
-                <Body>Save your progress and pick up where you left off.</Body>
+                {!guest && <Body>Save your progress and pick up where you left off.</Body>}
                 <SocialButton
                   provider="google"
                   disabled={auth.busy}

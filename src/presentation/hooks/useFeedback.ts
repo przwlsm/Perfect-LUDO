@@ -20,7 +20,7 @@ export function feedbackMailto(draft: FeedbackDraft, supportEmail: string): stri
     draft.message.trim() || '(describe what happened here)',
     contact ? `\nReply to: ${contact}` : '',
   ].join('\n');
-  return `mailto:${supportEmail}?subject=${encodeURIComponent(`Ludo Club ${label}`)}&body=${encodeURIComponent(body)}`;
+  return `mailto:${supportEmail}?subject=${encodeURIComponent(`Ludo Rumble ${label}`)}&body=${encodeURIComponent(body)}`;
 }
 
 /**

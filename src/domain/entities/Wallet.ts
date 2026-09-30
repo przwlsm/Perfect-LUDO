@@ -1,15 +1,69 @@
 /** What the club pays and gives. The server enforces the same numbers. */
+
+/** Flat daily gift for the offline guest ledger; members get the streak calendar. */
 export const DAILY_GIFT_COINS = 250;
+/** The member streak calendar: day 1..7 coins, then the cycle repeats. */
+export const GIFT_CYCLE_COINS = [100, 150, 200, 300, 400, 500, 750] as const;
+/** Day 7 of the calendar also pays this many gems. */
+export const GIFT_STREAK_GEMS = 25;
+/** The comeback rescue: once a day, below the threshold, members only. */
+export const RESCUE_COINS = 300;
+export const RESCUE_THRESHOLD = 100;
+/** The piggy bank fills 1:1 with granted XP, up to this many coins. */
+export const PIGGY_CAP = 15000;
+/** What Ludo Club adds to the daily gift, every day of membership. */
+export const CLUB_DAILY_GEMS = 10;
+
 /**
- * Match rewards: online pays far more than the computer, because online
- * results are verified by the server and bot games are only the device's
- * word (and capped at BOT_PAID_GAMES_PER_DAY paid games a day).
+ * The guest vault: everything a guest earns waits in a locked vault and is
+ * paid onto the account they eventually create. The server accepts the
+ * claim once per account, capped, so the client-held number stays honest.
+ */
+export const GUEST_VAULT_CAP = 5000;
+export const GUEST_VAULT_WIN = 50;
+export const GUEST_VAULT_PLAYED = 0;
+export const GUEST_VAULT_AD_COINS = 150;
+export const GUEST_VAULT_ADS_PER_DAY = 3;
+/** How long a guest's watch-an-ad board trial lasts. */
+export const TRIAL_HOURS = 24;
+
+/** Where the streak calendar stands: which day pays next (or paid today). */
+export function giftCalendar(
+  lastGift: string | null,
+  giftStreak: number,
+  todayUtc: string,
+): { day: number; claimedToday: boolean } {
+  const claimedToday = lastGift !== null && lastGift >= todayUtc;
+  if (claimedToday) return { day: ((Math.max(giftStreak, 1) - 1) % 7) + 1, claimedToday };
+  const yesterday = new Date(new Date(`${todayUtc}T00:00:00Z`).getTime() - 86400000)
+    .toISOString()
+    .slice(0, 10);
+  const continues = lastGift === yesterday;
+  return { day: continues ? (giftStreak % 7) + 1 : 1, claimedToday };
+}
+/**
+ * Match rewards: winning is what pays. Free online tables pay by finishing
+ * place (see placementCoins); merely finishing pays XP but no coins. Bot
+ * games are the device's word, so their pay is small and capped at
+ * BOT_PAID_GAMES_PER_DAY paid games a day.
  */
 export const REWARDS = {
-  online: { win: { coins: 250, xp: 120 }, played: { coins: 60, xp: 50 } },
-  bot: { win: { coins: 50, xp: 40 }, played: { coins: 15, xp: 15 } },
+  online: { win: { coins: 100, xp: 120 }, played: { coins: 0, xp: 50 } },
+  bot: { win: { coins: 50, xp: 40 }, played: { coins: 0, xp: 15 } },
 } as const;
 export const BOT_PAID_GAMES_PER_DAY = 25;
+
+/**
+ * What a finishing place pays at a free online table. Second place needs at
+ * least three seats, third at least four; last takes nothing, and neither
+ * do quitters. Mirrors the server's placement_coins.
+ */
+export function placementCoins(rank: number, players: number): number {
+  if (rank === 1) return 100;
+  if (rank === 2 && players >= 3) return 50;
+  if (rank === 3 && players >= 4) return 20;
+  return 0;
+}
 /** @deprecated names kept for the offline guest ledger; see REWARDS. */
 export const WIN_COINS = REWARDS.bot.win.coins;
 export const PLAYED_COINS = REWARDS.bot.played.coins;
@@ -48,6 +102,14 @@ export interface WalletSnapshot {
   readonly owned: readonly string[];
   /** Calendar day (UTC, `YYYY-MM-DD`) of the last claimed gift, if any. */
   readonly lastGift: string | null;
+  /** Consecutive days the gift was claimed; positions the 7-day calendar. */
+  readonly giftStreak: number;
+  /** UTC day of the last comeback rescue, if any. */
+  readonly lastRescue: string | null;
+  /** What the piggy bank holds right now. */
+  readonly piggyCoins: number;
+  /** When the Ludo Club membership runs out, if it was ever bought. */
+  readonly clubUntil: string | null;
   readonly games: number;
   readonly wins: number;
   readonly streak: number;
@@ -134,6 +196,10 @@ export function parseWalletSnapshot(raw: unknown): WalletSnapshot {
     coins,
     owned: owned as string[],
     lastGift: (r.lastGift as string | null | undefined) ?? null,
+    giftStreak: count(r.giftStreak) ?? 0,
+    lastRescue: typeof r.lastRescue === 'string' ? r.lastRescue : null,
+    piggyCoins: count(r.piggyCoins) ?? 0,
+    clubUntil: typeof r.clubUntil === 'string' ? r.clubUntil : null,
     games,
     wins,
     streak,

@@ -1,6 +1,7 @@
 import type { GameState } from './GameState';
 import type { DieValue } from './PlayerColor';
 import type { PresenceStatus } from './Social';
+import type { GameVariant } from './Variant';
 
 export type OnlineMatchStatus = 'IN_PROGRESS' | 'FINISHED' | 'ABANDONED';
 
@@ -12,6 +13,10 @@ export interface OnlineMatchPlayer {
   readonly avatar: string | null;
   readonly presence: PresenceStatus;
   readonly lastSeen: string | null;
+  /** Turns this player has let the clock run out on (lifelines lost). */
+  readonly missed: number;
+  /** Out of lifelines: their turns are skipped for the rest of the match. */
+  readonly out: boolean;
 }
 
 export interface OnlineMatch {
@@ -39,6 +44,12 @@ export interface OnlineMatch {
   readonly prize: number;
   /** When the current roll or move times out; null once the match is over. */
   readonly turnDeadline: string | null;
+  /** Classic, Quick or Kill & Go. */
+  readonly variant: GameVariant;
+  /** Lifelines each player starts with. */
+  readonly lifelines: number;
+  /** 2 v 2: opposite seats are partners and win together. */
+  readonly teams: boolean;
 }
 
 export interface OnlineMatchSnapshot {

@@ -5,6 +5,7 @@ import type { Move, Piece } from '@/domain';
 import { cellToPosition3D } from './cellToPosition3D';
 import { getCellForPiece } from './getCellForPiece';
 import { getPieceWaypoints, PIECE_JUMP_MS, PIECE_STEP_MS } from './pieceMotion';
+import { radialGrid } from './radialLayout';
 import { shade } from './shade';
 
 type Point = readonly [number, number, number];
@@ -50,7 +51,12 @@ export function AnimatedPiece3D({
         ? (Math.floor(stackIndex / columns) - (Math.ceil(stackCount / columns) - 1) / 2) * 0.48
         : 0;
     const toPoint = ([row, col]: readonly [number, number]): Point => {
-      const [x, , z] = cellToPosition3D(row, col, 1, playerCount > 4 ? 19 : 15);
+      const [x, , z] = cellToPosition3D(
+        row,
+        col,
+        1,
+        playerCount > 4 ? radialGrid(playerCount) : 15,
+      );
       return [x + offset, 0.2, z + offsetZ];
     };
     resting.current = toPoint(

@@ -17,6 +17,7 @@ import {
   type PlayerColor,
   NO_STATS,
   type MatchStats,
+  distinctMoves,
 } from '@/domain';
 import { accumulateStats } from './matchStats';
 import { getGameCue, type GameFeedback } from '../audio/gameFeedback';
@@ -93,7 +94,12 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
         current.snapshot.match.version > next.match.version
       )
         return;
-      const base = next.match.state ?? createGame(seatColors(next.match.playerCount));
+      const base =
+        next.match.state ??
+        createGame(seatColors(next.match.playerCount), {
+          variant: next.match.variant,
+          teams: next.match.teams,
+        });
       const board = next.match.lastRoll
         ? await rollDice(base, { nextInt: async () => next.match.lastRoll! })
         : base;
@@ -292,7 +298,7 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
       activity ||
       error ||
       snapshot.match.lastRoll === null ||
-      moves.length > 1
+      distinctMoves(moves).length > 1
     )
       return;
     if (autoVersion.current === snapshot.match.version) return;
@@ -305,9 +311,11 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
         )
           return;
         autoVersion.current = snapshot.match.version;
-        submit(moves.length === 1 ? applyMove(board, moves[0]!) : endTurnWithoutMove(board));
+        // Stacked coins make the same move: any one of them will do.
+        const choice = distinctMoves(moves)[0];
+        submit(choice ? applyMove(board, choice) : endTurnWithoutMove(board));
       },
-      moves.length === 1 ? 350 : 800,
+      moves.length > 0 ? 350 : 800,
     );
     return () => clearTimeout(timer);
   }, [board, snapshot, myTurn, paused, activity, error, moves, submit, fresh]);
@@ -348,6 +356,10 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
     prize: snapshot?.match.prize ?? 0,
     /** Whole seconds left on the current roll or move; null without a clock. */
     secondsLeft,
+    /** Lifelines each player starts with. */
+    lifelines: snapshot?.match.lifelines ?? 5,
+    /** 2 v 2: opposite seats are partners. */
+    teams: snapshot?.match.teams ?? false,
     busy: activity !== null,
     activity,
     feedback,

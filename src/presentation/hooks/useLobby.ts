@@ -191,6 +191,14 @@ export function useLobby(lobbyId: string | null) {
       run(async () => {
         if (lobbyId) accept(await challengeRepository!.setReady(lobbyId, ready));
       }),
+    moveSeat: (seat: number) =>
+      run(async () => {
+        if (lobbyId) accept(await challengeRepository!.moveSeat(lobbyId, seat));
+      }),
+    seekOpponents: (on: boolean) =>
+      run(async () => {
+        if (lobbyId) accept(await challengeRepository!.seekOpponents(lobbyId, on));
+      }),
     leave: () => run(() => challengeRepository!.leaveLobby(lobbyId!)),
     cancel: () =>
       run(() => challengeRepository!.cancelChallenge(snapshot!.challenge.id)).then(() => refresh()),

@@ -10,6 +10,7 @@ import { ui } from '../theme/themes';
 const ICON: Record<AppNotification['type'], string> = {
   FRIEND_REQUEST: '👋',
   FRIEND_REQUEST_ACCEPTED: '🤝',
+  GIFT: '🎁',
   CHALLENGE_INVITE: '🎮',
   CHALLENGE_ACCEPTED: '✅',
   CHALLENGE_DECLINED: '🚪',

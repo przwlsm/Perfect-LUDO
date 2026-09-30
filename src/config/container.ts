@@ -11,12 +11,16 @@ import type {
   INotificationRepository,
   IPresenceService,
   IRandomProvider,
+  IIapService,
+  IRewardedAdsService,
   IRewardsRepository,
   IReactionChannel,
   ISocialIdentityRepository,
   IUserProgressRepository,
   IWalletRepository,
 } from '@/domain';
+import { AdMobRewardedAdsService } from '@/infrastructure/ads/rewardedAds';
+import { ExpoIapService } from '@/infrastructure/iap/ExpoIapService';
 import { AsyncStorageKeyValueStore } from '@/infrastructure/storage/AsyncStorageKeyValueStore';
 import { ExpoConnectivityService } from '@/infrastructure/network/ExpoConnectivityService';
 import { SecureRandomProvider } from '@/infrastructure/random/SecureRandomProvider';
@@ -24,6 +28,7 @@ import {
   getSupabaseClient,
   isSupabaseConfigured,
   isSocialProviderEnabled,
+  readStoredSessionUser,
   probeSupabaseHealth,
 } from '@/infrastructure/supabase/supabaseClient';
 import { SupabaseMatchmakingRepository } from '@/infrastructure/supabase/SupabaseMatchmakingRepository';
@@ -62,7 +67,7 @@ export const matchRepository: IMatchRepository = new MatchRepository(preferences
  */
 const supabase = isSupabaseConfigured ? getSupabaseClient() : null;
 export const authProvider: IAccountAuthProvider | null = supabase
-  ? new SupabaseAuthAdapter(supabase, isSocialProviderEnabled)
+  ? new SupabaseAuthAdapter(supabase, isSocialProviderEnabled, readStoredSessionUser)
   : null;
 export const userProgressRepository: IUserProgressRepository | null = supabase
   ? new SupabaseUserProgressRepository(supabase)
@@ -83,6 +88,10 @@ export const walletRepository: IWalletRepository | null = supabase
 export const rewardsRepository: IRewardsRepository | null = supabase
   ? new SupabaseRewardsRepository(supabase)
   : null;
+/** Opt-in rewarded video ads; unsupported (hidden) in Expo Go builds. */
+export const rewardedAds: IRewardedAdsService = new AdMobRewardedAdsService();
+/** Real-money store purchases, verified server-side; null in offline builds. */
+export const iapService: IIapService | null = supabase ? new ExpoIapService(supabase) : null;
 /** Emoji between the players of an online match, over Realtime broadcast. */
 export const reactionChannel: IReactionChannel | null = supabase
   ? new SupabaseReactionChannel(supabase)

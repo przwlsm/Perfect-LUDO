@@ -7,7 +7,7 @@ export default function appConfig({ config }: ConfigContext): ExpoConfig {
   const iosBundleIdentifier = process.env.APP_IOS_BUNDLE_IDENTIFIER || config.ios?.bundleIdentifier;
   return {
     ...config,
-    name: process.env.APP_DISPLAY_NAME || config.name || 'Ludo Club',
+    name: process.env.APP_DISPLAY_NAME || config.name || 'Ludo Rumble',
     slug: config.slug || 'Ludo',
     ...(process.env.EXPO_OWNER ? { owner: process.env.EXPO_OWNER } : {}),
     android: { ...config.android, ...(androidPackage ? { package: androidPackage } : {}) },

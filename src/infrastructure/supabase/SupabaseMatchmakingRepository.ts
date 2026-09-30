@@ -3,6 +3,7 @@ import type {
   IMatchmakingRepository,
   QuickMatchPlayerCount,
   QuickMatchTicket,
+  GameVariant,
   Stake,
   Unsubscribe,
 } from '@/domain';
@@ -12,12 +13,19 @@ import { removeChannel, rpc, uniqueTopic } from './supabaseRpc';
 export class SupabaseMatchmakingRepository implements IMatchmakingRepository {
   constructor(private readonly client: SupabaseClient) {}
 
-  async join(playerCount: QuickMatchPlayerCount, stake: Stake = 0): Promise<QuickMatchTicket> {
+  async join(
+    playerCount: QuickMatchPlayerCount,
+    stake: Stake = 0,
+    variant: GameVariant = 'classic',
+    teams = false,
+  ): Promise<QuickMatchTicket> {
     // A free table leaves the stake out, so this also works before 0013.
     return toQuickMatchTicket(
       await rpc(this.client, 'join_quick_match', {
         p_player_count: playerCount,
-        ...(stake > 0 ? { p_stake: stake } : {}),
+        ...(stake > 0 || variant !== 'classic' || teams ? { p_stake: stake } : {}),
+        ...(variant !== 'classic' || teams ? { p_variant: variant } : {}),
+        ...(teams ? { p_teams: true } : {}),
       }),
     );
   }

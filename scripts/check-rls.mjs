@@ -256,6 +256,8 @@ for (const [fn, args] of [
   ['get_tournament', {}],
   ['join_quick_match', { p_player_count: 2, p_stake: 100 }],
   ['claim_turn_timeout', { p_match_id: '00000000-0000-0000-0000-000000000000', p_version: 0 }],
+  ['move_lobby_seat', { p_lobby_id: '00000000-0000-0000-0000-000000000000', p_seat: 1 }],
+  ['seek_opponents', { p_lobby_id: '00000000-0000-0000-0000-000000000000', p_on: true }],
 ]) {
   const call = await client.rpc(fn, args);
   check(`anonymous cannot call ${fn}`, Boolean(call.error), call.error?.code);

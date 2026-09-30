@@ -2,6 +2,7 @@ import { getFinishProgress } from '../board';
 import type { GameState } from '../entities/GameState';
 import { getCurrentPlayer, isTeamGame, partnerOf } from '../entities/GameState';
 import { hasPlayerWon } from '../entities/Player';
+import { coinsToWin, mayEnterHome, variantRules, type GameVariant } from '../entities/Variant';
 import type { Player } from '../entities/Player';
 import { ALL_PLAYER_COLORS, type DieValue, type PlayerColor } from '../entities/PlayerColor';
 import type { IRandomProvider } from '../ports/IRandomProvider';
@@ -13,17 +14,17 @@ const MAX_CONSECUTIVE_SIXES = 3;
 
 export function createGame(
   colors: readonly PlayerColor[],
-  options: { teams?: boolean } = {},
+  options: { teams?: boolean; variant?: GameVariant } = {},
 ): GameState {
   if (
     colors.length < 2 ||
-    colors.length > 6 ||
+    colors.length > 8 ||
     new Set(colors).size !== colors.length ||
     colors.some(
       (color) => !ALL_PLAYER_COLORS.slice(0, colors.length > 4 ? colors.length : 4).includes(color),
     )
   ) {
-    throw new Error('Ludo requires 2 to 6 distinct players');
+    throw new Error('Ludo requires 2 to 8 distinct players');
   }
 
   const players: Player[] = colors.map((color) => ({
@@ -44,6 +45,7 @@ export function createGame(
     status: 'IN_PROGRESS',
     winnerColor: null,
     ...(options.teams && colors.length === 4 ? { teams: true } : {}),
+    ...variantRules(options.variant ?? 'classic'),
   };
 }
 
@@ -88,7 +90,13 @@ export function getValidMovesForCurrentPlayer(state: GameState): Move[] {
   if (state.lastRoll === null) return [];
   if (state.consecutiveSixes >= MAX_CONSECUTIVE_SIXES) return [];
   const color = controlledColor(state);
-  return computeValidMoves(state.players, color, state.lastRoll, friendsOf(state, color));
+  return computeValidMoves(
+    state.players,
+    color,
+    state.lastRoll,
+    friendsOf(state, color),
+    !mayEnterHome(state, color),
+  );
 }
 
 export function endTurnWithoutMove(state: GameState): GameState {
@@ -130,9 +138,23 @@ export function applyMove(state: GameState, move: Move): GameState {
     }),
   }));
 
-  const winnerColor = findWinner(players, isTeamGame(state), getCurrentPlayer(state).color);
+  // Kill & Go: a first capture unlocks this colour's home path for good.
+  const moverColor = state.players
+    .flatMap((p) => p.pieces)
+    .find((p) => p.id === move.pieceId)!.color;
+  const unlocked =
+    state.killToEnter && capturedIds.size > 0 && !(state.hunters ?? []).includes(moverColor)
+      ? { hunters: [...(state.hunters ?? []), moverColor] }
+      : {};
+
+  const winnerColor = findWinner(
+    players,
+    isTeamGame(state),
+    getCurrentPlayer(state).color,
+    coinsToWin(state),
+  );
   if (winnerColor) {
-    return { ...state, players, status: 'FINISHED', winnerColor, lastRoll: null };
+    return { ...state, ...unlocked, players, status: 'FINISHED', winnerColor, lastRoll: null };
   }
 
   const earnedBonusTurn =
@@ -142,9 +164,16 @@ export function applyMove(state: GameState, move: Move): GameState {
       move.toProgress === getFinishProgress(state.players.length));
 
   if (earnedBonusTurn) {
-    return { ...state, players, lastRoll: null };
+    return { ...state, ...unlocked, players, lastRoll: null };
   }
 
   const nextIndex = (state.currentPlayerIndex + 1) % state.players.length;
-  return { ...state, players, currentPlayerIndex: nextIndex, lastRoll: null, consecutiveSixes: 0 };
+  return {
+    ...state,
+    ...unlocked,
+    players,
+    currentPlayerIndex: nextIndex,
+    lastRoll: null,
+    consecutiveSixes: 0,
+  };
 }

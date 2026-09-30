@@ -118,7 +118,7 @@ export function projectFace(
   return {
     visible: n[2] > 0.001,
     depth: n[2],
-    shade: Math.max(0, Math.min(0.4, 0.18 + n[0] * 0.2 + n[1] * 0.3)),
+    shade: Math.max(0, Math.min(0.32, 0.11 + n[0] * 0.18 + n[1] * 0.26)),
     // Read right to left: place the face on the cube, turn the whole cube to
     // show `value` at rest, apply the live roll on top of that, then shift
     // the result outward on screen by its rotated normal. React Native
@@ -133,7 +133,10 @@ export function projectFace(
     transform: [
       { translateX: (n[0] * edge) / 2 },
       { translateY: (n[1] * edge) / 2 },
-      { perspective: edge * 4 },
+      // Near-orthographic: strong perspective shrinks each independently
+      // transformed face by a different amount, so neighbouring faces stop
+      // sharing an edge and the cube shows cracks at its seams.
+      { perspective: edge * 30 },
       { rotateY: `${spinY}rad` },
       { rotateX: `${spinX}rad` },
       { rotateY: `${ay}rad` },

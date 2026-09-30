@@ -21,6 +21,7 @@ import {
   type DieValue,
   NO_STATS,
   type MatchStats,
+  distinctMoves,
 } from '@/domain';
 import { accumulateStats } from './matchStats';
 
@@ -41,6 +42,7 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
   const alive = useRef(false);
   const { mode, players, difficulty } = options;
   const teams = options.teams === true;
+  const variant = options.variant ?? 'classic';
   // Compared by value: the options object is rebuilt on every render.
   const namesKey = JSON.stringify(options.names ?? {});
   useEffect(() => {
@@ -60,6 +62,7 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
             difficulty,
             names: JSON.parse(namesKey) as SeatNames,
             ...(teams ? { teams: true } : {}),
+            ...(variant !== 'classic' ? { variant } : {}),
           });
         await matchRepository.save(next);
         if (!cancelled) {
@@ -80,7 +83,7 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
       finishFeedback.current?.();
       listener.remove();
     };
-  }, [resume, mode, players, difficulty, namesKey, teams, loadAttempt]);
+  }, [resume, mode, players, difficulty, namesKey, teams, variant, loadAttempt]);
 
   const transition = useCallback(
     async (next: () => Promise<SavedMatch> | SavedMatch, kind: 'rolling' | 'moving') => {
@@ -172,10 +175,12 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
   useEffect(() => {
     if (!match || busy || paused || !foreground || error || match.state.status === 'FINISHED')
       return;
-    const legalMoves = getValidMovesForCurrentPlayer(match.state);
+    // Coins stacked on one square (or all at home) make the same move, so
+    // they count as one choice.
+    const legalMoves = distinctMoves(getValidMovesForCurrentPlayer(match.state));
     if (match.state.lastRoll === null && humanTurn) return;
-    // A single legal move isn't a decision, so play it instead of making the
-    // player tap the only option they have. Two or more still waits for them.
+    // A single real choice isn't a decision, so play it instead of making the
+    // player tap. Two or more different moves still waits for them.
     if (match.state.lastRoll !== null && legalMoves.length > 1 && humanTurn) return;
     const timer = setTimeout(
       () => {

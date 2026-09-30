@@ -88,3 +88,35 @@ export function getSupabaseClient(): SupabaseClient {
 
   return client;
 }
+
+/**
+ * The account of the login saved on this device, read straight from storage
+ * without contacting the server. Used only when the server cannot be reached
+ * at start-up, so an offline player still opens the app as themselves.
+ * Supabase stores the session under `sb-<project ref>-auth-token`.
+ */
+export async function readStoredSessionUser(): Promise<{
+  uid: string;
+  email: string | null;
+  isGuest: boolean;
+} | null> {
+  if (!url) return null;
+  try {
+    const ref = new URL(url).hostname.split('.')[0];
+    const raw = await AsyncStorage.getItem(`sb-${ref}-auth-token`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as {
+      user?: { id?: unknown; email?: unknown; is_anonymous?: unknown };
+      currentSession?: { user?: { id?: unknown; email?: unknown; is_anonymous?: unknown } };
+    };
+    const user = parsed.user ?? parsed.currentSession?.user;
+    if (!user || typeof user.id !== 'string') return null;
+    return {
+      uid: user.id,
+      email: typeof user.email === 'string' ? user.email : null,
+      isGuest: user.is_anonymous === true,
+    };
+  } catch {
+    return null;
+  }
+}

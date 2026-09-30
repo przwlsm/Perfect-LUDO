@@ -2,11 +2,13 @@ import { ALL_PLAYER_COLORS, getFinishProgress } from '@/domain';
 import {
   radialTrack,
   radialPieceCell,
-  RADIAL_GRID,
+  radialGrid,
   radialHome,
   radialHomeTriangle,
+  radialInner,
 } from './radialLayout';
-describe.each([5, 6])('%i-arm board geometry', (count) => {
+describe.each([5, 6, 7, 8])('%i-arm board geometry', (count) => {
+  const grid = radialGrid(count);
   it('has a continuous closed route and distinct visible cells', () => {
     const track = radialTrack(count);
     expect(track).toHaveLength(count * 13);
@@ -17,8 +19,14 @@ describe.each([5, 6])('%i-arm board geometry', (count) => {
       const [nextR, nextC] = track[(index + 1) % track.length]!;
       expect(Math.hypot(r - nextR, c - nextC)).toBeLessThan(2.2);
       expect(Math.min(r, c)).toBeGreaterThan(0);
-      expect(Math.max(r, c)).toBeLessThan(RADIAL_GRID - 1);
+      expect(Math.max(r, c)).toBeLessThan(grid - 1);
     });
+  });
+  it('leaves room between neighbouring arms at the hub', () => {
+    // Arms are three cells wide: their innermost track cells must sit at
+    // least three cells apart, as they do on the six-seat table.
+    const inner = radialInner(count);
+    expect(2 * inner * Math.sin(Math.PI / count)).toBeGreaterThanOrEqual(3 - 1e-9);
   });
   it('keeps every yard coin separate and connects the track to the correct home lane', () => {
     const yards: string[] = [];
@@ -40,8 +48,10 @@ describe.each([5, 6])('%i-arm board geometry', (count) => {
   });
 });
 
-describe.each([5, 6])('%i-player triangle homes', (count) => {
+describe.each([5, 6, 7, 8])('%i-player triangle homes', (count) => {
   const colors = ALL_PLAYER_COLORS.slice(0, count);
+  const grid = radialGrid(count);
+  const centre = (grid - 1) / 2;
   // Signed area test: is point p on the inside of every edge of triangle t?
   const cross = (a: readonly number[], b: readonly number[], p: readonly number[]) =>
     (b[1]! - a[1]!) * (p[0]! - a[0]!) - (b[0]! - a[0]!) * (p[1]! - a[1]!);
@@ -68,7 +78,7 @@ describe.each([5, 6])('%i-player triangle homes', (count) => {
     for (const color of colors) {
       const t = radialHomeTriangle(color, count);
       for (const [r, c] of [t.apex, t.left, t.right])
-        expect(Math.hypot(r! - 9, c! - 9)).toBeLessThanOrEqual(RADIAL_GRID / 2);
+        expect(Math.hypot(r! - centre, c! - centre)).toBeLessThanOrEqual(grid / 2);
     }
   });
 });

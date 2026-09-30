@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { rewardsRepository } from '@/config/container';
-import type { RewardsSnapshot, SpinResult, TournamentView } from '@/domain';
+import type {
+  AdRewardKind,
+  LeagueView,
+  RewardsSnapshot,
+  SpinResult,
+  TournamentView,
+} from '@/domain';
 import { useProfile } from '../state/ProfileProvider';
 
 const message = (e: unknown) =>
@@ -96,7 +102,51 @@ export function useRewards() {
         () => rewardsRepository!.claimSeasonTier(tier, premium),
         adopt,
       ),
+    claimAdReward: (kind: AdRewardKind) =>
+      run(
+        `ad:${kind}`,
+        () => rewardsRepository!.claimAdReward(kind),
+        async (wallet) => {
+          await adoptWallet(wallet);
+          // Refresh the ad counts behind the buttons.
+          void load();
+        },
+      ),
   };
+}
+
+/**
+ * The player's league standing. Loading it settles a finished week on the
+ * server, so a settlement that paid gems refreshes the wallet too.
+ */
+export function useLeague() {
+  const { member, refreshWallet } = useProfile();
+  const [data, setData] = useState<LeagueView | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const refreshRef = useRef(refreshWallet);
+  useEffect(() => {
+    refreshRef.current = refreshWallet;
+  }, [refreshWallet]);
+
+  const load = useCallback(async () => {
+    if (!member || !rewardsRepository) return;
+    try {
+      const next = await rewardsRepository.getLeague();
+      setData(next);
+      setError(null);
+      if (next.lastResult && next.lastResult.gems > 0) await refreshRef.current();
+    } catch (e) {
+      setError(message(e));
+    }
+  }, [member]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
+
+  return { data, error, reload: load };
 }
 
 /** The weekly tournament leaderboard, with last week's prize to collect. */

@@ -12,7 +12,7 @@ const SCREENS: readonly [number, number][] = [
   [1440, 760],
 ];
 
-describe.each([2, 3, 4, 5, 6])('table for %i players', (count) => {
+describe.each([2, 3, 4, 5, 6, 7, 8])('table for %i players', (count) => {
   const colors = seatColors(count);
 
   it.each(SCREENS)('fits the board and every panel inside %i x %i', (width, height) => {
@@ -71,11 +71,14 @@ describe('classic board seats each panel beside its own yard', () => {
   });
 });
 
-describe('round board (5-6 players)', () => {
-  it.each([5, 6])('gives %i players the full width in portrait, with no side panels', (count) => {
-    const t = tableArrangement(360, 700, seatColors(count));
-    expect(t.board).toBe(348);
-    expect(t.before).toEqual([]);
-    expect(t.after).toEqual([]);
-  });
+describe('round board (5-8 players)', () => {
+  it.each([5, 6, 7, 8])(
+    'gives %i players the full width in portrait, with no side panels',
+    (count) => {
+      const t = tableArrangement(360, 700, seatColors(count));
+      expect(t.board).toBe(348);
+      expect(t.before).toEqual([]);
+      expect(t.after).toEqual([]);
+    },
+  );
 });

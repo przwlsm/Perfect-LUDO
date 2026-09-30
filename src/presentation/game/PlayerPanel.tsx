@@ -36,7 +36,10 @@ export function PlayerPanel({
   motionEnabled,
   onRoll,
   secondsLeft = null,
+  lives = null,
 }: {
+  /** Online only: lifelines left of the total, and whether the player is out. */
+  lives?: { left: number; total: number; out: boolean } | null;
   /** Online turn clock for the active seat; null when there is none. */
   secondsLeft?: number | null;
   color: string;
@@ -109,11 +112,32 @@ export function PlayerPanel({
           fontWeight: '900',
           letterSpacing: 0.3,
           color: active ? ui.text : ui.muted,
-          maxWidth: width - tile - 26,
+          maxWidth: active ? width - tile - 26 : width - 20,
         }}
       >
         {label}
       </Text>
+      {lives &&
+        (lives.out ? (
+          <Text style={{ color: ui.danger, fontSize: 9, fontWeight: '900', letterSpacing: 0.8 }}>
+            OUT
+          </Text>
+        ) : (
+          <View
+            accessible
+            accessibilityLabel={`${lives.left} of ${lives.total} lifelines left`}
+            style={{ flexDirection: 'row', gap: 2 }}
+          >
+            {Array.from({ length: lives.total }, (_, i) => (
+              <Text
+                key={i}
+                style={{ fontSize: 8, color: i < lives.left ? '#f43f5e' : '#ffffff30' }}
+              >
+                ♥
+              </Text>
+            ))}
+          </View>
+        ))}
     </View>
   );
 
@@ -174,7 +198,7 @@ export function PlayerPanel({
         borderWidth: 2,
         borderColor: active ? color : `${color}40`,
         boxShadow: active ? `0 0 16px ${color}90` : '0 4px 10px #00000055',
-        opacity: active ? 1 : 0.82,
+        opacity: lives?.out ? 0.45 : active ? 1 : 0.82,
         transform: [{ rotate: rotated ? '180deg' : '0deg' }],
       }}
     >
@@ -220,7 +244,10 @@ export function PlayerPanel({
           </View>
         </>
       )}
-      {mirrored ? (
+      {/* One die on the table: only the seat whose turn it is shows one. */}
+      {!active ? (
+        <View style={{ flex: 1, alignItems: 'center' }}>{identity}</View>
+      ) : mirrored ? (
         <>
           {arrow}
           {dice}

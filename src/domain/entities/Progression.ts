@@ -40,10 +40,25 @@ export interface SeasonState {
   readonly premiumClaimed: readonly number[];
 }
 
+/**
+ * Opt-in rewarded ads. The server enforces the same caps per UTC day; the
+ * counts in the snapshot say how many of each were already claimed today.
+ */
+export type AdRewardKind = 'gem' | 'spin' | 'rescue-boost';
+export const AD_REWARD_CAPS: Readonly<Record<AdRewardKind, number>> = {
+  gem: 5,
+  spin: 2,
+  'rescue-boost': 1,
+};
+export const AD_GEM_AMOUNT = 1;
+export const AD_RESCUE_BOOST_COINS = 300;
+export type AdRewardCounts = Readonly<Record<AdRewardKind, number>>;
+
 export interface RewardsSnapshot {
   readonly missions: readonly Mission[];
   readonly missionsResetAt: string;
   readonly spinsToday: number;
+  readonly ads: AdRewardCounts;
   readonly season: SeasonState;
   readonly wallet: WalletSnapshot;
 }
@@ -106,6 +121,42 @@ export interface TournamentView {
 export const TOURNAMENT_WIN_POINTS = 3;
 export const TOURNAMENT_PLAYED_POINTS = 1;
 
+// --- leagues -----------------------------------------------------------------
+// Weekly divisions settled from the tournament points. Mirrors the server's
+// league_rules and league_promotion_gems in 0022_leagues.sql.
+
+export const LEAGUE_DIVISIONS = ['Bronze', 'Silver', 'Gold', 'Diamond', 'Legend'] as const;
+export type LeagueDivision = 1 | 2 | 3 | 4 | 5;
+export const leagueName = (division: number): string =>
+  LEAGUE_DIVISIONS[Math.min(Math.max(division, 1), 5) - 1]!;
+/** Gems the first arrival in a division pays (index = division - 1). */
+export const LEAGUE_PROMOTION_GEMS = [0, 15, 25, 40, 60] as const;
+/** A Legend week at or above the promotion line pays this, every time. */
+export const LEGEND_WEEKLY_GEMS = 25;
+export const LEGEND_BONUS_POINTS = 30;
+
+export interface LeagueView {
+  readonly division: number;
+  readonly bestDivision: number;
+  readonly week: string;
+  readonly endsAt: string;
+  readonly points: number;
+  readonly wins: number;
+  readonly games: number;
+  /** Points this week that promote; null at the top. */
+  readonly promoteAt: number | null;
+  /** Points under which the week relegates; null at the bottom. */
+  readonly demoteBelow: number | null;
+  /** Filled when this read settled a finished week. */
+  readonly lastResult: {
+    readonly week: string;
+    readonly points: number;
+    readonly from: number;
+    readonly to: number;
+    readonly gems: number;
+  } | null;
+}
+
 /** Mirrors the server's tournament_prize. */
 export function tournamentPrize(rank: number): { coins: number; gems: number } {
   if (rank === 1) return { coins: 3000, gems: 60 };
@@ -150,10 +201,13 @@ function parseMission(v: unknown): Mission {
 export function parseRewards(v: unknown): RewardsSnapshot {
   const r = row(v);
   const season = row(r.season);
+  const ads = (r.ads && typeof r.ads === 'object' ? r.ads : {}) as Record<string, unknown>;
+  const adCount = (k: AdRewardKind) => (typeof ads[k] === 'number' ? Math.floor(ads[k]) : 0);
   return {
     missions: Array.isArray(r.missions) ? r.missions.map(parseMission) : [],
     missionsResetAt: str(r.missionsResetAt),
     spinsToday: int(r.spinsToday),
+    ads: { gem: adCount('gem'), spin: adCount('spin'), 'rescue-boost': adCount('rescue-boost') },
     season: {
       number: int(season.number),
       endsAt: str(season.endsAt),
@@ -180,6 +234,32 @@ export function parseSpin(v: unknown): SpinResult {
     },
     spinsToday: int(r.spinsToday),
     wallet: parseWalletSnapshot(r.wallet),
+  };
+}
+
+export function parseLeague(v: unknown): LeagueView {
+  const r = row(v);
+  const optInt = (x: unknown): number | null => (typeof x === 'number' ? Math.floor(x) : null);
+  const last = r.lastResult ? row(r.lastResult) : null;
+  return {
+    division: int(r.division),
+    bestDivision: int(r.bestDivision),
+    week: str(r.week),
+    endsAt: str(r.endsAt),
+    points: int(r.points),
+    wins: int(r.wins),
+    games: int(r.games),
+    promoteAt: optInt(r.promoteAt),
+    demoteBelow: optInt(r.demoteBelow),
+    lastResult: last
+      ? {
+          week: str(last.week),
+          points: int(last.points),
+          from: int(last.from),
+          to: int(last.to),
+          gems: int(last.gems),
+        }
+      : null,
   };
 }
 

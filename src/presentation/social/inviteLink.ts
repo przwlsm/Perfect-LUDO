@@ -12,8 +12,8 @@ export function inviteLink(code: string): string {
  */
 export function inviteMessage(code: string): string {
   return (
-    `Join my Ludo Club game! Tap ${inviteLink(code)} to take a seat, ` +
-    `or open Ludo Club → Online → Private Game and enter ${code}.`
+    `Join my Ludo Rumble game! Tap ${inviteLink(code)} to take a seat, ` +
+    `or open Ludo Rumble → Online → Private Game and enter ${code}.`
   );
 }
 

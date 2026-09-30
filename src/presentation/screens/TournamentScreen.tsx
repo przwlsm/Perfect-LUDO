@@ -1,12 +1,19 @@
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { TOURNAMENT_PLAYED_POINTS, TOURNAMENT_WIN_POINTS, tournamentPrize } from '@/domain';
+import {
+  LEGEND_BONUS_POINTS,
+  LEGEND_WEEKLY_GEMS,
+  leagueName,
+  TOURNAMENT_PLAYED_POINTS,
+  TOURNAMENT_WIN_POINTS,
+  tournamentPrize,
+} from '@/domain';
 import { Text } from '../components/AppText';
 import { Body, Button, Card, Label, Screen, shared } from '../components/Kit';
-import { RewardChips, timeLeft } from '../components/Progress';
+import { ProgressBar, RewardChips, timeLeft } from '../components/Progress';
 import { UserAvatar } from '../social/UserAvatar';
-import { useTournament } from '../hooks/useRewards';
+import { useLeague, useTournament } from '../hooks/useRewards';
 import { useProfile } from '../state/ProfileProvider';
 import { useSocial } from '../state/SocialProvider';
 import { ui } from '../theme/themes';
@@ -20,11 +27,14 @@ const PRIZE_TIERS: readonly { readonly label: string; readonly rank: number }[] 
 ];
 
 const MEDALS = ['#fbbf24', '#cbd5e1', '#d97706'];
+/** Badge colour per division, Bronze to Legend. */
+const DIVISION_COLORS = ['#d99a5b', '#cbd5e1', '#fbbf24', '#7dd3fc', '#c084fc'];
 
 export default function TournamentScreen() {
   const { theme, member } = useProfile();
   const { identity } = useSocial();
   const t = useTournament();
+  const league = useLeague();
 
   if (!member)
     return (
@@ -41,9 +51,62 @@ export default function TournamentScreen() {
     );
 
   const data = t.data;
+  const lg = league.data;
+  const divisionColor = lg ? DIVISION_COLORS[lg.division - 1]! : ui.muted;
   return (
     <Screen title="Weekly Tournament" subtitle="ONLINE LEAGUE">
       {t.error && <Text style={shared.error}>{t.error}</Text>}
+
+      {/* ---- Your league division ---- */}
+      {lg && (
+        <Card style={{ borderColor: `${divisionColor}55` }}>
+          {lg.lastResult && lg.lastResult.to !== lg.lastResult.from && (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={{
+                color: lg.lastResult.to > lg.lastResult.from ? ui.green : ui.danger,
+                fontWeight: '800',
+              }}
+            >
+              {lg.lastResult.to > lg.lastResult.from
+                ? `Promoted! ${leagueName(lg.lastResult.from)} → ${leagueName(lg.lastResult.to)}${
+                    lg.lastResult.gems > 0 ? ` · +${lg.lastResult.gems} gems` : ''
+                  }`
+                : `Relegated to ${leagueName(lg.lastResult.to)}. This week is the comeback.`}
+            </Text>
+          )}
+          <View style={shared.between}>
+            <View style={{ gap: 4 }}>
+              <Label color={divisionColor}>YOUR LEAGUE</Label>
+              <Text style={s.rank}>{leagueName(lg.division)}</Text>
+            </View>
+            <Ionicons name="shield" size={44} color={divisionColor} />
+          </View>
+          {lg.promoteAt !== null ? (
+            <>
+              <ProgressBar
+                value={Math.min(1, lg.points / lg.promoteAt)}
+                colors={[divisionColor, divisionColor]}
+              />
+              <Text style={shared.small}>
+                {lg.points} / {lg.promoteAt} points to {leagueName(lg.division + 1)} this week.
+                {lg.demoteBelow !== null && lg.points < lg.demoteBelow
+                  ? ` Under ${lg.demoteBelow} drops you to ${leagueName(lg.division - 1)}.`
+                  : ''}
+              </Text>
+            </>
+          ) : (
+            <Text style={shared.small}>
+              The top of the ladder. {LEGEND_BONUS_POINTS}+ points this week pays{' '}
+              {LEGEND_WEEKLY_GEMS} gems
+              {lg.demoteBelow !== null
+                ? `; under ${lg.demoteBelow} drops you to ${leagueName(lg.division - 1)}`
+                : ''}
+              .
+            </Text>
+          )}
+        </Card>
+      )}
 
       {data?.lastWeek && !data.lastWeek.claimed && (
         <Card style={{ borderColor: `${ui.gold}80`, backgroundColor: '#2a2210' }}>

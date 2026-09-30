@@ -143,8 +143,44 @@ export function Board2D({
                 borderRadius: theme.wood ? cellSize * 3 : cellSize * 0.65,
                 borderWidth: 2,
                 borderColor: '#00000015',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
-            />
+            >
+              {/* A faint embossed die, so an emptied yard never looks blank. */}
+              <View
+                style={{
+                  width: cellSize * 2.3,
+                  height: cellSize * 2.3,
+                  borderRadius: cellSize * 0.55,
+                  borderWidth: Math.max(2, cellSize * 0.13),
+                  borderColor: theme.wood ? `${theme.tile}45` : `${theme.colors[color]}2a`,
+                }}
+              >
+                {(
+                  [
+                    [0.22, 0.22],
+                    [0.22, 0.78],
+                    [0.5, 0.5],
+                    [0.78, 0.22],
+                    [0.78, 0.78],
+                  ] as const
+                ).map(([top, left]) => (
+                  <View
+                    key={`${top}-${left}`}
+                    style={{
+                      position: 'absolute',
+                      top: `${top * 100 - 9}%`,
+                      left: `${left * 100 - 9}%`,
+                      width: '18%',
+                      height: '18%',
+                      borderRadius: cellSize,
+                      backgroundColor: theme.wood ? `${theme.tile}45` : `${theme.colors[color]}2a`,
+                    }}
+                  />
+                ))}
+              </View>
+            </View>
           </View>
         );
       })}

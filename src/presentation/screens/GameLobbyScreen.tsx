@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../components/AppText';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
@@ -10,12 +10,15 @@ import {
   seatColors,
   type LobbyPlayer,
   tablePrize,
+  VARIANT_INFO,
 } from '@/domain';
 import { Body, Button, Card, Label, Screen, shared, Sheet } from '../components/Kit';
 import { useLobby } from '../hooks/useLobby';
 import { useProfile } from '../state/ProfileProvider';
 import { useSocial } from '../state/SocialProvider';
 import { UserAvatar } from '../social/UserAvatar';
+import { TeamSeats } from '../social/TeamSeats';
+import { LiveDot } from '../components/Live';
 import { shareInvite } from '../social/inviteLink';
 import { ui } from '../theme/themes';
 
@@ -83,6 +86,13 @@ export default function GameLobbyScreen() {
     return () => clearTimeout(timer);
   }, [snapshot?.lobby.status, snapshot?.lobby.id, snapshot?.lobby.maxPlayers]);
 
+  // A searching pair matched with another pair plays at the other table.
+  const movedTo = snapshot?.lobby.movedTo ?? null;
+  useEffect(() => {
+    if (!movedTo) return;
+    router.replace({ pathname: '/lobby/[id]', params: { id: movedTo } });
+  }, [movedTo]);
+
   if (!signedIn) {
     return (
       <Screen nav={false} back title="Game lobby">
@@ -116,7 +126,20 @@ export default function GameLobbyScreen() {
 
   const { lobby: room, challenge, players } = snapshot;
   const joined = countJoined(players);
-  const closed = room.status === 'CANCELLED' || challenge.status === 'EXPIRED';
+  const closed = (room.status === 'CANCELLED' || challenge.status === 'EXPIRED') && !room.movedTo;
+  const teamRoom = room.teams && room.maxPlayers === 4;
+  const seatTaken = (seat: number) =>
+    players.some((p) => p.seatIndex === seat && p.status === 'JOINED');
+  const canSeek =
+    link &&
+    teamRoom &&
+    identity?.id === room.hostId &&
+    room.status === 'WAITING' &&
+    !room.seeking &&
+    seatTaken(0) &&
+    seatTaken(2) &&
+    !seatTaken(1) &&
+    !seatTaken(3);
   const me = players.find((player) => player.userId === identity?.id) ?? null;
   const isHost = identity?.id === room.hostId;
   const waitingFor = players.filter((player) => player.status === 'INVITED');
@@ -216,6 +239,16 @@ export default function GameLobbyScreen() {
                 <Text style={s.count}>
                   {joined} / {room.maxPlayers} players
                 </Text>
+                {room.teams && (
+                  <Text style={{ color: ui.gem, fontWeight: '800', fontSize: 13 }}>
+                    2 v 2 teams: the player opposite you is your partner.
+                  </Text>
+                )}
+                {room.variant !== 'classic' && (
+                  <Text style={{ color: ui.blueSoft, fontWeight: '800', fontSize: 13 }}>
+                    {VARIANT_INFO[room.variant].title}: {VARIANT_INFO[room.variant].description}
+                  </Text>
+                )}
                 {room.stake > 0 && (
                   <Text style={{ color: ui.gold, fontWeight: '800', fontSize: 13 }}>
                     🪙 {room.stake.toLocaleString()} entry · winner takes{' '}
@@ -234,39 +267,69 @@ export default function GameLobbyScreen() {
               )}
             </View>
 
-            <View style={{ gap: 10 }}>
-              {players.map((player) => {
-                const state = seatState(player);
-                const color = theme.colors[colors[player.seatIndex] ?? 'RED'];
-                return (
-                  <View
-                    key={player.userId}
-                    style={[s.seat, { opacity: state.muted ? 0.62 : 1, borderLeftColor: color }]}
+            {teamRoom && (
+              <TeamSeats
+                players={players}
+                myId={identity?.id ?? null}
+                colors={colors}
+                palette={theme.colors}
+                canMove={room.status === 'WAITING' && !room.seeking && !lobby.busy}
+                onMove={(seat) => void lobby.moveSeat(seat)}
+              />
+            )}
+            {teamRoom && room.seeking && (
+              <View style={s.seeking}>
+                <LiveDot color={ui.green} active />
+                <Text style={{ color: ui.green, fontWeight: '800', flex: 1 }}>
+                  Looking for another team of friends… Random 2 v 2 players can fill in after 20
+                  seconds.
+                </Text>
+                {isHost && (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => void lobby.seekOpponents(false)}
+                    disabled={lobby.busy}
                   >
-                    <UserAvatar
-                      id={player.userId}
-                      name={displayNameOf(player)}
-                      emoji={player.avatar}
-                      presence={player.presence}
-                      size={42}
-                    />
-                    <View style={{ flex: 1, gap: 4 }}>
-                      <View style={s.nameRow}>
-                        <Text style={s.name} numberOfLines={1}>
-                          {displayNameOf(player)}
-                        </Text>
-                        {player.isHost && (
-                          <View style={[s.hostTag, { borderColor: `${theme.accent}55` }]}>
-                            <Text style={[s.hostText, { color: theme.accent }]}>HOST</Text>
-                          </View>
-                        )}
+                    <Text style={{ color: ui.muted, fontWeight: '800' }}>Stop</Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+            {!teamRoom && (
+              <View style={{ gap: 10 }}>
+                {players.map((player) => {
+                  const state = seatState(player);
+                  const color = theme.colors[colors[player.seatIndex] ?? 'RED'];
+                  return (
+                    <View
+                      key={player.userId}
+                      style={[s.seat, { opacity: state.muted ? 0.62 : 1, borderLeftColor: color }]}
+                    >
+                      <UserAvatar
+                        id={player.userId}
+                        name={displayNameOf(player)}
+                        emoji={player.avatar}
+                        presence={player.presence}
+                        size={42}
+                      />
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <View style={s.nameRow}>
+                          <Text style={s.name} numberOfLines={1}>
+                            {displayNameOf(player)}
+                          </Text>
+                          {player.isHost && (
+                            <View style={[s.hostTag, { borderColor: `${theme.accent}55` }]}>
+                              <Text style={[s.hostText, { color: theme.accent }]}>HOST</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={[s.status, { color: state.color }]}>{state.label}</Text>
                       </View>
-                      <Text style={[s.status, { color: state.color }]}>{state.label}</Text>
                     </View>
-                  </View>
-                );
-              })}
-            </View>
+                  );
+                })}
+              </View>
+            )}
 
             <Text style={shared.small}>
               {room.status === 'STARTED'
@@ -284,6 +347,19 @@ export default function GameLobbyScreen() {
             seconds={lobby.countdown}
             accent={theme.accent}
           />
+
+          {canSeek && (
+            <Button disabled={lobby.busy} onPress={() => void lobby.seekOpponents(true)}>
+              Find opponents for your team
+            </Button>
+          )}
+          {link && teamRoom && isHost && room.status === 'WAITING' && !room.seeking && !canSeek && (
+            <Text style={[shared.small, { textAlign: 'center' }]}>
+              {seatTaken(2)
+                ? 'Invite two more friends, or keep the other side empty to find opponents.'
+                : 'When your friend joins they sit opposite you as your partner. Then find opponents, or invite two more friends.'}
+            </Text>
+          )}
 
           {room.status === 'WAITING' && me?.status === 'JOINED' && !me.isReady && (
             <Button disabled={lobby.busy} onPress={() => void lobby.setReady(true)}>
@@ -365,6 +441,16 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   countdownText: { fontSize: 22, fontWeight: '900' },
+  seeking: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#10b98155',
+    backgroundColor: '#10b98114',
+  },
   seat: {
     flexDirection: 'row',
     alignItems: 'center',

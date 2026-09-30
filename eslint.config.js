@@ -124,4 +124,10 @@ module.exports = defineConfig([
     // Prettier; this closes the same gap for ESLint.
     ignores: ['dist/*', '.test-browser/**', '.test-artifacts/**'],
   },
+  {
+    // Supabase Edge Functions run on Deno, which resolves `jsr:`/`npm:`
+    // specifiers itself; the Node-based import resolver can't, so it
+    // false-positives on every one. They are type-checked by `supabase`/Deno.
+    ignores: ['supabase/functions/**'],
+  },
 ]);

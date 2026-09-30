@@ -21,6 +21,18 @@ function metadataFor(details?: RegistrationDetails): Record<string, string> | un
   return username ? { username } : undefined;
 }
 
+/** How long start-up waits for the server before trusting the saved login. */
+export const RESTORE_WAIT_MS = 3500;
+
+/** Network trouble, as opposed to the server saying the login is no longer valid. */
+function isNetworkError(error: { name?: string; status?: number; message?: string }): boolean {
+  return (
+    error.name === 'AuthRetryableFetchError' ||
+    error.status === 0 ||
+    /network|fetch|timed? ?out/i.test(error.message ?? '')
+  );
+}
+
 export class SupabaseAuthAdapter implements IAccountAuthProvider {
   private currentUser: AuthUser | null = null;
   private readonly listeners = new Set<(user: AuthUser | null) => void>();
@@ -30,6 +42,8 @@ export class SupabaseAuthAdapter implements IAccountAuthProvider {
   constructor(
     private readonly client: SupabaseClient,
     private readonly providerEnabled?: (provider: SocialProvider) => Promise<boolean>,
+    /** The login saved on this device, read without the network. */
+    private readonly storedUser?: () => Promise<AuthUser | null>,
   ) {
     this.client.auth.onAuthStateChange((event, session) => {
       this.currentUser = toAuthUser(session?.user);
@@ -43,10 +57,36 @@ export class SupabaseAuthAdapter implements IAccountAuthProvider {
     });
   }
 
+  /**
+   * Restoring an expired login refreshes it over the network, and offline
+   * the SDK keeps retrying for a long time. So start-up waits briefly; if
+   * the server is slow or unreachable, the player continues as the login
+   * saved on this device, and Supabase keeps refreshing in the background
+   * (reporting through onAuthStateChange once it succeeds). A login the
+   * server actually rejects is still treated as signed out.
+   */
   async restoreSession(): Promise<AuthUser | null> {
-    const { data, error } = await this.client.auth.getSession();
-    if (error) throw new Error('Could not restore your session. Please sign in again.');
-    this.currentUser = toAuthUser(data.session?.user);
+    const pending = this.client.auth.getSession();
+    const result = await Promise.race([
+      pending,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), RESTORE_WAIT_MS)),
+    ]);
+    if (result && !result.error) {
+      this.currentUser = toAuthUser(result.data.session?.user);
+      return this.currentUser;
+    }
+    if (result?.error && !isNetworkError(result.error))
+      throw new Error('Could not restore your session. Please sign in again.');
+    const saved = await this.storedUser?.().catch(() => null);
+    if (saved) {
+      this.currentUser = saved;
+      return saved;
+    }
+    if (result) throw new Error('Could not restore your session. Please sign in again.');
+    // Nothing saved to fall back on: wait for the SDK after all.
+    const late = await pending;
+    if (late.error) throw new Error('Could not restore your session. Please sign in again.');
+    this.currentUser = toAuthUser(late.data.session?.user);
     return this.currentUser;
   }
 

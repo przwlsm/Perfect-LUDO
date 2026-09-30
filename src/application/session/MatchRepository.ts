@@ -2,6 +2,9 @@ import {
   ALL_PLAYER_COLORS,
   createGame,
   isGameState,
+  isGameVariant,
+  variantOf,
+  type GameVariant,
   seatColors,
   type DieValue,
   type GameState,
@@ -13,12 +16,14 @@ export type MatchMode = 'ai' | 'local' | 'online';
 export type SeatNames = Partial<Record<PlayerColor, string>>;
 export interface MatchOptions {
   mode: MatchMode;
-  players: 2 | 3 | 4 | 5 | 6;
+  players: 2 | 3 | 4 | 5 | 6 | 7 | 8;
   difficulty: 'easy' | 'smart';
   /** Pass & play only: what to call each seat. Missing seats use their colour. */
   names?: SeatNames;
   /** 2 v 2: four seats only, opposite seats are partners. */
   teams?: boolean;
+  /** Quick or Kill & Go; absent means classic. */
+  variant?: GameVariant;
 }
 
 export const SEAT_NAME_MAX = 14;
@@ -58,7 +63,10 @@ export function newMatch(options: MatchOptions): SavedMatch {
     version: 1,
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     options,
-    state: createGame(colors, { teams: options.teams === true && options.players === 4 }),
+    state: createGame(colors, {
+      teams: options.teams === true && options.players === 4,
+      variant: options.variant ?? 'classic',
+    }),
     lastDie: null,
   };
 }
@@ -71,12 +79,14 @@ export function parseMatch(raw: string): SavedMatch {
     // An online match lives on the server and is never saved here, so a local
     // file claiming to be one is not something this can restore.
     !['ai', 'local'].includes(m.options.mode) ||
-    ![2, 3, 4, 5, 6].includes(m.options.players) ||
+    ![2, 3, 4, 5, 6, 7, 8].includes(m.options.players) ||
     !['easy', 'smart'].includes(m.options.difficulty) ||
     ![null, 1, 2, 3, 4, 5, 6].includes(m.lastDie) ||
     (m.options.teams !== undefined &&
       (typeof m.options.teams !== 'boolean' || (m.options.teams && m.options.players !== 4))) ||
     Boolean(m.options.teams) !== Boolean(m.state?.teams) ||
+    (m.options.variant !== undefined && !isGameVariant(m.options.variant)) ||
+    (m.state && variantOf(m.state) !== (m.options.variant ?? 'classic')) ||
     !isGameState(m.state, m.options.players)
   ) {
     throw new Error('The saved match could not be restored. Start a new game from the lobby.');

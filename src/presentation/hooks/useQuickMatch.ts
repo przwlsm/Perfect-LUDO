@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { matchmakingRepository } from '@/config/container';
-import type { QuickMatchPlayerCount, QuickMatchTicket, Stake, Unsubscribe } from '@/domain';
+import type {
+  GameVariant,
+  QuickMatchPlayerCount,
+  QuickMatchTicket,
+  Stake,
+  Unsubscribe,
+} from '@/domain';
 import { useSocial } from '../state/SocialProvider';
 
 /** How often a waiting ticket is refreshed; the server drops tickets quiet for 45 s. */
@@ -13,7 +19,12 @@ export interface QuickMatchState {
   readonly ticket: QuickMatchTicket | null;
   readonly error: string | null;
   readonly available: boolean;
-  start(playerCount: QuickMatchPlayerCount, stake?: Stake): Promise<void>;
+  start(
+    playerCount: QuickMatchPlayerCount,
+    stake?: Stake,
+    variant?: GameVariant,
+    teams?: boolean,
+  ): Promise<void>;
   cancel(): Promise<void>;
 }
 
@@ -35,6 +46,8 @@ export function useQuickMatch(): QuickMatchState {
   const searching = useRef(false);
   const playerCount = useRef<QuickMatchPlayerCount>(2);
   const stake = useRef<Stake>(0);
+  const variant = useRef<GameVariant>('classic');
+  const teams = useRef(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const unsubscribe = useRef<Unsubscribe | null>(null);
   const inFlight = useRef(false);
@@ -63,7 +76,14 @@ export function useQuickMatch(): QuickMatchState {
     if (!matchmakingRepository || !searching.current || inFlight.current) return;
     inFlight.current = true;
     try {
-      accept(await matchmakingRepository.join(playerCount.current, stake.current));
+      accept(
+        await matchmakingRepository.join(
+          playerCount.current,
+          stake.current,
+          variant.current,
+          teams.current,
+        ),
+      );
     } catch (e) {
       // One missed beat is not a failure; the server tolerates several.
       if (mounted.current && searching.current) setError(messageFor(e));
@@ -73,16 +93,23 @@ export function useQuickMatch(): QuickMatchState {
   }, [accept]);
 
   const start = useCallback(
-    async (count: QuickMatchPlayerCount, entry: Stake = 0) => {
+    async (
+      count: QuickMatchPlayerCount,
+      entry: Stake = 0,
+      mode: GameVariant = 'classic',
+      pairs = false,
+    ) => {
       if (!matchmakingRepository || !userId || searching.current) return;
       playerCount.current = count;
       stake.current = entry;
+      variant.current = mode;
+      teams.current = pairs && count === 4;
       searching.current = true;
       setError(null);
       setTicket(null);
       setPhase('searching');
       try {
-        accept(await matchmakingRepository.join(count, entry));
+        accept(await matchmakingRepository.join(count, entry, mode, pairs && count === 4));
       } catch (e) {
         stopWatching();
         if (mounted.current) {

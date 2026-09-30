@@ -57,7 +57,7 @@ export function SocialIdentityCard() {
 
   async function shareProfile() {
     if (!identity) return;
-    const line = `Add me on Ludo Club: @${identity.username}${
+    const line = `Add me on Ludo Rumble: @${identity.username}${
       identity.publicId ? ` (User ID ${identity.publicId})` : ''
     }`;
     try {

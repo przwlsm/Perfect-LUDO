@@ -8,10 +8,14 @@ describe('local cosmetic economy', () => {
     storage = new InMemoryKeyValueStore();
     service = new ProfileService(storage);
   });
+  /** A saved profile that has grinded enough to afford the store. */
+  const rich = (coins = 30000, gems = 1000) =>
+    storage.setItem(PROFILE_KEY, JSON.stringify({ ...INITIAL_PROFILE, coins, gems }));
   it('unlocks an entire wooden pack atomically and preserves the old collection', async () => {
+    await rich();
     const p = await service.purchase('heritage-pack');
     expect(p).toMatchObject({
-      coins: 650,
+      coins: 26875,
       board: 'heritage',
       dice: 'heritage-dice',
       pack: 'heritage-pack',
@@ -23,27 +27,29 @@ describe('local cosmetic economy', () => {
     expect(await service.load()).toMatchObject({ board: 'classic', dice: 'heritage-dice' });
     await service.equip('heritage-pack');
     expect(await new ProfileService(storage).load()).toMatchObject({
-      coins: 650,
+      coins: 26875,
       board: 'heritage',
       dice: 'heritage-dice',
       pack: 'heritage-pack',
     });
   });
   it('charges a pack only once under concurrent purchases and does not charge for its included dice', async () => {
+    await rich();
     await Promise.all([service.purchase('neon-pack'), service.purchase('neon-pack')]);
     await service.purchase('neon-dice');
     expect(await service.load()).toMatchObject({
-      coins: 450,
+      coins: 20625,
       board: 'neon',
       dice: 'neon-dice',
       pack: 'neon-pack',
     });
   });
   it('does not grant partial pack ownership when saving fails', async () => {
+    await rich();
     jest.spyOn(storage, 'setItem').mockRejectedValueOnce(new Error('Disk full'));
     await expect(service.purchase('heritage-pack')).rejects.toThrow('Disk full');
     expect(await service.load()).toMatchObject({
-      coins: 1000,
+      coins: 30000,
       owned: ['classic', 'ivory', 'triangle-homes'],
       pack: null,
     });
@@ -79,26 +85,30 @@ describe('local cosmetic economy', () => {
       board: 'royal',
     });
   });
-  it('unlocks and equips a purchase and restores it after reload', async () => {
+  it('unlocks and equips a gem legendary, charging gems and leaving coins alone', async () => {
+    await rich();
     const purchased = await service.purchase('royal');
-    expect(purchased.coins).toBe(400);
+    expect(purchased.gems).toBe(520);
+    expect(purchased.coins).toBe(30000);
     expect(purchased.board).toBe('royal');
     expect((await new ProfileService(storage).load()).owned).toContain('royal');
   });
   it('charges only once for simultaneous duplicate purchase requests', async () => {
+    await rich();
     await Promise.all([service.purchase('royal'), service.purchase('royal')]);
     const p = await service.load();
-    expect(p.coins).toBe(400);
+    expect(p.gems).toBe(520);
     expect(p.owned.filter((id) => id === 'royal')).toHaveLength(1);
   });
   it('serializes competing purchases and prevents overspending', async () => {
+    await rich();
     const outcomes = await Promise.allSettled([
       service.purchase('royal'),
       service.purchase('obsidian'),
     ]);
     expect(outcomes.map((r) => r.status)).toEqual(['fulfilled', 'rejected']);
-    expect((await service.load()).coins).toBe(400);
-    await expect(service.purchase('forest')).resolves.toMatchObject({ coins: 150 });
+    expect((await service.load()).gems).toBe(520);
+    await expect(service.purchase('forest')).resolves.toMatchObject({ coins: 27500 });
   });
   it('cannot equip an unowned item or buy an unknown item', async () => {
     await expect(service.equip('royal')).rejects.toThrow('Unlock');
@@ -113,7 +123,8 @@ describe('local cosmetic economy', () => {
     expect(await service.load()).toMatchObject({ coins: 1050, wins: 1, games: 1 });
     await service.recordMatch('match-2', false, true);
     await service.recordMatch('match-3', true, false);
-    expect(await service.load()).toMatchObject({ coins: 1065, wins: 2, games: 3 });
+    // Losses pay nothing now; only the eligible win above paid.
+    expect(await service.load()).toMatchObject({ coins: 1050, wins: 2, games: 3 });
   });
   it('builds a win streak and resets it on a loss, keeping the best', async () => {
     await service.recordMatch('m1', true, true);
@@ -151,10 +162,11 @@ describe('local cosmetic economy', () => {
     expect(JSON.parse((await storage.getItem(PROFILE_KEY))!).coins).toBe(-50);
   });
   it('leaves no entitlement after a failed write and supports retry', async () => {
+    await rich();
     const write = jest.spyOn(storage, 'setItem').mockRejectedValueOnce(new Error('Disk full'));
     await expect(service.purchase('royal')).rejects.toThrow('Disk full');
     expect((await service.load()).owned).not.toContain('royal');
-    await expect(service.purchase('royal')).resolves.toMatchObject({ coins: 400 });
+    await expect(service.purchase('royal')).resolves.toMatchObject({ gems: 520 });
     expect(write).toHaveBeenCalledTimes(2);
   });
 });
@@ -164,8 +176,9 @@ describe('table styles', () => {
     const storage = new InMemoryKeyValueStore();
     const service = new ProfileService(storage);
     expect((await service.load()).style).toBe('triangle-homes');
+    await storage.setItem(PROFILE_KEY, JSON.stringify({ ...INITIAL_PROFILE, coins: 30000 }));
     const bought = await service.purchase('round-homes');
-    expect(bought).toMatchObject({ style: 'round-homes', coins: 800 });
+    expect(bought).toMatchObject({ style: 'round-homes', coins: 28000 });
     await service.equip('triangle-homes');
     expect((await new ProfileService(storage).load()).style).toBe('triangle-homes');
   });

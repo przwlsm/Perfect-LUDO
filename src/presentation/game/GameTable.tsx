@@ -7,6 +7,8 @@ import { profileService } from '@/config/container';
 import {
   REACTION_COOLDOWN_MS,
   REACTIONS,
+  VARIANT_INFO,
+  variantOf,
   type DieValue,
   type GameState,
   type Move,
@@ -22,6 +24,7 @@ import type { Board3DProps } from '../board/Board3D';
 import { tableArrangement } from '../board/tableLayout';
 import { PlayerPanel } from './PlayerPanel';
 import { RoundBoardOverlay } from './RoundBoardOverlay';
+import { ZoomableBoard } from '../board/ZoomableBoard';
 import { Body, Button, Card, Label, Screen, shared, Sheet } from '../components/Kit';
 import { useProfile } from '../state/ProfileProvider';
 import { ui } from '../theme/themes';
@@ -102,6 +105,7 @@ export interface GameSource {
 export function GameTable({
   game,
   label,
+  prize,
   statusLine,
   seatRotation,
   motionEnabled,
@@ -118,7 +122,10 @@ export function GameTable({
   seatLabel,
   reactions,
   turnClock = null,
+  livesFor,
 }: {
+  /** Online only: each seat's lifelines, shown under its name. */
+  livesFor?: (color: PlayerColor) => { left: number; total: number; out: boolean } | null;
   /** Seconds left on the current turn (online only); null when untimed. */
   turnClock?: number | null;
   /** Emoji at the table: the bubbles to float, and how to send one (absent: no picker). */
@@ -128,6 +135,8 @@ export function GameTable({
   };
   game: GameSource;
   label: string;
+  /** What this table pays, shown under the label, e.g. "1st +100 · 2nd +50". */
+  prize?: string;
   /** The name shown on each seat's panel; defaults to the colour. */
   seatLabel?: (color: PlayerColor) => string;
   statusLine: string;
@@ -249,6 +258,7 @@ export function GameTable({
         motionEnabled={motionEnabled}
         onRoll={game.roll}
         secondsLeft={active ? turnClock : null}
+        lives={livesFor?.(color) ?? null}
       />
     );
   }
@@ -310,9 +320,16 @@ export function GameTable({
         )}
         <View style={{ flex: 1, alignItems: 'center', gap: 3 }}>
           <Label color={theme.accent}>{label}</Label>
-          <Text style={shared.small}>
-            {match.state.players.length} players / {profile.board3d ? '3D' : 'Classic'} table
-          </Text>
+          {prize ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="trophy" size={11} color={ui.gold} />
+              <Text style={{ color: ui.gold, fontSize: 11, fontWeight: '800' }}>{prize}</Text>
+            </View>
+          ) : (
+            <Text style={shared.small}>
+              {match.state.players.length} players / {profile.board3d ? '3D' : 'Classic'} table
+            </Text>
+          )}
         </View>
         <View style={{ width: 44 }} />
         <Pressable
@@ -372,28 +389,30 @@ export function GameTable({
         )}
         {!classic ? (
           <View testID="game-table" style={{ width: boardSize, height: boardSize }}>
-            {board}
-            <RoundBoardOverlay
-              size={boardSize}
-              colors={match.state.players.map((p) => p.color)}
-              palette={theme.colors}
-              nameOf={nameOf}
-              current={match.state.status === 'FINISHED' ? null : current.color}
-              canRoll={Boolean(
-                humanTurn &&
-                !busy &&
-                match.state.lastRoll === null &&
-                match.state.status !== 'FINISHED',
-              )}
-              rolling={game.activity === 'rolling'}
-              value={game.seatRolls[current.color] ?? null}
-              diceFinish={profile.dice}
-              surface={theme.surface}
-              faceSeats={seatRotation}
-              tilted={profile.board3d}
-              motionEnabled={motionEnabled}
-              onRoll={game.roll}
-            />
+            <ZoomableBoard size={boardSize}>
+              {board}
+              <RoundBoardOverlay
+                size={boardSize}
+                colors={match.state.players.map((p) => p.color)}
+                palette={theme.colors}
+                nameOf={nameOf}
+                current={match.state.status === 'FINISHED' ? null : current.color}
+                canRoll={Boolean(
+                  humanTurn &&
+                  !busy &&
+                  match.state.lastRoll === null &&
+                  match.state.status !== 'FINISHED',
+                )}
+                rolling={game.activity === 'rolling'}
+                value={game.seatRolls[current.color] ?? null}
+                diceFinish={profile.dice}
+                surface={theme.surface}
+                faceSeats={seatRotation}
+                tilted={profile.board3d}
+                motionEnabled={motionEnabled}
+                onRoll={game.roll}
+              />
+            </ZoomableBoard>
           </View>
         ) : (
           <View
@@ -463,6 +482,15 @@ export function GameTable({
       </Sheet>
 
       <Sheet visible={rules} onClose={() => setRules(false)} title="A classic for a reason.">
+        {variantOf(match.state) !== 'classic' && (
+          <Card style={{ borderColor: `${theme.accent}55` }}>
+            <Label color={theme.accent}>THIS TABLE</Label>
+            <Text style={[shared.sectionTitle, { fontSize: 15 }]}>
+              {VARIANT_INFO[variantOf(match.state)].title}
+            </Text>
+            <Body>{VARIANT_INFO[variantOf(match.state)].description}</Body>
+          </Card>
+        )}
         {RULES.map(([n, title, description]) => (
           <View key={n} style={shared.row}>
             <Text style={{ color: theme.accent, fontWeight: '900', fontSize: 18 }}>{n}</Text>

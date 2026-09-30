@@ -1,12 +1,24 @@
 import {
   DAILY_GIFT_COINS,
   FREE_ITEMS,
+  GUEST_VAULT_AD_COINS,
+  GUEST_VAULT_ADS_PER_DAY,
+  GUEST_VAULT_CAP,
+  GUEST_VAULT_PLAYED,
+  GUEST_VAULT_WIN,
   PLAYED_COINS,
+  TRIAL_HOURS,
   WIN_COINS,
   type IKeyValueStore,
   type WalletSnapshot,
 } from '@/domain';
-import { COSMETICS, DEFAULT_TABLE_STYLE, getCosmetic } from '@/domain/cosmetics/catalog';
+import {
+  COSMETICS,
+  cosmeticCurrency,
+  DEFAULT_TABLE_STYLE,
+  getCosmetic,
+  isCosmeticExpired,
+} from '@/domain/cosmetics/catalog';
 
 /** A finished match whose reward could not reach the account yet. */
 export interface PendingReward {
@@ -36,6 +48,20 @@ export interface Profile {
   readonly bestStreak: number;
   readonly rewardedMatches: readonly string[];
   readonly lastGift: string | null;
+  /** Account mirrors of the streak calendar and the comeback rescue. */
+  readonly giftStreak: number;
+  readonly lastRescue: string | null;
+  /** Account mirrors of the piggy bank and Ludo Club (0 / null for guests). */
+  readonly piggyCoins: number;
+  readonly clubUntil: string | null;
+  /** The guest vault: earnings waiting to be claimed onto an account. */
+  readonly vaultCoins: number;
+  /** UTC day and count of the guest's watch-an-ad vault bonuses. */
+  readonly vaultAdDay: string | null;
+  readonly vaultAdsToday: number;
+  /** A board a guest is trying after an ad, until the ISO instant. */
+  readonly trialBoard: string | null;
+  readonly trialUntil: string | null;
   /**
    * Results recorded while the account wallet was unreachable. Replayed in
    * order the next time it answers; the server pays each match id once, so a
@@ -66,6 +92,15 @@ export const INITIAL_PROFILE: Profile = {
   bestStreak: 0,
   rewardedMatches: [],
   lastGift: null,
+  giftStreak: 0,
+  lastRescue: null,
+  piggyCoins: 0,
+  clubUntil: null,
+  vaultCoins: 0,
+  vaultAdDay: null,
+  vaultAdsToday: 0,
+  trialBoard: null,
+  trialUntil: null,
   pendingRewards: [],
   gems: 0,
   xp: 0,
@@ -145,6 +180,19 @@ export function parseProfile(raw: string): Profile {
     style: p.style ?? DEFAULT_TABLE_STYLE,
     gems: Number.isSafeInteger(p.gems) && p.gems >= 0 ? p.gems : 0,
     xp: Number.isSafeInteger(p.xp) && p.xp >= 0 ? p.xp : 0,
+    giftStreak: Number.isSafeInteger(p.giftStreak) && p.giftStreak >= 0 ? p.giftStreak : 0,
+    lastRescue: typeof p.lastRescue === 'string' ? p.lastRescue : null,
+    piggyCoins: Number.isSafeInteger(p.piggyCoins) && p.piggyCoins >= 0 ? p.piggyCoins : 0,
+    clubUntil: typeof p.clubUntil === 'string' ? p.clubUntil : null,
+    vaultCoins:
+      Number.isSafeInteger(p.vaultCoins) && p.vaultCoins >= 0
+        ? Math.min(p.vaultCoins, GUEST_VAULT_CAP)
+        : 0,
+    vaultAdDay: typeof p.vaultAdDay === 'string' ? p.vaultAdDay : null,
+    vaultAdsToday:
+      Number.isSafeInteger(p.vaultAdsToday) && p.vaultAdsToday >= 0 ? p.vaultAdsToday : 0,
+    trialBoard: typeof p.trialBoard === 'string' ? p.trialBoard : null,
+    trialUntil: typeof p.trialUntil === 'string' ? p.trialUntil : null,
     lastSpin: typeof p.lastSpin === 'string' ? p.lastSpin : null,
     spinStreak: Number.isSafeInteger(p.spinStreak) && p.spinStreak >= 0 ? p.spinStreak : 0,
     // Free items are everyone's; saves from before one existed just lack it.
@@ -192,6 +240,10 @@ export function applyWalletSnapshot(local: Profile, wallet: WalletSnapshot): Pro
     pack,
     style,
     lastGift: wallet.lastGift,
+    giftStreak: wallet.giftStreak,
+    lastRescue: wallet.lastRescue,
+    piggyCoins: wallet.piggyCoins,
+    clubUntil: wallet.clubUntil,
     gems: wallet.gems,
     xp: wallet.xp,
     lastSpin: wallet.lastSpin,
@@ -217,6 +269,14 @@ export interface IProfileService {
   ): Promise<Profile>;
   claimGift(now?: Date): Promise<Profile>;
   recordMatch(id: string, won: boolean, rewardEligible: boolean): Promise<Profile>;
+  /** A guest's watch-an-ad vault bonus, capped per day. */
+  claimVaultAd(now?: Date): Promise<Profile>;
+  /** Zeroes the vault after the account claimed it. */
+  clearVault(): Promise<Profile>;
+  /** Credits a guest's vault once per match id. */
+  creditVaultOnce(id: string, coins: number): Promise<Profile>;
+  /** A guest tries a paid board for a day after a rewarded ad. */
+  startTrial(boardId: string, now?: Date): Promise<Profile>;
   /** Adopts the account wallet the server just returned. */
   mirrorWallet(wallet: WalletSnapshot): Promise<Profile>;
   /** Counts a finished match locally and remembers to tell the account later. */
@@ -255,12 +315,18 @@ export class ProfileService implements IProfileService {
       const item = getCosmetic(id);
       if (p.owned.includes(id)) return p;
       if (item.productId) throw new Error('This item requires a verified store purchase.');
-      if (p.coins < item.price)
+      if (isCosmeticExpired(item))
+        throw new Error('That look was part of a past event and is no longer for sale.');
+      const gems = cosmeticCurrency(item) === 'gems';
+      if (gems && p.gems < item.price)
+        throw new Error('Not enough gems. Missions, the season pass and rewarded ads earn them.');
+      if (!gems && p.coins < item.price)
         throw new Error('Not enough coins. Finish matches or claim your daily gift.');
       const contents = item.contents;
       const unlocked = {
         ...p,
-        coins: p.coins - item.price,
+        coins: gems ? p.coins : p.coins - item.price,
+        gems: gems ? p.gems - item.price : p.gems,
         owned: [...new Set([...p.owned, id, ...(contents ? [contents.board, contents.dice] : [])])],
       };
       return contents ? { ...unlocked, ...contents, pack: id } : { ...unlocked, [item.kind]: id };
@@ -306,7 +372,61 @@ export class ProfileService implements IProfileService {
         streak,
         bestStreak: Math.max(p.bestStreak, streak),
         coins: p.coins + (rewardEligible ? (won ? WIN_COINS : PLAYED_COINS) : 0),
+        // Guests earn into the vault; an account claims it later.
+        vaultCoins: Math.min(
+          p.vaultCoins + (won ? GUEST_VAULT_WIN : GUEST_VAULT_PLAYED),
+          GUEST_VAULT_CAP,
+        ),
         rewardedMatches: [...p.rewardedMatches, id],
+      };
+    });
+  }
+
+  /** A guest's watch-an-ad vault bonus, capped per UTC day. */
+  claimVaultAd(now = new Date()): Promise<Profile> {
+    return this.transact((p) => {
+      const today = now.toISOString().slice(0, 10);
+      const usedToday = p.vaultAdDay === today ? p.vaultAdsToday : 0;
+      if (usedToday >= GUEST_VAULT_ADS_PER_DAY)
+        throw new Error('That is all the bonus ads for today. Come back tomorrow!');
+      return {
+        ...p,
+        vaultCoins: Math.min(p.vaultCoins + GUEST_VAULT_AD_COINS, GUEST_VAULT_CAP),
+        vaultAdDay: today,
+        vaultAdsToday: usedToday + 1,
+      };
+    });
+  }
+
+  /** The vault was paid onto the account; it starts again from zero. */
+  clearVault(): Promise<Profile> {
+    return this.transact((p) => ({ ...p, vaultCoins: 0 }));
+  }
+
+  /** Credits a guest's vault once per match id (e.g. an online placement). */
+  creditVaultOnce(id: string, coins: number): Promise<Profile> {
+    return this.transact((p) => {
+      if (coins <= 0 || p.rewardedMatches.includes(id)) return p;
+      return {
+        ...p,
+        vaultCoins: Math.min(p.vaultCoins + coins, GUEST_VAULT_CAP),
+        rewardedMatches: [...p.rewardedMatches, id],
+      };
+    });
+  }
+
+  /** A guest tries a paid board for a day after a rewarded ad. */
+  startTrial(boardId: string, now = new Date()): Promise<Profile> {
+    return this.transact((p) => {
+      const item = getCosmetic(boardId);
+      if (item.kind !== 'board' || item.price === 0)
+        throw new Error('Only paid boards can be tried.');
+      if (isCosmeticExpired(item, now))
+        throw new Error('That look was part of a past event and is no longer for sale.');
+      return {
+        ...p,
+        trialBoard: boardId,
+        trialUntil: new Date(now.getTime() + TRIAL_HOURS * 3600000).toISOString(),
       };
     });
   }

@@ -1,4 +1,11 @@
-import type { RewardsSnapshot, SpinResult, TournamentView } from '../entities/Progression';
+import type {
+  AdRewardKind,
+  LeagueView,
+  RewardsSnapshot,
+  SpinResult,
+  TournamentView,
+} from '../entities/Progression';
+import type { WalletSnapshot } from '../entities/Wallet';
 
 /**
  * Daily spin, missions, the season pass and the weekly tournament: all
@@ -15,4 +22,8 @@ export interface IRewardsRepository {
   claimSeasonTier(tier: number, premium: boolean): Promise<RewardsSnapshot>;
   getTournament(): Promise<TournamentView>;
   claimTournamentPrize(): Promise<TournamentView>;
+  /** Reports a finished rewarded ad view; the server grants within daily caps. */
+  claimAdReward(kind: AdRewardKind): Promise<WalletSnapshot>;
+  /** The player's league standing; reading it also settles a finished week. */
+  getLeague(): Promise<LeagueView>;
 }

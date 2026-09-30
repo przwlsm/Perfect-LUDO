@@ -49,6 +49,24 @@ export class MemberWallet {
     return this.profiles.mirrorWallet(await this.wallet.claimGift());
   }
 
+  async claimRescue(): Promise<Profile> {
+    return this.profiles.mirrorWallet(await this.wallet.claimRescue());
+  }
+
+  /** Buys a look for a friend; only this account's balance changes here. */
+  async gift(toUserId: string, id: string): Promise<Profile> {
+    const item = getCosmetic(id);
+    return this.profiles.mirrorWallet(await this.wallet.gift(toUserId, id, item.price));
+  }
+
+  /** Pays the guest vault onto the account, then starts the vault again. */
+  async claimVault(): Promise<Profile> {
+    const local = await this.profiles.load();
+    if (local.vaultCoins <= 0) return local;
+    await this.profiles.mirrorWallet(await this.wallet.claimVault(local.vaultCoins));
+    return this.profiles.clearVault();
+  }
+
   /**
    * Records a finished match. Reaches the account when it can; otherwise the
    * result is counted on the device and queued. A refusal (bad id, guest

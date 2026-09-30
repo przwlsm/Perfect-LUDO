@@ -60,6 +60,22 @@ export class SupabaseWalletRepository implements IWalletRepository {
     return this.call('claim_daily_gift');
   }
 
+  claimRescue(): Promise<WalletSnapshot> {
+    return this.call('claim_rescue');
+  }
+
+  gift(toUserId: string, itemId: string, expectedPrice: number): Promise<WalletSnapshot> {
+    return this.call('gift_item', {
+      p_to: toUserId,
+      p_item_id: itemId,
+      p_expected_price: expectedPrice,
+    });
+  }
+
+  claimVault(coins: number): Promise<WalletSnapshot> {
+    return this.call('claim_vault', { p_coins: coins });
+  }
+
   awardMatch(
     matchId: string,
     won: boolean,

@@ -1,4 +1,4 @@
-import { isGameState } from '@/domain';
+import { isGameState, isGameVariant } from '@/domain';
 import type {
   AppNotification,
   Challenge,
@@ -103,6 +103,7 @@ const LOBBY_PLAYER_STATUS: readonly LobbyPlayerStatus[] = ['INVITED', 'JOINED', 
 const NOTIFICATION_TYPE: readonly NotificationType[] = [
   'FRIEND_REQUEST',
   'FRIEND_REQUEST_ACCEPTED',
+  'GIFT',
   'CHALLENGE_INVITE',
   'CHALLENGE_ACCEPTED',
   'CHALLENGE_DECLINED',
@@ -183,6 +184,8 @@ export function toQuickMatchTicket(value: unknown): QuickMatchTicket {
     lobbyId,
     playerCount: int(row.playerCount),
     stake: row.stake == null ? 0 : int(row.stake),
+    variant: isGameVariant(row.variant) ? row.variant : 'classic',
+    teams: row.teams === true,
     waiting: int(row.waiting),
     serverNow: str(row.serverNow),
   };
@@ -202,6 +205,11 @@ function toLobby(value: unknown): Lobby {
     inviteCode: typeof row.inviteCode === 'string' ? row.inviteCode : null,
     // Servers before stakes send no field: those tables are free.
     stake: row.stake == null ? 0 : int(row.stake),
+    // Servers before game modes send no field: those tables are classic.
+    variant: isGameVariant(row.variant) ? row.variant : 'classic',
+    teams: row.teams === true,
+    seeking: row.seeking === true,
+    movedTo: typeof row.movedTo === 'string' ? row.movedTo : null,
   };
 }
 
@@ -257,6 +265,9 @@ function toMatchPlayer(value: unknown): OnlineMatchPlayer {
     avatar: optionalStr(row.avatar),
     presence: oneOf(PRESENCE, row.presence),
     lastSeen: optionalStr(row.lastSeen),
+    // Servers before lifelines send neither field.
+    missed: row.missed == null ? 0 : int(row.missed),
+    out: row.out === true,
   };
 }
 
@@ -319,6 +330,9 @@ export function toMatchSnapshot(value: unknown): OnlineMatchSnapshot {
       pool: match.pool == null ? 0 : int(match.pool),
       prize: match.prize == null ? 0 : int(match.prize),
       turnDeadline: optionalStr(match.turnDeadline),
+      variant: isGameVariant(match.variant) ? match.variant : 'classic',
+      lifelines: match.lifelines == null ? 5 : int(match.lifelines),
+      teams: match.teams === true,
     },
     players: row.players.map(toMatchPlayer),
   };

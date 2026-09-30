@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { STAKES, tablePrize, type Stake } from '@/domain';
+import { levelInfo, STAKES, stakeMinLevel, tablePrize, type Stake } from '@/domain';
 import { Text } from './AppText';
 import { CoinIcon } from './Currency';
 import { formatCount } from './Kit';
@@ -8,26 +8,32 @@ import { ui } from '../theme/themes';
 
 /**
  * Entry stake chips for an online table, with what the winner takes.
- * Stakes need an account with enough coins; those chips are locked
- * otherwise, and a locked choice falls back to a free table.
+ * Stakes need an account with enough coins (the high tables a level too);
+ * those chips are locked otherwise, and a locked choice falls back free.
  */
 export function StakePicker({
   value,
   players,
+  maxStake,
   onChange,
 }: {
   value: Stake;
   players: number;
+  /** Hides tables above this stake (private rooms are capped server-side). */
+  maxStake?: number;
   onChange(stake: Stake): void;
 }) {
   const { theme, member, wallet, profile } = useProfile();
+  const level = levelInfo(profile.xp).level;
   const canPay = (stake: Stake) =>
-    stake === 0 || (member && wallet === 'ready' && profile.coins >= stake);
+    stake === 0 ||
+    (member && wallet === 'ready' && profile.coins >= stake && level >= stakeMinLevel(stake));
   return (
     <View style={{ gap: 8 }}>
       <View style={s.row}>
-        {STAKES.map((stake) => {
+        {STAKES.filter((stake) => maxStake === undefined || stake <= maxStake).map((stake) => {
           const allowed = canPay(stake);
+          const gated = stake > 0 && level < stakeMinLevel(stake);
           const selected = stake === value;
           return (
             <Pressable
@@ -36,7 +42,13 @@ export function StakePicker({
               accessibilityLabel={
                 stake === 0
                   ? 'Free table'
-                  : `${stake} coin table${allowed ? '' : ', not enough coins or no account'}`
+                  : `${stake} coin table${
+                      allowed
+                        ? ''
+                        : gated
+                          ? `, unlocks at level ${stakeMinLevel(stake)}`
+                          : ', not enough coins or no account'
+                    }`
               }
               accessibilityState={{ selected, disabled: !allowed }}
               disabled={!allowed}
@@ -59,6 +71,7 @@ export function StakePicker({
                   </Text>
                 </View>
               )}
+              {gated && <Text style={s.gate}>Lv {stakeMinLevel(stake)}</Text>}
             </Pressable>
           );
         })}
@@ -77,16 +90,19 @@ export function StakePicker({
 }
 
 const s = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 8 },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '30%',
     minHeight: 44,
     borderRadius: 13,
     borderWidth: 1,
     borderColor: ui.line,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 1,
   },
   chipText: { color: ui.text, fontWeight: '900', fontSize: 14 },
+  gate: { color: ui.subtle, fontSize: 9, fontWeight: '800' },
   hint: { color: ui.muted, fontSize: 12, lineHeight: 17 },
 });
