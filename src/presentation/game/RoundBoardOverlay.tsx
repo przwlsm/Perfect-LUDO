@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Pressable, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import Animated, {
   cancelAnimation,
@@ -52,8 +53,9 @@ export function RoundBoardOverlay({
   motionEnabled: boolean;
   onRoll(): void;
 }) {
+  const { t } = useTranslation('game');
   const cell = size / radialGrid(colors.length);
-  const tile = Math.max(46, Math.round(size * 0.12));
+  const tile = Math.max(48, Math.round(size * 0.12));
   const pulse = useSharedValue(0);
 
   useEffect(() => {
@@ -162,8 +164,10 @@ export function RoundBoardOverlay({
       />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={current ? `${nameOf(current)}: roll dice` : 'Dice'}
-        accessibilityHint={canRoll ? 'Your turn. Tap to roll.' : 'Wait for your turn.'}
+        accessibilityLabel={
+          current ? t('dice.rollA11y', { name: nameOf(current) }) : t('dice.label')
+        }
+        accessibilityHint={canRoll ? t('dice.yourTurnHint') : t('dice.waitHint')}
         accessibilityState={{ disabled: !canRoll }}
         disabled={!canRoll}
         onPress={onRoll}

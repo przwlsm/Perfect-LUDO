@@ -13,6 +13,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import type { DieValue } from '@/domain';
 import { AnimatedDice } from './AnimatedDice';
 import { Text } from './AppText';
@@ -21,19 +22,19 @@ import { ui } from '../theme/themes';
 const COIN_COLORS = ['#ef4444', '#10b981', '#f59e0b', '#3b82f6'];
 const FACES: readonly DieValue[] = [6, 3, 5, 1, 4, 2];
 
-/** Little Ludo tips to read while the table is being set. */
-export const LOADING_TIPS: readonly string[] = [
-  'A six brings a coin out of home.',
-  'Roll a six and you roll again.',
-  'Star squares are safe: nobody can capture you there.',
-  'Two coins on one square make a block no rival can land on.',
-  'Capturing a coin earns you a bonus roll.',
-  'Three sixes in a row and your turn is over.',
-  'You need an exact roll to reach home.',
-  'Online wins pay the most coins and XP.',
-  'Spin the lucky wheel every day for free rewards.',
-  'In Kill & Go, capture first, then head home.',
-];
+/** Little Ludo tips to read while the table is being set (keys under common:loader.tips). */
+export const LOADING_TIPS = [
+  'sixOut',
+  'sixAgain',
+  'starSafe',
+  'block',
+  'captureBonus',
+  'threeSixes',
+  'exactRoll',
+  'onlinePays',
+  'dailyWheel',
+  'killAndGo',
+] as const;
 
 /**
  * The Ludo-themed loading state: a die rolling through its faces, four
@@ -42,11 +43,13 @@ export const LOADING_TIPS: readonly string[] = [
  */
 export function LudoLoader({
   motionEnabled,
-  label = 'Setting up the board…',
+  label: labelOverride,
 }: {
   motionEnabled: boolean;
   label?: string;
 }) {
+  const { t } = useTranslation();
+  const label = labelOverride ?? t('loader.settingUp');
   const [face, setFace] = useState(0);
   const [rolling, setRolling] = useState(false);
   const [tip, setTip] = useState(0);
@@ -101,8 +104,8 @@ export function LudoLoader({
         exiting={motionEnabled ? FadeOut.duration(200) : undefined}
         style={s.tipBox}
       >
-        <Text style={s.tipTitle}>LUDO TIP</Text>
-        <Text style={s.tip}>{LOADING_TIPS[tip]}</Text>
+        <Text style={s.tipTitle}>{t('loader.tipTitle')}</Text>
+        <Text style={s.tip}>{t(`loader.tips.${LOADING_TIPS[tip] ?? 'sixOut'}`)}</Text>
       </Animated.View>
     </View>
   );

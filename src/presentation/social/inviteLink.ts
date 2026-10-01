@@ -1,5 +1,6 @@
 import { Share } from 'react-native';
 import * as Linking from 'expo-linking';
+import { i18n } from '../i18n';
 
 /** Opens this app straight at the join screen for `code` (perfectludo://join/CODE). */
 export function inviteLink(code: string): string {
@@ -11,10 +12,7 @@ export function inviteLink(code: string): string {
  * it still works for someone whose chat app will not open app links.
  */
 export function inviteMessage(code: string): string {
-  return (
-    `Join my Ludo Rumble game! Tap ${inviteLink(code)} to take a seat, ` +
-    `or open Ludo Rumble → Online → Private Game and enter ${code}.`
-  );
+  return i18n.t('social:invite.share', { link: inviteLink(code), code });
 }
 
 /** The system share sheet; resolves quietly if the player dismisses it. */

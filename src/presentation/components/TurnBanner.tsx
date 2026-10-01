@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from './AppText';
 import type { GameState, PlayerColor } from '@/domain';
 import { PLAYER_COLOR_HEX } from './PlayerColorPalette';
@@ -9,11 +10,20 @@ export interface TurnBannerProps {
 }
 
 export function TurnBanner({ state, humanColor }: TurnBannerProps): React.JSX.Element {
+  const { t } = useTranslation('game');
+  // The colour as an id ("RED") in English, its name in other languages.
+  const colorName = (color: PlayerColor) => t(`colors.${color}`).toUpperCase();
   if (state.status === 'FINISHED') {
     const won = state.winnerColor === humanColor;
     return (
       <View style={styles.container}>
-        <Text style={styles.text}>{won ? 'You won!' : `${state.winnerColor} wins`}</Text>
+        <Text style={styles.text}>
+          {won
+            ? t('turnBanner.youWon')
+            : t('turnBanner.wins', {
+                color: state.winnerColor ? colorName(state.winnerColor) : '',
+              })}
+        </Text>
       </View>
     );
   }
@@ -24,7 +34,9 @@ export function TurnBanner({ state, humanColor }: TurnBannerProps): React.JSX.El
   return (
     <View style={styles.container}>
       <View style={[styles.dot, { backgroundColor: PLAYER_COLOR_HEX[current] }]} />
-      <Text style={styles.text}>{isYou ? 'Your turn' : `${current}'s turn`}</Text>
+      <Text style={styles.text}>
+        {isYou ? t('turnBanner.yourTurn') : t('turnBanner.turn', { color: colorName(current) })}
+      </Text>
     </View>
   );
 }

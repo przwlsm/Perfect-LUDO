@@ -9,6 +9,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import type { PlayerColor } from '@/domain';
 import { PLAYER_COLOR_HEX } from './PlayerColorPalette';
 
@@ -70,6 +71,9 @@ export function PieceToken({
   pieceStyle = 'coin',
   onPress,
 }: PieceTokenProps): React.JSX.Element {
+  const { t } = useTranslation('game');
+  // The colour as an id ("RED piece") in English, its name in other languages.
+  const name = label ?? t('piece.label', { color: t(`colors.${color}`).toUpperCase() });
   const pulse = useSharedValue(0);
   useEffect(() => {
     pulse.value = 0;
@@ -93,8 +97,8 @@ export function PieceToken({
       disabled={!isTappable}
       onPress={onPress}
       accessibilityRole={isTappable ? 'button' : undefined}
-      accessibilityHint={isTappable ? 'Move this piece using the rolled dice value' : undefined}
-      accessibilityLabel={`${label ?? `${color} piece`}${isTappable ? ', tap to move' : ''}`}
+      accessibilityHint={isTappable ? t('piece.hint') : undefined}
+      accessibilityLabel={isTappable ? t('piece.tapToMove', { label: name }) : name}
       style={{ width: hitSize, height: hitSize, alignItems: 'center', justifyContent: 'center' }}
     >
       {isTappable && (

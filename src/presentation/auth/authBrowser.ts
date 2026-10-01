@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
 import { authProvider } from '@/config/container';
 import type { AuthCompletion, SocialProvider } from '@/domain';
+import { i18n } from '../i18n';
 
 export function authRedirect(recovery = false): string {
   const base =
@@ -13,11 +14,9 @@ export function authRedirect(recovery = false): string {
 }
 
 export async function signInWithSocial(provider: SocialProvider): Promise<AuthCompletion | null> {
-  if (!authProvider) throw new Error('Account services are unavailable in this build.');
+  if (!authProvider) throw new Error(i18n.t('account:auth.errors.unavailable'));
   if (Platform.OS !== 'web' && Constants.executionEnvironment === 'storeClient') {
-    throw new Error(
-      'Social sign-in requires the installed app or a development build. Use email in Expo Go.',
-    );
+    throw new Error(i18n.t('account:auth.errors.socialExpoGo'));
   }
   const redirect = authRedirect();
   const url = await authProvider.getOAuthUrl(provider, redirect);

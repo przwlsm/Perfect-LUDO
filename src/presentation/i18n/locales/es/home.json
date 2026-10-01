@@ -1,0 +1,201 @@
+{
+  "restoreFailed": "No se pudo recuperar tu partida.",
+  "profile": {
+    "guest": "Invitado · inicia sesión para subir de nivel",
+    "levelTag": "NV.{{level}}",
+    "titles": {
+      "grandmaster": "GRAN MAESTRO",
+      "master": "MAESTRO",
+      "proRoller": "TIRADOR PRO",
+      "roller": "TIRADOR",
+      "rookie": "NOVATO"
+    }
+  },
+  "spin": {
+    "a11y": "Giro de la suerte diario",
+    "a11yReady": "Giro de la suerte diario, giro gratis disponible",
+    "free": "GRATIS",
+    "title": "Giro de la suerte diario",
+    "winUpTo": "¡Gira y gana hasta {{amount}} monedas!",
+    "nextIn": "Próximo giro gratis en {{time}}",
+    "signIn": "Inicia sesión para girar cada día",
+    "streak": "DÍA {{day}}/7",
+    "spinButton": "GIRAR",
+    "openButton": "ABRIR",
+    "signInButton": "ENTRAR"
+  },
+  "resume": {
+    "resultReady": "Tu resultado está listo",
+    "tableWaiting": "Tu mesa te espera",
+    "ai_one": "{{count}} jugadores · Contra la computadora",
+    "ai_many": "{{count}} jugadores · Contra la computadora",
+    "ai_other": "{{count}} jugadores · Contra la computadora",
+    "local_one": "{{count}} jugadores · Pasa y juega",
+    "local_many": "{{count}} jugadores · Pasa y juega",
+    "local_other": "{{count}} jugadores · Pasa y juega",
+    "viewResult": "Ver resultado",
+    "resume": "Continuar →"
+  },
+  "online": {
+    "title": "Jugar en línea",
+    "subtitle": "Jugadores reales · las mejores recompensas",
+    "live": "EN VIVO",
+    "offline": "SIN CONEXIÓN",
+    "mostPlayed": "MÁS JUGADO",
+    "quickMatch": "PARTIDA RÁPIDA",
+    "body": "Jugadores reales, mesa al instante. Cada victoria paga <coins>+{{coins}} monedas</coins> y <xp>+{{xp}} XP</xp>.",
+    "teamsA11y": "Partida aleatoria 2 vs 2",
+    "seatsA11y": "Partida de {{seats}} jugadores",
+    "teamsShort": "2vs2",
+    "seatsShort": "{{seats}}J",
+    "playNow": "⚡ Jugar ya",
+    "offlineButton": "Sin conexión"
+  },
+  "tournament": {
+    "a11y": "Torneo semanal",
+    "live": "EN VIVO",
+    "title": "Torneo semanal",
+    "prize": "Premio mayor: 3000 monedas + 60 gemas · termina en {{time}}",
+    "toTopTen": "{{points}} pts · faltan {{need}} para el top 10",
+    "firstToScore": "{{points}} pts · sé el primero en puntuar"
+  },
+  "friends": {
+    "title": "Jugar con amigos",
+    "subtitle": "Sala privada, un teléfono o tu lista de amigos",
+    "party": {
+      "title": "Sala de fiesta",
+      "subtitle": "Sala privada con un código para amigos.",
+      "pill": "Anfitrión"
+    },
+    "pass": {
+      "title": "Pasa y juega",
+      "subtitle": "Un teléfono, hasta ocho amigos.",
+      "pill": "2–8"
+    },
+    "challenge": {
+      "title": "Desafía a amigos",
+      "subtitle": "Invita a alguien de tu lista de amigos.",
+      "pillMember": "Amigos",
+      "pillGuest": "Cuenta"
+    },
+    "teamUp": {
+      "title": "2 vs 2 con un amigo",
+      "subtitle": "Forma equipo y enfréntate a otro equipo de amigos.",
+      "pill": "En equipo"
+    }
+  },
+  "computer": {
+    "title": "Jugar contra la computadora",
+    "subtitle": "Sin conexión, cuando quieras · elige un modo",
+    "classic": {
+      "title": "Ludo clásico",
+      "subtitle": "Reglas originales, las cuatro fichas a la meta.",
+      "pill": "+{{coins}} / victoria"
+    },
+    "quick": {
+      "subtitle": "Gana la primera ficha en llegar. Minutos.",
+      "pill": "Rápido"
+    },
+    "kill": {
+      "subtitle": "Primero come, luego ve a la meta.",
+      "pill": "Difícil"
+    },
+    "teams": {
+      "title": "Equipos 2vs2",
+      "subtitle": "Tú y un compañero contra dos.",
+      "pill": "En pareja"
+    }
+  },
+  "progress": {
+    "title": "Tu progreso",
+    "subtitle": "Pase de temporada, misiones y estilo",
+    "seasonA11y": "Pase de temporada",
+    "seasonTitle": "Pase de la temporada {{number}}",
+    "pro": "PRO",
+    "seasonNext": "{{xp}} XP para el siguiente nivel · termina en {{time}}"
+  },
+  "missions": {
+    "title": "MISIONES DE HOY",
+    "ready_one": "{{count}} LISTA PARA RECLAMAR",
+    "ready_many": "{{count}} LISTAS PARA RECLAMAR",
+    "ready_other": "{{count}} LISTAS PARA RECLAMAR",
+    "resetsIn": "SE REINICIAN EN {{time}}",
+    "claimed": "RECLAMADA",
+    "claim": "RECLAMAR",
+    "claimA11y": "Reclamar {{title}}"
+  },
+  "store": {
+    "title": "Hazlo tuyo",
+    "subtitle": "Tableros, dados y estilos de mesa en la tienda."
+  },
+  "setup": {
+    "aiTitle": "Prepara tu mesa",
+    "localTitle": "Reúne a tu gente",
+    "aiBody": "Juegas con rojo. Elige a tus rivales y haz tu jugada.",
+    "localBody": "Pasa el dispositivo cuando cambie el turno. Cada lugar lo controla una persona.",
+    "players": "JUGADORES",
+    "playersA11y_one": "{{count}} jugadores",
+    "playersA11y_many": "{{count}} jugadores",
+    "playersA11y_other": "{{count}} jugadores",
+    "playersUnit": "jugadores",
+    "gameMode": "MODO DE JUEGO",
+    "teams": "EQUIPOS",
+    "teamsOnHint": "los compañeros se sientan enfrente",
+    "teamsOffHint": "cada uno por su cuenta",
+    "teamsAi": "Tú y amarillo (un compañero de la computadora) contra verde y azul. Los compañeros nunca se comen entre sí, y cuando tus fichas llegan a la meta, tiras por tu compañero.",
+    "teamsLocal": "Rojo y amarillo contra verde y azul. Los compañeros nunca se comen entre sí, y cuando tus fichas llegan a la meta, tiras por tu compañero.",
+    "whoIsPlaying": "¿QUIÉN JUEGA?",
+    "namesHint": "Los nombres aparecen junto a cada casa en el tablero. Déjalo en blanco para usar el color.",
+    "seatPlaceholder": {
+      "RED": "Jugador rojo",
+      "GREEN": "Jugador verde",
+      "YELLOW": "Jugador amarillo",
+      "BLUE": "Jugador azul",
+      "PURPLE": "Jugador morado",
+      "ORANGE": "Jugador naranja",
+      "PINK": "Jugador rosa",
+      "CYAN": "Jugador cian"
+    },
+    "seatNameA11y": {
+      "RED": "Nombre del jugador rojo",
+      "GREEN": "Nombre del jugador verde",
+      "YELLOW": "Nombre del jugador amarillo",
+      "BLUE": "Nombre del jugador azul",
+      "PURPLE": "Nombre del jugador morado",
+      "ORANGE": "Nombre del jugador naranja",
+      "PINK": "Nombre del jugador rosa",
+      "CYAN": "Nombre del jugador cian"
+    },
+    "difficulty": "DIFICULTAD DE LA COMPUTADORA",
+    "easy": "Tranqui",
+    "smart": "Con estrategia",
+    "easyHint": "Elige un movimiento válido al azar. Perfecto para una partida relajada.",
+    "smartHint": "Busca comer fichas, llegar a la meta y oportunidades para salir de casa.",
+    "replacesSaved": "Empezar una partida nueva reemplaza tu partida guardada.",
+    "start": "¡A jugar! →",
+    "footer": "Gratis · No necesitas conexión"
+  },
+  "teams": {
+    "on": "Equipos 2 vs 2",
+    "off": "Todos contra todos",
+    "offA11y": "Cada jugador por su cuenta",
+    "hint": "Tú y el jugador de enfrente son compañeros: nunca se comen entre sí y ganan juntos. Ambos ganadores comparten el premio."
+  },
+  "stake": {
+    "freeA11y": "Mesa gratis",
+    "tableA11y": "Mesa de {{amount}} monedas",
+    "tableGatedA11y": "Mesa de {{amount}} monedas, se desbloquea en el nivel {{level}}",
+    "tableLockedA11y": "Mesa de {{amount}} monedas, no tienes suficientes monedas o no tienes cuenta",
+    "free": "GRATIS",
+    "gate": "Nv {{level}}",
+    "freeHint": "Mesa gratis: juega por XP, monedas y puntos de torneo.",
+    "guestHint": "Los invitados juegan en mesas gratis. Crea una cuenta para jugar por monedas.",
+    "paidHint": "Todos pagan {{stake}} al empezar la partida. El ganador se lleva {{prize}} monedas."
+  },
+  "ad": {
+    "a11y": "{{title}}. {{reward}}",
+    "loading": "Cargando tu anuncio…",
+    "hangTight": "Espera un momento: tu recompensa llega justo después.",
+    "left": "QUEDAN {{left}}"
+  }
+}

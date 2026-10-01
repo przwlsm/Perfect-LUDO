@@ -1,0 +1,197 @@
+{
+  "brand": {
+    "tagline": "GOOD TIMES. GREAT MOVES.",
+    "homeA11y": "Ludo Rumble home",
+    "defaultSubtitle": "MAKE YOUR NEXT MOVE"
+  },
+  "actions": {
+    "back": "Back",
+    "close": "Close",
+    "closeDialog": "Close dialog",
+    "retry": "Retry",
+    "retryLoading": "Retry loading",
+    "cancel": "Cancel",
+    "save": "Save",
+    "continue": "Continue",
+    "done": "Done",
+    "later": "Later",
+    "notNow": "Not now",
+    "ok": "OK"
+  },
+  "nav": {
+    "play": "Play",
+    "online": "Online",
+    "rewards": "Rewards",
+    "friends": "Friends",
+    "profile": "Profile",
+    "accountRequired": "{{label}}, account required"
+  },
+  "wallet": {
+    "vaultA11y": "{{amount}} coins in your vault. Open rewards",
+    "loadFailedA11y": "Coins could not be loaded. Retry",
+    "coinsA11y": "{{amount}} coins. Open store",
+    "gemsA11y": "{{amount}} gems. Open rewards",
+    "levelA11y": "Level {{level}}"
+  },
+  "connection": {
+    "a11y": "Connection: {{label}}",
+    "ONLINE": "Online",
+    "CONNECTING": "Connecting…",
+    "RECONNECTING": "Reconnecting…",
+    "SERVER_UNAVAILABLE": "Server unavailable",
+    "OFFLINE": "Offline",
+    "offlineBuild": "Offline build"
+  },
+  "loader": {
+    "settingUp": "Setting up the board…",
+    "tipTitle": "LUDO TIP",
+    "tips": {
+      "sixOut": "A six brings a coin out of home.",
+      "sixAgain": "Roll a six and you roll again.",
+      "starSafe": "Star squares are safe: nobody can capture you there.",
+      "block": "Two coins on one square make a block no rival can land on.",
+      "captureBonus": "Capturing a coin earns you a bonus roll.",
+      "threeSixes": "Three sixes in a row and your turn is over.",
+      "exactRoll": "You need an exact roll to reach home.",
+      "onlinePays": "Online wins pay the most coins and XP.",
+      "dailyWheel": "Spin the lucky wheel every day for free rewards.",
+      "killAndGo": "In Kill & Go, capture first, then head home."
+    }
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Could not reach the server. Check your connection and try again."
+  },
+  "defaultPlayerName": "Player",
+  "variants": {
+    "classic": {
+      "title": "Classic",
+      "short": "CLASSIC",
+      "description": "The full game: bring all four coins home to win."
+    },
+    "quick1": {
+      "title": "Quick · 1 coin",
+      "short": "QUICK 1",
+      "description": "A fast game: the first coin home wins it."
+    },
+    "quick2": {
+      "title": "Quick · 2 coins",
+      "short": "QUICK 2",
+      "description": "A short game: the first player with two coins home wins."
+    },
+    "kill": {
+      "title": "Kill & Go",
+      "short": "KILL & GO",
+      "description": "Capture at least one opponent coin before any of your coins can enter your home path."
+    }
+  },
+  "rarity": {
+    "Classic": "Classic",
+    "Rare": "Rare",
+    "Epic": "Epic",
+    "Legendary": "Legendary"
+  },
+  "kind": {
+    "board": "Board",
+    "dice": "Dice",
+    "pack": "Pack",
+    "style": "Style"
+  },
+  "cosmetics": {
+    "diceName": "{{board}} Dice",
+    "diceDescription": "The matching signature dice for {{board}}.",
+    "packName": "{{board}} Pack",
+    "heritagePackName": "Wooden Theme Pack",
+    "packDescription": "Matching board, signature dice, player cards and app styling.",
+    "items": {
+      "heritage": {
+        "name": "Heritage Wood",
+        "description": "Warm ivory wood. Forest, mustard, brick and deep blue."
+      },
+      "classic": {
+        "name": "Arcade Classic",
+        "description": "The original. Always a good move."
+      },
+      "royal": {
+        "name": "Royal Palace",
+        "description": "A seat at the golden table."
+      },
+      "neon": {
+        "name": "Neon Nights",
+        "description": "After dark, every move glows."
+      },
+      "forest": {
+        "name": "Forest Retreat",
+        "description": "A little closer to nature."
+      },
+      "ocean": {
+        "name": "Ocean Blue",
+        "description": "Make waves on the board."
+      },
+      "rose": {
+        "name": "Rose Quartz",
+        "description": "Soft tones. Sharp strategy."
+      },
+      "sunset": {
+        "name": "Desert Sunset",
+        "description": "Warm sands, golden victories."
+      },
+      "arctic": {
+        "name": "Arctic Frost",
+        "description": "Keep your cool. Take the lead."
+      },
+      "cosmic": {
+        "name": "Cosmic Voyage",
+        "description": "Your next win is written in the stars."
+      },
+      "jade": {
+        "name": "Jade Dynasty",
+        "description": "Crafted for a timeless game."
+      },
+      "candy": {
+        "name": "Candy Club",
+        "description": "A sweet twist on a classic."
+      },
+      "obsidian": {
+        "name": "Obsidian Gold",
+        "description": "Quiet confidence. Pure gold."
+      },
+      "diwali": {
+        "name": "Festival of Lights",
+        "description": "A marigold night. Here for the festival, yours forever."
+      },
+      "ivory": {
+        "name": "Ivory Original",
+        "description": "A familiar roll, beautifully made."
+      },
+      "gold": {
+        "name": "Golden Hour",
+        "description": "A little gold in every roll."
+      },
+      "ruby": {
+        "name": "Ruby Red",
+        "description": "Bold, bright, ready to roll."
+      },
+      "mint": {
+        "name": "Fresh Mint",
+        "description": "A refreshing change of luck."
+      },
+      "galaxy": {
+        "name": "Galaxy Dice",
+        "description": "A small piece of the universe."
+      },
+      "midnight": {
+        "name": "Midnight Metal",
+        "description": "Dark finish. Golden details."
+      },
+      "triangle-homes": {
+        "name": "Pointed Homes",
+        "description": "Big tables: each home fills the space between the arms."
+      },
+      "round-homes": {
+        "name": "Round Homes",
+        "description": "The original round yards for 5 and 6 player tables."
+      }
+    }
+  }
+}

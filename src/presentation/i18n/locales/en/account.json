@@ -1,0 +1,278 @@
+{
+  "shared": {
+    "backToSignIn": "Back to sign in",
+    "backToGame": "Back to the game",
+    "retrySync": "Retry cloud sync",
+    "guestLabel": "PLAYING AS A GUEST",
+    "continueGuest": "Continue as guest",
+    "passwordMismatch": "Passwords do not match."
+  },
+  "username": {
+    "checking": "Checking…",
+    "available": "✓ Username available",
+    "unavailable": "✕ {{reason}}",
+    "fallback": "That username cannot be used."
+  },
+  "profile": {
+    "title": "Your corner of the club.",
+    "subtitle": "PLAYER PROFILE",
+    "rank": {
+      "champion": "CLUB CHAMPION",
+      "regular": "TABLE REGULAR",
+      "welcome": "WELCOME TO THE CLUB"
+    },
+    "level": "Level {{level}}",
+    "xpToNext": "{{into}} / {{need}} XP to level {{next}}",
+    "edit": "Edit profile",
+    "stats": {
+      "played": "Played",
+      "wins": "Wins",
+      "winRate": "Win rate",
+      "winStreak": "Win streak",
+      "bestStreak": "Best streak"
+    },
+    "recordMember": "Completed matches on your account. In pass & play, wins track the red seat.",
+    "recordDevice": "Completed matches on this device. In pass & play, wins track the red seat.",
+    "balance": {
+      "label": "YOUR BALANCE",
+      "openStore": "Open store",
+      "loadFailed": "Your coins could not be loaded from your account. Spending is paused until they are.",
+      "reload": "Reload coins",
+      "pending_one": "{{count}} finished game still waiting to be paid. They will be added the next time your account answers.",
+      "pending_other": "{{count}} finished games still waiting to be paid. They will be added the next time your account answers.",
+      "kept": "Kept on your account, so they follow you to any device."
+    },
+    "account": {
+      "label": "ACCOUNT",
+      "memberBody": "Your coins, collection and statistics are kept on your account.",
+      "signedOutBody": "Sign in to play with friends and to earn, keep and spend coins. Coins and unlocked looks live on your account, not on this device.",
+      "manage": "Manage account",
+      "signIn": "Sign in or create an account"
+    },
+    "look": {
+      "label": "YOUR SIGNATURE LOOK",
+      "view3d": "{{dice}} · 3D view",
+      "view2d": "{{dice}} · 2D view",
+      "explore": "Explore your collection · {{items}} items"
+    },
+    "tips": {
+      "label": "SMALL WINS ADD UP",
+      "title": "Play. Collect. Make it yours.",
+      "body": "Claim the daily calendar, spin the wheel, finish missions, and win online for the big payouts. Coins buy the looks; gems unlock the legendary ones."
+    },
+    "feedback": {
+      "label": "WE’RE LISTENING",
+      "title": "Found a bug? Have an idea?",
+      "body": "Tell us what’s working, what isn’t, and what you’d like to see next.",
+      "button": "Send feedback"
+    }
+  },
+  "login": {
+    "title": {
+      "account": "Your account",
+      "keepProgress": "Keep your progress",
+      "join": "Join the club",
+      "forgot": "Reset your password",
+      "confirm": "Check your email",
+      "welcome": "Welcome back"
+    },
+    "notConfigured": "Account services are not configured for this build. You can still play offline.",
+    "playOffline": "Play offline",
+    "signedIn": "SIGNED IN",
+    "connectedAccount": "Connected account",
+    "summary": "{{name}} / {{coins}} coins / {{wins}} wins",
+    "changePassword": "Change password",
+    "signOut": "Sign out",
+    "backOnline": "Back to online play",
+    "backStore": "Back to the store",
+    "deleteAccount": "Delete account",
+    "guestSignUp": "Your games, coins and seat at the table stay exactly as they are.",
+    "guestSignIn": "Signing in to another account ends this guest session.",
+    "pitch": "Save your progress and pick up where you left off.",
+    "orEmail": "OR USE EMAIL",
+    "confirmRecovery": "Open the password reset link we emailed you to continue.",
+    "confirmSignup": "Open the confirmation link we emailed you. Your account is ready as soon as you do.",
+    "name": {
+      "label": "Player name",
+      "placeholder": "Your name at the table"
+    },
+    "username": {
+      "label": "Username",
+      "placeholder": "3–16 letters, numbers or _ (optional)"
+    },
+    "email": {
+      "label": "Email address",
+      "placeholder": "you@example.com"
+    },
+    "password": {
+      "label": "Password",
+      "newPlaceholder": "At least 8 characters",
+      "placeholder": "Your password",
+      "confirm": "Confirm password"
+    },
+    "submit": {
+      "wait": "Please wait...",
+      "create": "Create account",
+      "sendReset": "Send reset email",
+      "signIn": "Sign in"
+    },
+    "forgotPassword": "Forgot password?",
+    "resendVerification": "Resend verification email",
+    "resendIn": "Resend available in {{seconds}}s",
+    "resendEmail": "Resend email",
+    "createAccount": "Create an account",
+    "signInExisting": "Sign in to an existing account",
+    "playOfflineInstead": "Play offline instead",
+    "nameSaveFailed": "Could not save your player name. Please try again.",
+    "delete": {
+      "title": "Delete your account?",
+      "body": "This permanently deletes your account: your coins, unlocked looks, statistics and friends. It cannot be undone.",
+      "noRestore": "Your device keeps nothing to restore afterward, and this cannot be reversed.",
+      "deleting": "Deleting…",
+      "confirm": "Yes, permanently delete my account"
+    }
+  },
+  "reset": {
+    "titleDone": "Password updated",
+    "title": "Choose a new password",
+    "doneBody": "Your new password is ready. You are signed in.",
+    "checking": "Checking your session...",
+    "openEmail": "Open your password reset email or verify its code to continue.",
+    "rules": "Use at least 8 characters. Choose a password you do not use elsewhere.",
+    "newPassword": "New password",
+    "confirmNew": "Confirm new password",
+    "updating": "Updating...",
+    "save": "Save new password",
+    "backToAccount": "Back to account"
+  },
+  "callback": {
+    "title": "Connecting your account",
+    "finishing": "Finishing your secure sign-in...",
+    "failed": "Could not complete sign-in. Please try again."
+  },
+  "field": {
+    "show": "Show",
+    "hide": "Hide",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
+  },
+  "social": {
+    "google": "Continue with Google",
+    "facebook": "Continue with Facebook"
+  },
+  "identity": {
+    "saved": "Saved.",
+    "saveFailed": "That could not be saved.",
+    "copied": "User ID copied.",
+    "copyFailed": "Could not copy. Your ID is {{id}}.",
+    "share": "Add me on Ludo Rumble: @{{username}} (User ID {{id}})",
+    "shareNoId": "Add me on Ludo Rumble: @{{username}}",
+    "guest": {
+      "temporary": "Temporary · no permanent User ID yet",
+      "played_one": "You’ve played {{count}} game as a guest.",
+      "played_other": "You’ve played {{count}} games as a guest.",
+      "empty": "Make this seat yours.",
+      "body": "Create an account to save your game history and continue your progress, choose a username, get a User ID friends can search for, and unlock friends and challenges.",
+      "signUp": "Sign Up",
+      "login": "Login"
+    },
+    "label": "HOW FRIENDS FIND YOU",
+    "idA11y": "User ID {{id}}",
+    "idA11yPending": "User ID pending",
+    "idLine": "User ID: {{id}}",
+    "hint": "Friends can search either one. The ID never changes.",
+    "copyId": "Copy ID",
+    "shareProfile": "Share profile",
+    "newUsername": "NEW USERNAME",
+    "newUsernameA11y": "New username",
+    "usernamePlaceholder": "3–16 letters, numbers or _",
+    "keepHint": "Your friends, history and User ID stay attached to you when your username changes.",
+    "saving": "Saving…",
+    "saveUsername": "Save username",
+    "changeUsername": "Change username",
+    "pickAvatar": "PICK AN AVATAR",
+    "avatarA11y": "Use {{emoji}} as your avatar"
+  },
+  "gate": {
+    "label": "ACCOUNT FEATURE",
+    "title": "Create an account to unlock {{feature}}",
+    "body": "Sign in to save your progress, add friends, view your game history, and more. Everything you have played as a guest comes with you.",
+    "cta": "Login / Sign Up",
+    "guest": "Continue as Guest",
+    "sheetTitle": "Unlock with an account",
+    "thisFeature": "this feature"
+  },
+  "auth": {
+    "errors": {
+      "invalidCredentials": "Email or password is incorrect.",
+      "emailNotConfirmed": "Confirm your email first. You can resend the confirmation below.",
+      "rateLimited": "Too many attempts. Please wait a minute and try again.",
+      "guestDisabled": "Guest play is not switched on for this server yet. Please sign in or create an account.",
+      "emailExists": "An account with this email already exists. Sign in to it instead.",
+      "providerUnavailable": "This sign-in option is unavailable. Please use email or try again later.",
+      "unavailable": "Account services are unavailable in this build.",
+      "restoreFailed": "Please sign in again. Your session could not be restored.",
+      "socialExpoGo": "Social sign-in requires the installed app or a development build. Use email in Expo Go."
+    },
+    "notices": {
+      "confirm": "Check your email and open the confirmation link to finish creating your account.",
+      "socialCancelled": "Sign-in was cancelled or is continuing in your browser.",
+      "resetSent": "If an account exists for this email, a password reset email is on its way.",
+      "resendSent": "If confirmation is needed, a new email is on its way. Check your spam folder too.",
+      "passwordUpdated": "Your password has been updated."
+    }
+  },
+  "profileState": {
+    "loadFailed": "Could not load your profile.",
+    "accountLoadFailed": "Could not load this account profile. Please reopen the app to retry.",
+    "restoreFailed": "Could not restore your login. Please sign in again.",
+    "cloudSyncUnavailable": "Cloud sync is unavailable. Your progress is saved on this device; retry from your profile.",
+    "cloudSyncSignedIn": "Signed in. Cloud sync is unavailable; your progress is saved on this device.",
+    "walletStale": "Signed in, but your coins could not be loaded. Reconnect and retry from your profile.",
+    "stillLoading": "Your profile is still loading.",
+    "storeUnavailable": "The store is not available in this build."
+  },
+  "feedback": {
+    "title": "Tell us what you think.",
+    "subtitle": "FEEDBACK & SUGGESTIONS",
+    "intro": "Found a bug, or have an idea that would make the club better? We read every message.",
+    "topicLabel": "WHAT’S THIS ABOUT?",
+    "categories": {
+      "bug": "Something broke",
+      "suggestion": "An idea",
+      "other": "Something else"
+    },
+    "messageLabel": "YOUR MESSAGE",
+    "messageA11y": "Your message",
+    "placeholders": {
+      "bug": "What happened, and what did you expect instead? Which screen were you on?",
+      "suggestion": "What would make this better?",
+      "other": "What's on your mind?"
+    },
+    "emailLabel": "YOUR EMAIL (OPTIONAL)",
+    "emailA11y": "Your email, optional",
+    "emailPlaceholder": "Only if you'd like a reply",
+    "sent": "Thanks — your message is on its way to us.",
+    "sending": "Sending…",
+    "send": "Send to the club",
+    "offline": "This build isn’t connected to our server, but you can still reach us by email.",
+    "emailUs": "Email us instead",
+    "preferEmail": "Prefer email? Send it to {{email}} instead",
+    "sendFailed": "Could not send your message. Please try again.",
+    "problems": {
+      "category": "Please choose a category.",
+      "empty": "Please write a message before sending.",
+      "tooLong": "Please keep your message under {{max}} characters.",
+      "email": "That does not look like a valid email address."
+    },
+    "mail": {
+      "subject": {
+        "bug": "Ludo Rumble bug report",
+        "suggestion": "Ludo Rumble suggestion",
+        "other": "Ludo Rumble feedback"
+      },
+      "bodyPlaceholder": "(describe what happened here)",
+      "replyTo": "Reply to: {{email}}"
+    }
+  }
+}

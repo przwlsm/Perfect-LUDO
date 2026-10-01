@@ -1,12 +1,14 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { displayNameOf, type LobbyPlayer, type PlayerColor } from '@/domain';
 import { Text } from '../components/AppText';
 import { UserAvatar } from './UserAvatar';
 import { ui } from '../theme/themes';
 
-const TEAMS: readonly { label: string; seats: readonly [number, number] }[] = [
-  { label: 'Red & Yellow', seats: [0, 2] },
-  { label: 'Green & Blue', seats: [1, 3] },
+/** Text: online:teamSeats.<id>. */
+const TEAMS: readonly { id: 'redYellow' | 'greenBlue'; seats: readonly [number, number] }[] = [
+  { id: 'redYellow', seats: [0, 2] },
+  { id: 'greenBlue', seats: [1, 3] },
 ];
 
 /**
@@ -29,20 +31,23 @@ export function TeamSeats({
   canMove: boolean;
   onMove(seat: number): void;
 }) {
+  const { t } = useTranslation('online');
   const bySeat = (seat: number) =>
     players.find((p) => p.seatIndex === seat && p.status === 'JOINED') ?? null;
   const mine = players.find((p) => p.userId === myId && p.status === 'JOINED')?.seatIndex;
   return (
     <View style={s.wrap}>
-      {TEAMS.map((team, t) => (
+      {TEAMS.map((team, index) => (
         <View
-          key={team.label}
+          key={team.id}
           style={[s.team, mine !== undefined && team.seats.includes(mine) && s.myTeam]}
         >
           <Text style={s.teamLabel}>
-            {mine !== undefined && team.seats.includes(mine) ? 'YOUR TEAM' : `TEAM ${t + 1}`}
+            {mine !== undefined && team.seats.includes(mine)
+              ? t('teamSeats.yourTeam')
+              : t('teamSeats.team', { number: index + 1 })}
           </Text>
-          <Text style={s.teamName}>{team.label}</Text>
+          <Text style={s.teamName}>{t(`teamSeats.${team.id}`)}</Text>
           {team.seats.map((seat) => {
             const player = bySeat(seat);
             const color = palette[colors[seat] ?? 'RED'];
@@ -57,21 +62,24 @@ export function TeamSeats({
                       size={30}
                     />
                     <Text numberOfLines={1} style={s.name}>
-                      {displayNameOf(player)}
-                      {player.userId === myId ? ' (you)' : ''}
+                      {player.userId === myId
+                        ? t('nameYou', { name: displayNameOf(player) })
+                        : displayNameOf(player)}
                     </Text>
                   </>
                 ) : canMove && mine !== undefined ? (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Sit in the ${colors[seat]?.toLowerCase()} seat`}
+                    accessibilityLabel={t('teamSeats.sitA11y', {
+                      color: colors[seat] ? t(`colors.${colors[seat]}`).toLowerCase() : '',
+                    })}
                     onPress={() => onMove(seat)}
                     style={s.sit}
                   >
-                    <Text style={s.sitText}>Sit here</Text>
+                    <Text style={s.sitText}>{t('teamSeats.sitHere')}</Text>
                   </Pressable>
                 ) : (
-                  <Text style={s.empty}>Open seat</Text>
+                  <Text style={s.empty}>{t('teamSeats.openSeat')}</Text>
                 )}
               </View>
             );
@@ -97,7 +105,7 @@ const s = StyleSheet.create({
   teamLabel: { color: ui.gem, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
   teamName: { color: ui.text, fontWeight: '800', fontSize: 13 },
   slot: {
-    minHeight: 44,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -110,7 +118,7 @@ const s = StyleSheet.create({
   empty: { color: ui.subtle, fontSize: 12, fontWeight: '700' },
   sit: {
     flex: 1,
-    minHeight: 34,
+    minHeight: 48,
     borderRadius: 10,
     borderWidth: 1,
     borderStyle: 'dashed',

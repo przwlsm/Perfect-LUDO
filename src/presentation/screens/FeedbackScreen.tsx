@@ -1,8 +1,8 @@
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text, TextInput } from '../components/AppText';
 import { router } from 'expo-router';
-import type { FeedbackCategory } from '@/domain';
-import { FEEDBACK_MESSAGE_MAX } from '@/domain';
+import { FEEDBACK_CATEGORIES, FEEDBACK_MESSAGE_MAX } from '@/domain';
 import { Body, Button, Card, Label, Screen, shared } from '../components/Kit';
 import { feedbackMailto, useFeedback } from '../hooks/useFeedback';
 import { useProfile } from '../state/ProfileProvider';
@@ -11,14 +11,9 @@ import { ui } from '../theme/themes';
 /** Replace with an inbox your team actually reads before shipping. */
 export const FEEDBACK_SUPPORT_EMAIL = 'support@ludoclub.app';
 
-const CATEGORIES: readonly { readonly id: FeedbackCategory; readonly label: string }[] = [
-  { id: 'bug', label: 'Something broke' },
-  { id: 'suggestion', label: 'An idea' },
-  { id: 'other', label: 'Something else' },
-];
-
 export default function FeedbackScreen() {
   const { theme } = useProfile();
+  const { t } = useTranslation(['account', 'common']);
   const feedback = useFeedback();
   const { draft } = feedback;
 
@@ -27,47 +22,39 @@ export default function FeedbackScreen() {
   };
 
   return (
-    <Screen title="Tell us what you think." subtitle="FEEDBACK & SUGGESTIONS" back nav={false}>
-      <Body>
-        Found a bug, or have an idea that would make the club better? We read every message.
-      </Body>
+    <Screen title={t('feedback.title')} subtitle={t('feedback.subtitle')} back nav={false}>
+      <Body>{t('feedback.intro')}</Body>
       <Card>
-        <Label color={theme.accent}>WHAT’S THIS ABOUT?</Label>
+        <Label color={theme.accent}>{t('feedback.topicLabel')}</Label>
         <View style={s.tabs}>
-          {CATEGORIES.map((c) => (
+          {FEEDBACK_CATEGORIES.map((id) => (
             <Pressable
-              key={c.id}
+              key={id}
               accessibilityRole="button"
-              accessibilityState={{ selected: draft.category === c.id }}
-              onPress={() => feedback.setCategory(c.id)}
+              accessibilityState={{ selected: draft.category === id }}
+              onPress={() => feedback.setCategory(id)}
               android_ripple={{ color: `${theme.accent}30` }}
-              style={[s.tab, draft.category === c.id && { backgroundColor: theme.accent }]}
+              style={[s.tab, draft.category === id && { backgroundColor: theme.accent }]}
             >
-              <Text style={[s.tabText, draft.category === c.id && { color: '#211d19' }]}>
-                {c.label}
+              <Text style={[s.tabText, draft.category === id && { color: '#211d19' }]}>
+                {t(`feedback.categories.${id}`)}
               </Text>
             </Pressable>
           ))}
         </View>
         <View style={{ gap: 7 }}>
           <View style={shared.between}>
-            <Label>YOUR MESSAGE</Label>
+            <Label>{t('feedback.messageLabel')}</Label>
             <Text style={shared.small}>
               {draft.message.length}/{FEEDBACK_MESSAGE_MAX}
             </Text>
           </View>
           <TextInput
-            accessibilityLabel="Your message"
+            accessibilityLabel={t('feedback.messageA11y')}
             value={draft.message}
             onChangeText={feedback.setMessage}
             editable={!feedback.busy}
-            placeholder={
-              draft.category === 'bug'
-                ? 'What happened, and what did you expect instead? Which screen were you on?'
-                : draft.category === 'suggestion'
-                  ? 'What would make this better?'
-                  : "What's on your mind?"
-            }
+            placeholder={t(`feedback.placeholders.${draft.category}`)}
             placeholderTextColor={ui.muted}
             multiline
             maxLength={FEEDBACK_MESSAGE_MAX}
@@ -75,13 +62,13 @@ export default function FeedbackScreen() {
           />
         </View>
         <View style={{ gap: 7 }}>
-          <Label>YOUR EMAIL (OPTIONAL)</Label>
+          <Label>{t('feedback.emailLabel')}</Label>
           <TextInput
-            accessibilityLabel="Your email, optional"
+            accessibilityLabel={t('feedback.emailA11y')}
             value={draft.contactEmail}
             onChangeText={feedback.setContactEmail}
             editable={!feedback.busy}
-            placeholder="Only if you'd like a reply"
+            placeholder={t('feedback.emailPlaceholder')}
             placeholderTextColor={ui.muted}
             autoCapitalize="none"
             autoCorrect={false}
@@ -91,7 +78,7 @@ export default function FeedbackScreen() {
         </View>
         {feedback.sent && (
           <Text accessibilityLiveRegion="polite" style={{ color: ui.green, fontWeight: '700' }}>
-            Thanks — your message is on its way to us.
+            {t('feedback.sent')}
           </Text>
         )}
         {feedback.error && (
@@ -101,30 +88,28 @@ export default function FeedbackScreen() {
         )}
         {feedback.available ? (
           <Button disabled={feedback.busy} onPress={() => void feedback.submit()}>
-            {feedback.busy ? 'Sending…' : 'Send to the club'}
+            {feedback.busy ? t('feedback.sending') : t('feedback.send')}
           </Button>
         ) : (
           <>
-            <Body>
-              This build isn’t connected to our server, but you can still reach us by email.
-            </Body>
-            <Button onPress={emailFallback}>Email us instead</Button>
+            <Body>{t('feedback.offline')}</Body>
+            <Button onPress={emailFallback}>{t('feedback.emailUs')}</Button>
           </>
         )}
         {feedback.available && draft.message.trim().length > 0 && (
           <Pressable
             accessibilityRole="button"
             onPress={emailFallback}
-            style={{ alignSelf: 'center' }}
+            style={{ alignSelf: 'center', minHeight: 48, justifyContent: 'center' }}
           >
             <Text style={[shared.small, { textDecorationLine: 'underline' }]}>
-              Prefer email? Send it to {FEEDBACK_SUPPORT_EMAIL} instead
+              {t('feedback.preferEmail', { email: FEEDBACK_SUPPORT_EMAIL })}
             </Text>
           </Pressable>
         )}
       </Card>
       <Button secondary onPress={() => router.back()}>
-        Done
+        {t('common:actions.done')}
       </Button>
     </Screen>
   );
@@ -133,6 +118,8 @@ export default function FeedbackScreen() {
 const s = StyleSheet.create({
   tabs: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   tab: {
+    minHeight: 48,
+    justifyContent: 'center',
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,

@@ -1,0 +1,205 @@
+{
+  "colors": {
+    "RED": "Rojo",
+    "GREEN": "Verde",
+    "YELLOW": "Amarillo",
+    "BLUE": "Azul",
+    "PURPLE": "Morado",
+    "ORANGE": "Naranja",
+    "PINK": "Rosa",
+    "CYAN": "Cian"
+  },
+  "colorPlayer": {
+    "RED": "jugador rojo",
+    "GREEN": "jugador verde",
+    "YELLOW": "jugador amarillo",
+    "BLUE": "jugador azul",
+    "PURPLE": "jugador morado",
+    "ORANGE": "jugador naranja",
+    "PINK": "jugador rosa",
+    "CYAN": "jugador cian"
+  },
+  "seat": {
+    "you": "Tú",
+    "partner": "Compañero",
+    "rival1": "Rival 1",
+    "rival2": "Rival 2",
+    "computer": "Computadora",
+    "computerNumbered": "Computadora {{index}}"
+  },
+  "label": {
+    "passAndPlay": "PASA Y JUEGA",
+    "solo": "MESA EN SOLITARIO",
+    "teams": "2 VS 2"
+  },
+  "prize": {
+    "win_one": "Premio: +{{count}} moneda",
+    "win_many": "Premio: +{{count}} monedas",
+    "win_other": "Premio: +{{count}} monedas"
+  },
+  "status": {
+    "finished": "Una buena partida, bien jugada.",
+    "rolling": "Tirando el dado...",
+    "moving": "Moviendo las fichas...",
+    "playableCoins_one": "{{count}} ficha disponible: toca la ficha que rebota",
+    "playableCoins_many": "{{count}} fichas disponibles: toca una ficha que rebota",
+    "playableCoins_other": "{{count}} fichas disponibles: toca una ficha que rebota",
+    "onlyOne": "Solo hay un movimiento: lo hacemos por ti...",
+    "threeSixes": "¡Tres seises! Pierdes el turno.",
+    "noMoves": "Esta vez no hay movimientos. Pasa el dado…",
+    "computerChoosing": "La computadora está eligiendo…",
+    "rollForPartner": "Tus fichas llegaron: ¡tira por tu compañero!",
+    "killFirst": "tira: come una ficha para abrir tu camino a la meta",
+    "killFirstNamed": "{{name}}, tira: come una ficha para abrir tu camino a la meta",
+    "tapToRoll": "toca el dado para tirar",
+    "tapToRollNamed": "{{name}}, toca el dado para tirar",
+    "computerReady": "La computadora se está preparando…"
+  },
+  "errors": {
+    "noSavedMatch": "No se encontró ninguna partida guardada. Empieza una nueva desde la sala.",
+    "loadFailed": "No se pudo cargar la partida.",
+    "moveSaveFailed": "No se pudo guardar tu movimiento. Inténtalo de nuevo."
+  },
+  "pause": {
+    "a11y": "Pausar partida",
+    "title": "Tómate tu tiempo.",
+    "body": "Tu partida está en pausa y guardada en este dispositivo. Tu mesa te esperará cuando vuelvas.",
+    "exit": "Guardar y volver a la sala",
+    "backToGame": "Volver a la partida",
+    "howToPlay": "Cómo jugar"
+  },
+  "rulesSheet": {
+    "title": "Un clásico por algo.",
+    "thisTable": "ESTA MESA"
+  },
+  "rules": {
+    "entrance": {
+      "title": "Haz tu entrada",
+      "text": "Saca un seis para sacar una ficha de tu casa. Un seis te da otro tiro."
+    },
+    "home": {
+      "title": "Abre camino a la meta",
+      "text": "Avanza en el sentido de las agujas del reloj por el recorrido y luego sube por tu carril de color. Necesitas el número exacto para terminar."
+    },
+    "rivalry": {
+      "title": "Una rivalidad amistosa",
+      "text": "Cae sobre un rival para mandar su ficha de vuelta. Las casillas con estrella y las de salida son seguras. Comer y llegar a la meta te dan un turno extra."
+    },
+    "fair": {
+      "title": "Juego limpio",
+      "text": "Con tres seises seguidos pierdes el tercer tiro. Los movimientos anteriores se mantienen. Dos fichas del mismo color en una casilla impiden que un rival caiga ahí."
+    },
+    "finish": {
+      "title": "Lleva a todos a la meta",
+      "text": "Gana el primer jugador que lleve sus cuatro fichas a la meta. Con sesión iniciada ganas monedas y XP: ganar en línea paga más, y cada partida en línea suma puntos de torneo."
+    }
+  },
+  "table": {
+    "tryAgain": "Reintentar",
+    "backToLobby": "Volver a la sala",
+    "retryTurn": "Reintentar turno",
+    "boardSaveFailed": "No se pudo guardar la preferencia de tablero. Inténtalo de nuevo.",
+    "reactA11y": "Enviar una reacción",
+    "reactWith": "Reaccionar {{emoji}}",
+    "switchView": "Cambiar al tablero {{mode}}",
+    "info3d_one": "{{count}} jugador / mesa 3D",
+    "info3d_many": "{{count}} jugadores / mesa 3D",
+    "info3d_other": "{{count}} jugadores / mesa 3D",
+    "infoClassic_one": "{{count}} jugador / mesa clásica",
+    "infoClassic_many": "{{count}} jugadores / mesa clásica",
+    "infoClassic_other": "{{count}} jugadores / mesa clásica"
+  },
+  "dice": {
+    "rollA11y": "{{name}}: tirar el dado",
+    "yourTurnHint": "Es tu turno. Toca para tirar.",
+    "waitHint": "Espera tu turno.",
+    "label": "Dado",
+    "showing": "El dado muestra {{value}}",
+    "readyToRoll": "Dado listo para tirar",
+    "rolling": "El dado está rodando",
+    "ready": "Listo para tirar"
+  },
+  "panel": {
+    "out": "FUERA",
+    "livesA11y": "Te quedan {{left}} de {{total}} vidas",
+    "secondsLeft_one": "Queda {{count}} segundo",
+    "secondsLeft_many": "Quedan {{count}} segundos",
+    "secondsLeft_other": "Quedan {{count}} segundos",
+    "secondsShort": "{{seconds}} s"
+  },
+  "victory": {
+    "title": "RESULTADOS",
+    "ended": "PARTIDA TERMINADA",
+    "completed": "PARTIDA COMPLETADA",
+    "rewards": "Recompensas",
+    "level": "Nivel {{level}}",
+    "levelUp": "¡SUBISTE DE NIVEL!",
+    "toNext": "{{percent}} % para el siguiente",
+    "performance": "RENDIMIENTO",
+    "sixes": "Seises sacados",
+    "captured": "Fichas comidas",
+    "home": "Fichas en la meta",
+    "saving": "GUARDANDO…",
+    "share": "Compartir",
+    "place": {
+      "winner": "GANADOR",
+      "silver": "PLATA",
+      "bronze": "BRONCE"
+    },
+    "you": "{{name}} (Tú)",
+    "homeCount": "{{home}}/{{goal}} en la meta",
+    "minutesSeconds": "{{minutes}} min {{seconds}} s",
+    "seconds": "{{seconds}} s"
+  },
+  "result": {
+    "playerWins": "¡Gana {{name}}!",
+    "teamVictory": "¡VICTORIA EN EQUIPO!",
+    "victory": "¡VICTORIA!",
+    "goodGame": "BUENA PARTIDA",
+    "soClose": "Casi lo logras · {{mode}}",
+    "subtitle": "{{mode}} · {{how}}",
+    "guestWonNote_one": "+{{count}} moneda está en tu bóveda: inicia sesión cuando quieras para reclamar todo lo que hay.",
+    "guestWonNote_many": "+{{count}} de monedas están en tu bóveda: inicia sesión cuando quieras para reclamar todo lo que hay.",
+    "guestWonNote_other": "+{{count}} monedas están en tu bóveda: inicia sesión cuando quieras para reclamar todo lo que hay.",
+    "guestLostNote_one": "Gana para sumar {{count}} moneda a tu bóveda, o {{online}} en línea.",
+    "guestLostNote_many": "Gana para sumar {{count}} de monedas a tu bóveda, o {{online}} en línea.",
+    "guestLostNote_other": "Gana para sumar {{count}} monedas a tu bóveda, o {{online}} en línea.",
+    "loadingAd": "Cargando anuncio…",
+    "watchAdRematch": "Ver anuncio · Revancha",
+    "playAgain": "Jugar de nuevo",
+    "goHome": "Ir al inicio",
+    "lobby": "Sala",
+    "sharePlayer": "¡{{name}} acaba de ganar una partida {{mode}} de Ludo Rumble! 🎲🏆",
+    "shareMine": "¡Acabo de ganar una partida {{mode}} de Ludo Rumble! 🎲🏆",
+    "saveFailed": "No se pudo guardar tu resultado. Toca de nuevo para reintentar.",
+    "adIncomplete": "El anuncio no terminó. Inténtalo de nuevo o vuelve al inicio."
+  },
+  "winLine": {
+    "allEight": "Las ocho fichas en la meta",
+    "partners": "Ambos compañeros llevaron {{goal}} a la meta",
+    "first": "Primera ficha en la meta",
+    "two": "Dos fichas en la meta",
+    "allFour": "Las cuatro fichas en la meta"
+  },
+  "piece": {
+    "label": "Ficha de {{color}}",
+    "numbered": "Ficha {{number}} de {{color}}",
+    "tapToMove": "{{label}}, toca para mover",
+    "hint": "Mueve esta ficha con el valor del dado"
+  },
+  "zoom": {
+    "resetA11y": "Restablecer zoom",
+    "zoomA11y": "Acercar el tablero",
+    "reset": "Restablecer",
+    "pinch": "Pellizca para hacer zoom"
+  },
+  "board": {
+    "home": "META"
+  },
+  "turnBanner": {
+    "youWon": "¡Ganaste!",
+    "wins": "Gana {{color}}",
+    "yourTurn": "Tu turno",
+    "turn": "Turno de {{color}}"
+  }
+}

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -57,6 +58,7 @@ export function AnimatedPiece2D({
       : 0;
   const targetX = (col + 0.5) * cellSize + offset;
   const targetY = (row + 0.5) * cellSize + offsetY;
+  const { t } = useTranslation('game');
   const x = useSharedValue(targetX);
   const y = useSharedValue(targetY);
   const hop = useSharedValue(0);
@@ -132,7 +134,7 @@ export function AnimatedPiece2D({
     transform: [{ translateX: x.value }, { translateY: y.value + hop.value }],
   }));
   // The hit area moves with the piece. Legal pieces stay above inactive safe-square stacks.
-  const hitSize = Math.max(cellSize * 1.35, Math.min(44, cellSize * 1.9));
+  const hitSize = Math.max(cellSize * 1.35, Math.min(48, cellSize * 1.9));
   return (
     <Animated.View
       pointerEvents={move ? 'auto' : 'none'}
@@ -152,7 +154,10 @@ export function AnimatedPiece2D({
         color={color}
         fill={fill}
         pieceStyle={pieceStyle}
-        label={`${color} piece ${yardSlot + 1}`}
+        label={t('piece.numbered', {
+          color: t(`colors.${color}`).toUpperCase(),
+          number: yardSlot + 1,
+        })}
         isTappable={Boolean(move)}
         motionEnabled={motionEnabled}
         size={cellSize * (stackCount > 1 ? 0.65 : progress === 0 ? 1.25 : 0.88)}

@@ -1,0 +1,156 @@
+{
+  "title": "Um pouco mais de você.",
+  "subtitle": "A COLEÇÃO DO CLUBE",
+  "intro": "Tabuleiros avulsos. Dados exclusivos. Pacotes de tema completos.\nDesbloqueie um visual novo com as moedas que você ganha jogando.",
+  "fair": {
+    "label": "TODO VISUAL. O MESMO JOGO JUSTO.",
+    "title": "Estilo é a única vantagem.",
+    "text": "Todos os itens visuais funcionam em 2D e 3D. O acabamento dos dados nunca muda as chances."
+  },
+  "topUp": {
+    "label": "RECARGA",
+    "title": "Pegue gemas e moedas",
+    "text": "Pule a ralação quando quiser — jogar continua sempre grátis.",
+    "openA11y": "Abrir a loja de recarga",
+    "open": "Loja"
+  },
+  "tabs": {
+    "board": "Tabuleiros · {{total}}",
+    "dice": "Dados · {{total}}",
+    "pack": "Pacotes de Tema · {{total}}",
+    "style": "Estilos de mesa · {{total}}"
+  },
+  "ownedFilter": "{{box}} Meus itens",
+  "card": {
+    "a11yEquipped": "Ver {{name}}, equipado",
+    "a11yOwned": "Ver {{name}}, adquirido",
+    "a11yPriceCoins_one": "Ver {{name}}, {{count}} moeda",
+    "a11yPriceCoins_many": "Ver {{name}}, {{count}} de moedas",
+    "a11yPriceCoins_other": "Ver {{name}}, {{count}} moedas",
+    "a11yPriceGems_one": "Ver {{name}}, {{count}} gema",
+    "a11yPriceGems_many": "Ver {{name}}, {{count}} de gemas",
+    "a11yPriceGems_other": "Ver {{name}}, {{count}} gemas",
+    "endsIn": "TERMINA EM {{time}}",
+    "equipped": "✓ Equipado",
+    "owned": "Adquirido"
+  },
+  "footer": {
+    "noCashValue": "As moedas são ganhas neste app e não têm valor em dinheiro.",
+    "member": "Suas moedas e sua coleção ficam guardadas na sua conta.",
+    "guest": "Entre para desbloquear visuais; as moedas e sua coleção ficam na sua conta."
+  },
+  "shop": {
+    "title": "Recarga",
+    "clubMember": "MEMBRO DO CLUBE",
+    "subscription": "ASSINATURA",
+    "clubActive": "Ativa até {{date}}. Giros extras são grátis e todo presente traz gemas.",
+    "joinClubA11y": "Assinar o Ludo Club por {{price}} por mês",
+    "perMonth": "{{price}}/mês",
+    "piggyLabel": "COFRINHO",
+    "piggySaved": "{{amount}} guardadas",
+    "crackPiggyA11y": "Quebrar o cofrinho por {{price}}",
+    "piggyFilling": "Enchendo…",
+    "buyA11y": "Comprar {{name}} por {{price}}",
+    "note": "Os pagamentos são feitos pela loja de apps. Moedas e gemas são para jogar aqui — elas nunca podem ser convertidas de volta em dinheiro."
+  },
+  "products": {
+    "ludo.starter": {
+      "name": "Pacote Inicial",
+      "blurb": "Pacote único: uma boa reserva de moedas e um punhado de gemas."
+    },
+    "ludo.gems.small": {
+      "name": "Saquinho de Gemas",
+      "blurb": "160 gemas."
+    },
+    "ludo.gems.medium": {
+      "name": "Bolsa de Gemas",
+      "blurb": "900 gemas — o passe de temporada e mais."
+    },
+    "ludo.gems.large": {
+      "name": "Baú de Gemas",
+      "blurb": "4.200 gemas para a coleção inteira."
+    },
+    "ludo.coins.small": {
+      "name": "Pilha de Moedas",
+      "blurb": "12.000 moedas — um lugar na mesa de 10 mil."
+    },
+    "ludo.coins.large": {
+      "name": "Cofre de Moedas",
+      "blurb": "75.000 moedas — a mesa de 50 mil espera por você."
+    },
+    "ludo.pass": {
+      "name": "Passe Premium",
+      "blurb": "A trilha premium desta temporada, paga direto."
+    },
+    "ludo.piggy": {
+      "name": "Cofrinho",
+      "blurb": "Cada partida enche o cofrinho. Quebre e fique com tudo o que está dentro."
+    },
+    "ludo.club": {
+      "name": "Ludo Club",
+      "blurb": "Giros extras grátis e 10 gemas em cada presente diário."
+    }
+  },
+  "preview": {
+    "title": "Prévia",
+    "rarityKind": "{{kind}} {{rarity}}",
+    "includes": "Inclui {{board}}, dados combinando e cartões de jogador coordenados. Equipe o visual completo ou combine o tabuleiro e os dados com sua coleção.",
+    "unlockPrice": "Preço para desbloquear",
+    "guestNote": "As moedas e os visuais desbloqueados ficam na sua conta. Entre para usá-los aqui.",
+    "walletFailed": "Não foi possível carregar suas moedas. Reconecte e tente de novo antes de desbloquear.",
+    "balanceAfter": "Seu saldo após a compra",
+    "saving": "Salvando…",
+    "currentlyEquipped": "✓ Equipado agora",
+    "equip": "Equipar este visual",
+    "signIn": "Entre para desbloquear",
+    "reconnect": "Reconecte para desbloquear",
+    "earnMoreCoins": "Ganhe mais moedas para desbloquear",
+    "earnMoreGems": "Ganhe mais gemas para desbloquear",
+    "unlockCoins_one": "Desbloquear e equipar · {{count}} moeda",
+    "unlockCoins_many": "Desbloquear e equipar · {{count}} de moedas",
+    "unlockCoins_other": "Desbloquear e equipar · {{count}} moedas",
+    "unlockGems_one": "Desbloquear e equipar · {{count}} gema",
+    "unlockGems_many": "Desbloquear e equipar · {{count}} de gemas",
+    "unlockGems_other": "Desbloquear e equipar · {{count}} gemas",
+    "giftCoins_one": "Presentear um amigo · {{count}} moeda",
+    "giftCoins_many": "Presentear um amigo · {{count}} de moedas",
+    "giftCoins_other": "Presentear um amigo · {{count}} moedas",
+    "giftGems_one": "Presentear um amigo · {{count}} gema",
+    "giftGems_many": "Presentear um amigo · {{count}} de gemas",
+    "giftGems_other": "Presentear um amigo · {{count}} gemas",
+    "trialActive": "Testando agora · faltam {{time}}",
+    "trialOffer": "Teste grátis por 24 horas",
+    "trialReward": "Veja um anúncio curto",
+    "trialActiveCaption": "Aproveite! Entre quando quiser para que seja seu para sempre.",
+    "trialCaption": "O app inteiro se veste com este tabuleiro por um dia.",
+    "oneUnlock": "Um desbloqueio. Seu em todas as visões do tabuleiro."
+  },
+  "gift": {
+    "title": "Enviar como presente",
+    "bodyCoins_one": "{{name}} · {{count}} moeda do seu saldo. Seu amigo fica com o item para sempre.",
+    "bodyCoins_many": "{{name}} · {{count}} de moedas do seu saldo. Seu amigo fica com o item para sempre.",
+    "bodyCoins_other": "{{name}} · {{count}} moedas do seu saldo. Seu amigo fica com o item para sempre.",
+    "bodyGems_one": "{{name}} · {{count}} gema do seu saldo. Seu amigo fica com o item para sempre.",
+    "bodyGems_many": "{{name}} · {{count}} de gemas do seu saldo. Seu amigo fica com o item para sempre.",
+    "bodyGems_other": "{{name}} · {{count}} gemas do seu saldo. Seu amigo fica com o item para sempre.",
+    "loading": "Carregando seus amigos…",
+    "empty": "Nenhum amigo ainda — adicione alguns na tela Amigos e compartilhe a diversão.",
+    "sendA11y": "Enviar para {{name}}",
+    "send": "Enviar"
+  },
+  "packPreview": {
+    "player": "JOGADOR",
+    "yourTurn": "Sua vez"
+  },
+  "notices": {
+    "adNotFinished": "O anúncio não terminou. Tente de novo daqui a pouco.",
+    "trialStarted": "Aproveite pelas próximas 24 horas — entre para que seja seu para sempre.",
+    "trialFailed": "Não foi possível começar o teste.",
+    "giftSent": "{{name}} está a caminho de {{friend}}!",
+    "giftFailed": "Não foi possível enviar o presente.",
+    "purchaseDone": "Compra concluída. Aproveite!",
+    "purchaseFailed": "A compra não foi concluída.",
+    "equipped": "{{name}} equipado. Boa partida!",
+    "saveFailed": "Não foi possível salvar a compra. Tente de novo."
+  }
+}

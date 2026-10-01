@@ -1,0 +1,59 @@
+{
+  "title": "Just how you like it.",
+  "subtitle": "YOUR PREFERENCES",
+  "language": {
+    "label": "LANGUAGE",
+    "title": "Choose your language",
+    "system": "Phone language",
+    "systemHint": "Currently {{language}}",
+    "a11y": "{{name}}, {{englishName}}"
+  },
+  "name": {
+    "label": "AT THE TABLE",
+    "title": "What should we call you?",
+    "a11y": "Player name",
+    "placeholder": "Your name",
+    "save": "Save name"
+  },
+  "lookAndFeel": {
+    "label": "LOOK & FEEL",
+    "board3d": {
+      "title": "Play in 3D",
+      "hint": "A dimensional board with sculpted pieces. Switch views during any match."
+    },
+    "reducedMotion": {
+      "title": "Reduced motion",
+      "hint": "Keep coins and dice still, with clear outlines for playable pieces."
+    },
+    "soundEnabled": {
+      "title": "Game sounds",
+      "hint": "Soft dice rolls, wooden taps, captures, and homecoming chimes."
+    }
+  },
+  "saved": "Preferences saved.",
+  "saveFailed": "Could not save preferences. Please try again.",
+  "about": {
+    "label": "ABOUT THE CLUB",
+    "title": "Good times, wherever you are.",
+    "offline": "Ludo Rumble works offline. Matches and settings are stored on this device; coins and your collection are kept on your account when you sign in.",
+    "currency": "Daily gifts reset at midnight UTC. Coins and gems can be earned by playing or bought in the app, but they can never be transferred or redeemed for money.",
+    "feedback": "Send feedback or report a bug",
+    "howToPlay": "How to play",
+    "adPrivacy": "Ad privacy choices"
+  },
+  "version": {
+    "label": "APP VERSION",
+    "name": "Ludo Rumble {{version}}",
+    "includesUpdate": "Includes update {{id}}",
+    "storeRelease": "Store release",
+    "check": "Check for updates",
+    "checking": "Checking…",
+    "result": {
+      "up-to-date": "You’re on the latest version.",
+      "downloaded": "Update downloaded. Restart to apply it.",
+      "unavailable": "Updates are installed from the store in this build.",
+      "failed": "Couldn’t check for updates. Check your connection and try again.",
+      "store": "A new version is available in the store."
+    }
+  }
+}

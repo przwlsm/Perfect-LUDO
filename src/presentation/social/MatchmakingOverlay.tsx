@@ -13,11 +13,14 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { VARIANT_INFO, tablePrize, type GameVariant } from '@/domain';
+import { useTranslation } from 'react-i18next';
+import { tablePrize, type GameVariant } from '@/domain';
+import { useCatalogText } from '../i18n/useCatalogText';
 import { Text } from '../components/AppText';
 import { LiveDot, Shine } from '../components/Live';
 import { UserAvatar } from './UserAvatar';
 import { ui } from '../theme/themes';
+import { numberLocale } from '../i18n/format';
 
 /** Faces the opponent slots flick through while the search runs. */
 const ROLL_FACES = [
@@ -71,6 +74,8 @@ export function MatchmakingOverlay({
   onCancel(): void;
 }) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation('online');
+  const { variantTitle } = useCatalogText();
   const [seconds, setSeconds] = useState(0);
   const motion = motionEnabled && visible;
 
@@ -100,7 +105,7 @@ export function MatchmakingOverlay({
         <View style={s.topRow}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Cancel search"
+            accessibilityLabel={t('cancelSearch')}
             onPress={onCancel}
             style={s.back}
           >
@@ -110,24 +115,29 @@ export function MatchmakingOverlay({
             <LiveDot color={ui.green} active={motion} />
             <Text style={s.bannerText}>
               {matched
-                ? 'LET’S PLAY!'
+                ? t('matchmaking.letsPlay')
                 : teams
-                  ? 'FINDING YOUR TEAM'
+                  ? t('matchmaking.findingTeam')
                   : seats > 2
-                    ? 'FINDING YOUR RIVALS'
-                    : 'FINDING YOUR RIVAL'}
+                    ? t('matchmaking.findingRivals')
+                    : t('matchmaking.findingRival')}
             </Text>
           </View>
-          <View style={{ width: 44 }} />
+          <View style={{ width: 48 }} />
         </View>
         <View style={s.tableInfo}>
           <Text style={s.table}>
-            {VARIANT_INFO[variant].title} · {teams ? '2 v 2 teams' : `${seats} players`}
+            {teams
+              ? t('matchmaking.tableTeams', { mode: variantTitle(variant) })
+              : t('matchmaking.tablePlayers', { mode: variantTitle(variant), count: seats })}
           </Text>
           <Text style={s.stake}>
             {stake > 0
-              ? `Entry ${stake.toLocaleString()}  ·  Win ${tablePrize(stake, seats).toLocaleString()}`
-              : 'Free entry'}
+              ? t('matchmaking.stake', {
+                  entry: stake.toLocaleString(numberLocale()),
+                  prize: tablePrize(stake, seats).toLocaleString(numberLocale()),
+                })
+              : t('matchmaking.freeEntry')}
           </Text>
         </View>
 
@@ -143,7 +153,11 @@ export function MatchmakingOverlay({
               />
             </PlayerCard>
             {teams && (
-              <PlayerCard label={matched ? 'Partner!' : 'Partner?'} tint={SLOT_COLORS[1]!} compact>
+              <PlayerCard
+                label={matched ? t('matchmaking.partnerFound') : t('matchmaking.partnerUnknown')}
+                tint={SLOT_COLORS[1]!}
+                compact
+              >
                 <RollingFace rolling={!matched && motion} offset={3} size={64} found={matched} />
               </PlayerCard>
             )}
@@ -153,7 +167,7 @@ export function MatchmakingOverlay({
             {Array.from({ length: teams ? 2 : opponents }, (_, i) => (
               <PlayerCard
                 key={i}
-                label={matched ? 'Found!' : '?????'}
+                label={matched ? t('matchmaking.found') : '?????'}
                 tint={teams ? SLOT_COLORS[i === 0 ? 0 : 2]! : SLOT_COLORS[i % SLOT_COLORS.length]!}
                 compact={opponents > 1}
               >
@@ -173,19 +187,19 @@ export function MatchmakingOverlay({
           <Text style={s.timerText}>{clock}</Text>
         </View>
         <Text style={s.waiting}>
-          {matched
-            ? 'All seats filled — taking you to the table…'
-            : `${waiting ?? 1} ${waiting === 1 ? 'player' : 'players'} in this queue`}
+          {matched ? t('matchmaking.allFilled') : t('matchmaking.inQueue', { count: waiting ?? 1 })}
         </Text>
 
         <View style={s.searchWrap}>
           <LinearGradient colors={['#4d8eff', '#2f62d8']} style={s.search}>
             <Shine active={motion && !matched} width={300} every={900} />
-            <Text style={s.searchText}>{matched ? 'Match found!' : 'Searching for players…'}</Text>
+            <Text style={s.searchText}>
+              {matched ? t('matchmaking.matchFound') : t('matchmaking.searching')}
+            </Text>
           </LinearGradient>
         </View>
         {error && <Text style={s.error}>{error}</Text>}
-        <Text style={s.hint}>Keep this screen open — leaving cancels your search.</Text>
+        <Text style={s.hint}>{t('matchmaking.hint')}</Text>
       </LinearGradient>
     </Modal>
   );
@@ -302,8 +316,8 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
   },
   back: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: 14,
     backgroundColor: '#ffffff14',
     alignItems: 'center',

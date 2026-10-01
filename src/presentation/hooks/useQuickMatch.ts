@@ -8,6 +8,7 @@ import type {
   Unsubscribe,
 } from '@/domain';
 import { useSocial } from '../state/SocialProvider';
+import { i18n } from '../i18n';
 
 /** How often a waiting ticket is refreshed; the server drops tickets quiet for 45 s. */
 export const HEARTBEAT_MS = 5000;
@@ -29,7 +30,7 @@ export interface QuickMatchState {
 }
 
 function messageFor(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
+  return error instanceof Error ? error.message : i18n.t('common:errors.generic');
 }
 
 /**

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { displayNameOf, requiredFriendCount, toggleSelection, type Friend } from '@/domain';
 import { Body, Button, Label, shared, Sheet } from '../components/Kit';
@@ -29,6 +30,7 @@ export function ChallengeSheet({
   onCreate(friendIds: readonly string[]): void;
 }) {
   const { theme } = useProfile();
+  const { t } = useTranslation('social');
   const [playerCount, setPlayerCount] = useState<2 | 3>(2);
   // Seeded from whoever's Challenge button opened the sheet. The parent
   // remounts this component per opening, so there is nothing to reset.
@@ -47,8 +49,8 @@ export function ChallengeSheet({
   }
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Create challenge">
-      <Label>HOW MANY PLAYERS?</Label>
+    <Sheet visible={visible} onClose={onClose} title={t('challenge.title')}>
+      <Label>{t('challenge.howMany')}</Label>
       <View style={shared.row}>
         {PLAYER_COUNTS.map((count) => {
           const active = count === playerCount;
@@ -56,7 +58,7 @@ export function ChallengeSheet({
             <Pressable
               key={count}
               accessibilityRole="button"
-              accessibilityLabel={`${count} players`}
+              accessibilityLabel={t('challenge.playersA11y', { count })}
               accessibilityState={{ selected: active }}
               onPress={() => choosePlayerCount(count)}
               android_ripple={{ color: `${theme.accent}30` }}
@@ -67,21 +69,21 @@ export function ChallengeSheet({
               ]}
             >
               <Text style={[s.countNumber, active && { color: theme.accent }]}>{count}</Text>
-              <Text style={s.countLabel}>PLAYERS</Text>
+              <Text style={s.countLabel}>{t('challenge.players')}</Text>
             </Pressable>
           );
         })}
       </View>
 
       <View style={shared.between}>
-        <Label>{required === 1 ? 'SELECT 1 FRIEND' : `SELECT ${required} FRIENDS`}</Label>
+        <Label>{t('challenge.selectFriends', { count: required })}</Label>
         <Text style={[s.counter, ready && { color: theme.accent }]}>
-          Selected: {picked.length} / {required}
+          {t('challenge.selected', { picked: picked.length, required })}
         </Text>
       </View>
 
       {friends.length === 0 ? (
-        <Body>Add a friend first — challenges are private games between friends.</Body>
+        <Body>{t('challenge.noFriends')}</Body>
       ) : (
         <View style={{ gap: 8 }}>
           {friends.map((friend) => {
@@ -92,7 +94,7 @@ export function ChallengeSheet({
               <Pressable
                 key={friend.id}
                 accessibilityRole="checkbox"
-                accessibilityLabel={`Select ${name}`}
+                accessibilityLabel={t('challenge.selectA11y', { name })}
                 accessibilityState={{ checked: isPicked, disabled: full }}
                 disabled={full || busy}
                 onPress={() => setSelected(toggleSelection(picked, friend.id, required))}
@@ -137,11 +139,9 @@ export function ChallengeSheet({
       )}
 
       <Button disabled={!ready || busy} onPress={() => onCreate(picked)}>
-        {busy ? 'Creating…' : `Start challenge · ${playerCount} players`}
+        {busy ? t('challenge.creating') : t('challenge.start', { count: playerCount })}
       </Button>
-      <Text style={[shared.small, { textAlign: 'center' }]}>
-        Invited friends get a notification right away. It expires if nobody answers.
-      </Text>
+      <Text style={[shared.small, { textAlign: 'center' }]}>{t('challenge.footnote')}</Text>
     </Sheet>
   );
 }

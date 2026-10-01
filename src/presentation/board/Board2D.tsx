@@ -21,6 +21,7 @@ import {
   yardRestSpots,
 } from './boardLayout';
 import { getCellForPiece } from './getCellForPiece';
+import { keepLtr } from '../i18n/rtl';
 
 const ENTRY_ARROWS = ['→', '↓', '←', '↑'] as const;
 
@@ -100,7 +101,9 @@ export function Board2D({
   );
 
   return (
-    <View style={[styles.board, { width: size, height: size, backgroundColor: theme.tile }]}>
+    <View
+      style={[styles.board, keepLtr, { width: size, height: size, backgroundColor: theme.tile }]}
+    >
       {theme.wood && (
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
           {Array.from({ length: 45 }, (_, i) => (

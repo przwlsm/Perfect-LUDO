@@ -1,0 +1,197 @@
+{
+  "brand": {
+    "tagline": "BUENOS RATOS. GRANDES JUGADAS.",
+    "homeA11y": "Inicio de Ludo Rumble",
+    "defaultSubtitle": "HAZ TU PRÓXIMA JUGADA"
+  },
+  "actions": {
+    "back": "Atrás",
+    "close": "Cerrar",
+    "closeDialog": "Cerrar diálogo",
+    "retry": "Reintentar",
+    "retryLoading": "Reintentar la carga",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "continue": "Continuar",
+    "done": "Listo",
+    "later": "Más tarde",
+    "notNow": "Ahora no",
+    "ok": "OK"
+  },
+  "nav": {
+    "play": "Jugar",
+    "online": "En línea",
+    "rewards": "Recompensas",
+    "friends": "Amigos",
+    "profile": "Perfil",
+    "accountRequired": "{{label}}, requiere una cuenta"
+  },
+  "wallet": {
+    "vaultA11y": "{{amount}} monedas en tu bóveda. Abrir recompensas",
+    "loadFailedA11y": "No se pudieron cargar las monedas. Reintentar",
+    "coinsA11y": "{{amount}} monedas. Abrir la tienda",
+    "gemsA11y": "{{amount}} gemas. Abrir recompensas",
+    "levelA11y": "Nivel {{level}}"
+  },
+  "connection": {
+    "a11y": "Conexión: {{label}}",
+    "ONLINE": "En línea",
+    "CONNECTING": "Conectando…",
+    "RECONNECTING": "Reconectando…",
+    "SERVER_UNAVAILABLE": "Servidor no disponible",
+    "OFFLINE": "Sin conexión",
+    "offlineBuild": "Versión sin conexión"
+  },
+  "loader": {
+    "settingUp": "Preparando el tablero…",
+    "tipTitle": "CONSEJO DE LUDO",
+    "tips": {
+      "sixOut": "Con un seis sacas una ficha de casa.",
+      "sixAgain": "Si sacas un seis, vuelves a tirar.",
+      "starSafe": "Las casillas con estrella son seguras: nadie te puede comer ahí.",
+      "block": "Dos fichas en una casilla forman un bloqueo que ningún rival puede pisar.",
+      "captureBonus": "Comer una ficha te da un tiro extra.",
+      "threeSixes": "Tres seises seguidos y pierdes el turno.",
+      "exactRoll": "Necesitas el número exacto para llegar a la meta.",
+      "onlinePays": "Ganar en línea da más monedas y XP.",
+      "dailyWheel": "Gira la ruleta de la suerte cada día y gana premios gratis.",
+      "killAndGo": "En Come y Corre, primero come una ficha y luego ve a la meta."
+    }
+  },
+  "errors": {
+    "generic": "Algo salió mal. Inténtalo de nuevo.",
+    "network": "No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo."
+  },
+  "defaultPlayerName": "Jugador",
+  "variants": {
+    "classic": {
+      "title": "Clásico",
+      "short": "CLÁSICO",
+      "description": "La partida completa: lleva tus cuatro fichas a la meta para ganar."
+    },
+    "quick1": {
+      "title": "Rápido · 1 ficha",
+      "short": "RÁPIDO 1",
+      "description": "Una partida veloz: gana la primera ficha que llegue a la meta."
+    },
+    "quick2": {
+      "title": "Rápido · 2 fichas",
+      "short": "RÁPIDO 2",
+      "description": "Una partida corta: gana el primero en llevar dos fichas a la meta."
+    },
+    "kill": {
+      "title": "Come y Corre",
+      "short": "COME Y CORRE",
+      "description": "Come al menos una ficha rival antes de que tus fichas puedan entrar en tu camino a la meta."
+    }
+  },
+  "rarity": {
+    "Classic": "Clásico",
+    "Rare": "Raro",
+    "Epic": "Épico",
+    "Legendary": "Legendario"
+  },
+  "kind": {
+    "board": "Tablero",
+    "dice": "Dado",
+    "pack": "Paquete",
+    "style": "Estilo"
+  },
+  "cosmetics": {
+    "diceName": "Dado {{board}}",
+    "diceDescription": "El dado exclusivo a juego con {{board}}.",
+    "packName": "Paquete {{board}}",
+    "heritagePackName": "Paquete Tema de Madera",
+    "packDescription": "Tablero, dado exclusivo, tarjetas de jugador y estilo de la app a juego.",
+    "items": {
+      "heritage": {
+        "name": "Madera Tradicional",
+        "description": "Cálida madera marfil. Verde bosque, mostaza, ladrillo y azul profundo."
+      },
+      "classic": {
+        "name": "Arcade Clásico",
+        "description": "El original. Siempre una buena jugada."
+      },
+      "royal": {
+        "name": "Palacio Real",
+        "description": "Un lugar en la mesa dorada."
+      },
+      "neon": {
+        "name": "Noches de Neón",
+        "description": "Al caer la noche, cada jugada brilla."
+      },
+      "forest": {
+        "name": "Refugio del Bosque",
+        "description": "Un poco más cerca de la naturaleza."
+      },
+      "ocean": {
+        "name": "Azul Océano",
+        "description": "Haz olas en el tablero."
+      },
+      "rose": {
+        "name": "Cuarzo Rosa",
+        "description": "Tonos suaves. Estrategia afilada."
+      },
+      "sunset": {
+        "name": "Atardecer del Desierto",
+        "description": "Arenas cálidas, victorias doradas."
+      },
+      "arctic": {
+        "name": "Escarcha Ártica",
+        "description": "Mantén la calma. Toma la delantera."
+      },
+      "cosmic": {
+        "name": "Viaje Cósmico",
+        "description": "Tu próxima victoria está escrita en las estrellas."
+      },
+      "jade": {
+        "name": "Dinastía de Jade",
+        "description": "Hecho para un juego eterno."
+      },
+      "candy": {
+        "name": "Club de Dulces",
+        "description": "Un toque dulce para un clásico."
+      },
+      "obsidian": {
+        "name": "Obsidiana y Oro",
+        "description": "Confianza serena. Oro puro."
+      },
+      "diwali": {
+        "name": "Festival de las Luces",
+        "description": "Una noche de caléndulas. Llega con el festival, tuyo para siempre."
+      },
+      "ivory": {
+        "name": "Marfil Original",
+        "description": "Un tiro familiar, hecho con belleza."
+      },
+      "gold": {
+        "name": "Hora Dorada",
+        "description": "Un poco de oro en cada tiro."
+      },
+      "ruby": {
+        "name": "Rojo Rubí",
+        "description": "Audaz, brillante y listo para rodar."
+      },
+      "mint": {
+        "name": "Menta Fresca",
+        "description": "Un cambio de suerte refrescante."
+      },
+      "galaxy": {
+        "name": "Dado Galáctico",
+        "description": "Un pedacito del universo."
+      },
+      "midnight": {
+        "name": "Metal de Medianoche",
+        "description": "Acabado oscuro. Detalles dorados."
+      },
+      "triangle-homes": {
+        "name": "Casas en Punta",
+        "description": "Mesas grandes: cada casa llena el espacio entre los brazos."
+      },
+      "round-homes": {
+        "name": "Casas Redondas",
+        "description": "Las casas redondas originales para mesas de 5 y 6 jugadores."
+      }
+    }
+  }
+}

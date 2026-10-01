@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { router } from 'expo-router';
 import { Body, Button, Card, Label, Sheet, shared } from '../components/Kit';
@@ -21,11 +22,12 @@ export function AccountGateCard({
   feature,
   onContinueAsGuest,
 }: {
-  /** Named so the copy can say what, exactly, is locked. */
+  /** Named so the copy can say what, exactly, is locked; already in the player's language. */
   feature: string;
   onContinueAsGuest(): void;
 }) {
   const { theme } = useProfile();
+  const { t } = useTranslation('account');
   return (
     <Card style={{ borderColor: `${theme.accent}40` }}>
       <View style={shared.row}>
@@ -33,17 +35,14 @@ export function AccountGateCard({
           <Text style={{ fontSize: 24 }}>🔒</Text>
         </View>
         <View style={{ flex: 1, gap: 4 }}>
-          <Label color={theme.accent}>ACCOUNT FEATURE</Label>
-          <Text style={shared.sectionTitle}>Create an account to unlock {feature}</Text>
+          <Label color={theme.accent}>{t('gate.label')}</Label>
+          <Text style={shared.sectionTitle}>{t('gate.title', { feature })}</Text>
         </View>
       </View>
-      <Body>
-        Sign in to save your progress, add friends, view your game history, and more. Everything you
-        have played as a guest comes with you.
-      </Body>
-      <Button onPress={() => router.push(SIGN_UP_HREF)}>Login / Sign Up</Button>
+      <Body>{t('gate.body')}</Body>
+      <Button onPress={() => router.push(SIGN_UP_HREF)}>{t('gate.cta')}</Button>
       <Button secondary compact onPress={onContinueAsGuest}>
-        Continue as Guest
+        {t('gate.guest')}
       </Button>
     </Card>
   );
@@ -58,9 +57,10 @@ export function AccountGateSheet({
   visible: boolean;
   onClose(): void;
 }) {
+  const { t } = useTranslation('account');
   return (
-    <Sheet visible={visible} onClose={onClose} title="Unlock with an account">
-      <AccountGateCard feature={feature ?? 'this feature'} onContinueAsGuest={onClose} />
+    <Sheet visible={visible} onClose={onClose} title={t('gate.sheetTitle')}>
+      <AccountGateCard feature={feature ?? t('gate.thisFeature')} onContinueAsGuest={onClose} />
     </Sheet>
   );
 }

@@ -1,0 +1,25 @@
+{
+  "step": "{{current}} / {{total}}",
+  "skip": "Saltar",
+  "skipA11y": "Saltar el recorrido",
+  "next": "Siguiente",
+  "start": "¡A jugar!",
+  "pages": {
+    "roll": {
+      "title": "Saca un seis para empezar",
+      "text": "Saca un seis para sacar una ficha de tu casa. Cada seis te da otro tiro."
+    },
+    "race": {
+      "title": "Lleva tus fichas a la meta",
+      "text": "Avanza en el sentido de las agujas del reloj por el tablero y luego sube por tu carril de color. Necesitas el número exacto para terminar."
+    },
+    "capture": {
+      "title": "Come o ponte a salvo",
+      "text": "Cae sobre un rival para mandarlo de vuelta a su casa. Las casillas con estrella y las de salida son seguras, y comer te da un tiro extra."
+    },
+    "modes": {
+      "title": "Juega a tu manera",
+      "text": "Enfréntate a la computadora sin conexión, pasa el teléfono entre amigos o juega en línea en partidas rápidas. Inicia sesión para conservar tus monedas y tu progreso."
+    }
+  }
+}

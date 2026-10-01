@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text, TextInput } from '../components/AppText';
 import { router } from 'expo-router';
 import { challengeRepository } from '@/config/container';
@@ -14,16 +15,19 @@ import { RequestList } from '../social/RequestList';
 import { SearchResultList } from '../social/SearchResultList';
 import { ui } from '../theme/themes';
 
-type Tab = 'friends' | 'requests' | 'sent';
+const TABS = ['friends', 'requests', 'sent'] as const;
+type Tab = (typeof TABS)[number];
 
 export default function FriendsScreen() {
   const { enabled, signedIn, account } = useSocial();
+  const { t } = useTranslation(['social', 'common']);
   const friends = useFriends();
   const [tab, setTab] = useState<Tab>('friends');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [seedFriendId, setSeedFriendId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
+  // A server message when there is one; otherwise the fallback is translated at render.
+  const [createError, setCreateError] = useState<{ message?: string } | null>(null);
 
   async function createChallenge(friendIds: readonly string[]) {
     if (!challengeRepository) return;
@@ -34,7 +38,7 @@ export default function FriendsScreen() {
       setSheetOpen(false);
       router.push({ pathname: '/lobby/[id]', params: { id: lobbyId } });
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : 'The game could not be created.');
+      setCreateError(e instanceof Error ? { message: e.message } : {});
     } finally {
       setCreating(false);
     }
@@ -51,7 +55,7 @@ export default function FriendsScreen() {
   if (account === 'guest') return <GuestLocked />;
 
   return (
-    <Screen title="Friends" subtitle="PLAY WITH PEOPLE YOU KNOW">
+    <Screen title={t('friends.title')} subtitle={t('friends.subtitle')}>
       <FriendsHeader count={friends.friends.length} online={friends.onlineCount} />
       <SearchField value={friends.query} onChange={friends.setQuery} />
 
@@ -97,24 +101,24 @@ export default function FriendsScreen() {
           ) : tab === 'requests' ? (
             <RequestList
               requests={friends.incoming}
-              empty="No friend requests right now."
+              empty={t('requests.incomingEmpty')}
               busyId={friends.busyId}
-              primaryLabel="Accept"
-              secondaryLabel="Decline"
+              primaryLabel={t('requests.accept')}
+              secondaryLabel={t('requests.decline')}
               onPrimary={friends.acceptRequest}
               onSecondary={friends.declineRequest}
             />
           ) : (
             <RequestList
               requests={friends.sent}
-              empty="You haven’t sent any requests."
+              empty={t('requests.sentEmpty')}
               busyId={friends.busyId}
-              secondaryLabel="Cancel"
+              secondaryLabel={t('common:actions.cancel')}
               onSecondary={friends.cancelRequest}
             />
           )}
           {friends.friends.length > 0 && (
-            <Button onPress={() => openChallenge(null)}>Create a challenge →</Button>
+            <Button onPress={() => openChallenge(null)}>{t('friends.createChallenge')}</Button>
           )}
         </>
       )}
@@ -126,7 +130,7 @@ export default function FriendsScreen() {
         friends={friends.friends}
         seedFriendId={seedFriendId}
         busy={creating}
-        error={createError}
+        error={createError ? (createError.message ?? t('friends.createFailed')) : null}
         onClose={() => setSheetOpen(false)}
         onCreate={(ids) => void createChallenge(ids)}
       />
@@ -141,22 +145,22 @@ function Loading() {
 
 function FriendsHeader({ count, online }: { count: number; online: number }) {
   const { identity } = useSocial();
+  const { t } = useTranslation('social');
   return (
     <View style={shared.between}>
       <View style={{ gap: 4 }}>
-        <Text style={s.headline}>
-          {count} {count === 1 ? 'friend' : 'friends'}
-        </Text>
+        <Text style={s.headline}>{t('friends.count', { count })}</Text>
         {identity && (
           <Text style={shared.small}>
-            You are @{identity.username}
-            {identity.publicId ? ` · ID ${identity.publicId}` : ''}
+            {identity.publicId
+              ? t('friends.youWithId', { username: identity.username, id: identity.publicId })
+              : t('friends.you', { username: identity.username })}
           </Text>
         )}
       </View>
       <View style={s.onlinePill}>
         <View style={s.onlineDot} />
-        <Text style={s.onlineText}>{online} ONLINE</Text>
+        <Text style={s.onlineText}>{t('friends.online', { online })}</Text>
       </View>
     </View>
   );
@@ -164,16 +168,17 @@ function FriendsHeader({ count, online }: { count: number; online: number }) {
 
 function SearchField({ value, onChange }: { value: string; onChange(next: string): void }) {
   const { theme } = useProfile();
+  const { t } = useTranslation('social');
   return (
     <View
       style={[s.searchBox, { borderColor: `${theme.accent}40`, backgroundColor: theme.surface }]}
     >
       <Text style={s.searchIcon}>⌕</Text>
       <TextInput
-        accessibilityLabel="Search username or user ID"
+        accessibilityLabel={t('search.a11y')}
         value={value}
         onChangeText={onChange}
-        placeholder="Search username or user ID…"
+        placeholder={t('search.placeholder')}
         placeholderTextColor={ui.subtle}
         autoCapitalize="none"
         autoCorrect={false}
@@ -182,7 +187,7 @@ function SearchField({ value, onChange }: { value: string; onChange(next: string
       {value.length > 0 && (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Clear search"
+          accessibilityLabel={t('search.clear')}
           onPress={() => onChange('')}
           android_ripple={{ color: '#ffffff25' }}
           style={s.clear}
@@ -204,14 +209,10 @@ function Tabs({
   onChange(next: Tab): void;
 }) {
   const { theme } = useProfile();
-  const entries: readonly (readonly [Tab, string])[] = [
-    ['friends', 'Friends'],
-    ['requests', 'Requests'],
-    ['sent', 'Sent'],
-  ];
+  const { t } = useTranslation('social');
   return (
     <View style={s.tabs}>
-      {entries.map(([key, label]) => (
+      {TABS.map((key) => (
         <Pressable
           key={key}
           accessibilityRole="tab"
@@ -223,7 +224,9 @@ function Tabs({
             tab === key && { backgroundColor: `${theme.accent}1c`, borderColor: theme.accent },
           ]}
         >
-          <Text style={[s.tabText, tab === key && { color: theme.accent }]}>{label}</Text>
+          <Text style={[s.tabText, tab === key && { color: theme.accent }]}>
+            {t(`tabs.${key}`)}
+          </Text>
           {counts[key] > 0 && (
             <View style={[s.badge, { backgroundColor: key === 'requests' ? ui.green : ui.line }]}>
               <Text style={[s.badgeText, key === 'requests' && { color: '#0b2019' }]}>
@@ -238,14 +241,12 @@ function Tabs({
 }
 
 function NoBackend() {
+  const { t } = useTranslation('social');
   return (
-    <Screen title="Friends" subtitle="PLAY WITH PEOPLE YOU KNOW">
+    <Screen title={t('friends.title')} subtitle={t('friends.subtitle')}>
       <Card>
-        <Body>
-          Playing with friends needs an account, and this build has no account service configured.
-          Everything else still works offline.
-        </Body>
-        <Button onPress={() => router.replace('/')}>Back to the game</Button>
+        <Body>{t('noBackend.body')}</Body>
+        <Button onPress={() => router.replace('/')}>{t('noBackend.back')}</Button>
       </Card>
     </Screen>
   );
@@ -253,31 +254,30 @@ function NoBackend() {
 
 /** Guests see why, not a failure: the offer to sign up, and the way back to play. */
 function GuestLocked() {
+  const { t } = useTranslation('social');
   return (
-    <Screen title="Friends" subtitle="PLAY WITH PEOPLE YOU KNOW">
-      <AccountGateCard feature="Friends" onContinueAsGuest={() => router.replace('/online')} />
-      <Text style={shared.small}>
-        As a guest you can still play online right now: Quick Play seats you with the next players
-        looking for a game.
-      </Text>
+    <Screen title={t('friends.title')} subtitle={t('friends.subtitle')}>
+      <AccountGateCard
+        feature={t('friends.title')}
+        onContinueAsGuest={() => router.replace('/online')}
+      />
+      <Text style={shared.small}>{t('guest.hint')}</Text>
     </Screen>
   );
 }
 
 function SignedOut() {
   const { theme } = useProfile();
+  const { t } = useTranslation('social');
   return (
-    <Screen title="Friends" subtitle="PLAY WITH PEOPLE YOU KNOW">
+    <Screen title={t('friends.title')} subtitle={t('friends.subtitle')}>
       <Card>
-        <Label color={theme.accent}>ONE ACCOUNT, EVERY GAME NIGHT</Label>
-        <Text style={shared.sectionTitle}>Sign in to add friends</Text>
-        <Body>
-          Your friends list, challenges and invitations live with your account, so they follow you
-          to every device.
-        </Body>
-        <Button onPress={() => router.push('/login')}>Sign in or create an account</Button>
+        <Label color={theme.accent}>{t('signedOut.label')}</Label>
+        <Text style={shared.sectionTitle}>{t('signedOut.title')}</Text>
+        <Body>{t('signedOut.body')}</Body>
+        <Button onPress={() => router.push('/login')}>{t('signedOut.signIn')}</Button>
         <Button secondary compact onPress={() => router.replace('/')}>
-          Keep playing offline
+          {t('signedOut.offline')}
         </Button>
       </Card>
     </Screen>
@@ -315,7 +315,7 @@ const s = StyleSheet.create({
     color: ui.text,
     fontSize: 15,
   },
-  clear: { width: 44, height: 48, alignItems: 'center', justifyContent: 'center' },
+  clear: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   tabs: { flexDirection: 'row', gap: 8 },
   tab: {
     flex: 1,
@@ -323,7 +323,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    minHeight: 44,
+    minHeight: 48,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: ui.line,

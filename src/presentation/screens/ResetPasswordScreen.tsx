@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { router } from 'expo-router';
 import { Body, Button, Card, Screen, shared } from '../components/Kit';
@@ -6,15 +7,16 @@ import { AuthField } from '../auth/AuthField';
 import { useAuthSession } from '../state/useAuthSession';
 
 export default function ResetPasswordScreen() {
+  const { t } = useTranslation('account');
   const auth = useAuthSession();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [done, setDone] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [mismatch, setMismatch] = useState(false);
   async function submit() {
-    setError(null);
+    setMismatch(false);
     if (password !== confirm) {
-      setError('Passwords do not match.');
+      setMismatch(true);
       return;
     }
     if (await auth.updatePassword(password)) {
@@ -23,30 +25,27 @@ export default function ResetPasswordScreen() {
       setDone(true);
     }
   }
+  const error = mismatch ? t('shared.passwordMismatch') : null;
   return (
-    <Screen nav={false} title={done ? 'Password updated' : 'Choose a new password'}>
+    <Screen nav={false} title={done ? t('reset.titleDone') : t('reset.title')}>
       <Card style={{ width: '100%', maxWidth: 480, alignSelf: 'center' }}>
         {done ? (
           <>
-            <Body>Your new password is ready. You are signed in.</Body>
-            <Button onPress={() => router.replace('/')}>Back to the game</Button>
+            <Body>{t('reset.doneBody')}</Body>
+            <Button onPress={() => router.replace('/')}>{t('shared.backToGame')}</Button>
           </>
         ) : !auth.user ? (
           <>
-            <Body>
-              {auth.busy
-                ? 'Checking your session...'
-                : 'Open your password reset email or verify its code to continue.'}
-            </Body>
+            <Body>{auth.busy ? t('reset.checking') : t('reset.openEmail')}</Body>
             <Button disabled={auth.busy} onPress={() => router.replace('/login')}>
-              Back to sign in
+              {t('shared.backToSignIn')}
             </Button>
           </>
         ) : (
           <>
-            <Body>Use at least 8 characters. Choose a password you do not use elsewhere.</Body>
+            <Body>{t('reset.rules')}</Body>
             <AuthField
-              label="New password"
+              label={t('reset.newPassword')}
               password
               value={password}
               onChangeText={setPassword}
@@ -54,7 +53,7 @@ export default function ResetPasswordScreen() {
               editable={!auth.busy}
             />
             <AuthField
-              label="Confirm new password"
+              label={t('reset.confirmNew')}
               password
               value={confirm}
               onChangeText={setConfirm}
@@ -65,10 +64,10 @@ export default function ResetPasswordScreen() {
               disabled={auth.busy || password.length < 8 || confirm.length < 8}
               onPress={() => void submit()}
             >
-              {auth.busy ? 'Updating...' : 'Save new password'}
+              {auth.busy ? t('reset.updating') : t('reset.save')}
             </Button>
             <Button secondary disabled={auth.busy} onPress={() => router.replace('/login')}>
-              Back to account
+              {t('reset.backToAccount')}
             </Button>
           </>
         )}

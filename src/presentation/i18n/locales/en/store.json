@@ -1,0 +1,148 @@
+{
+  "title": "A little more you.",
+  "subtitle": "THE CLUB COLLECTION",
+  "intro": "Individual boards. Signature dice. Complete theme packs.\nUnlock a new look with the coins you earn by playing.",
+  "fair": {
+    "label": "EVERY LOOK. THE SAME FAIR GAME.",
+    "title": "Style is the only advantage.",
+    "text": "All cosmetics work in 2D and 3D. Dice finishes never change the odds."
+  },
+  "topUp": {
+    "label": "TOP UP",
+    "title": "Get gems & coins",
+    "text": "Skip the grind when you feel like it — playing always stays free.",
+    "openA11y": "Open the top up shop",
+    "open": "Shop"
+  },
+  "tabs": {
+    "board": "Boards · {{total}}",
+    "dice": "Dice · {{total}}",
+    "pack": "Theme Packs · {{total}}",
+    "style": "Table styles · {{total}}"
+  },
+  "ownedFilter": "{{box}} Owned",
+  "card": {
+    "a11yEquipped": "Preview {{name}}, equipped",
+    "a11yOwned": "Preview {{name}}, owned",
+    "a11yPriceCoins_one": "Preview {{name}}, {{count}} coin",
+    "a11yPriceCoins_other": "Preview {{name}}, {{count}} coins",
+    "a11yPriceGems_one": "Preview {{name}}, {{count}} gem",
+    "a11yPriceGems_other": "Preview {{name}}, {{count}} gems",
+    "endsIn": "ENDS IN {{time}}",
+    "equipped": "✓ Equipped",
+    "owned": "Owned"
+  },
+  "footer": {
+    "noCashValue": "Coins are earned in this app and have no cash value.",
+    "member": "Your coins and collection are kept on your account.",
+    "guest": "Sign in to unlock looks; coins and your collection stay on your account."
+  },
+  "shop": {
+    "title": "Top up",
+    "clubMember": "CLUB MEMBER",
+    "subscription": "SUBSCRIPTION",
+    "clubActive": "Active until {{date}}. Extra spins are free and every gift brings gems.",
+    "joinClubA11y": "Join Ludo Club for {{price}} a month",
+    "perMonth": "{{price}}/mo",
+    "piggyLabel": "PIGGY BANK",
+    "piggySaved": "{{amount}} saved",
+    "crackPiggyA11y": "Crack the piggy bank open for {{price}}",
+    "piggyFilling": "Filling…",
+    "buyA11y": "Buy {{name}} for {{price}}",
+    "note": "Payments go through your app store. Coins and gems are for playing here — they never convert back to money."
+  },
+  "products": {
+    "ludo.starter": {
+      "name": "Starter Pack",
+      "blurb": "One-time bundle: a bankroll and a pocket of gems."
+    },
+    "ludo.gems.small": {
+      "name": "Pouch of Gems",
+      "blurb": "160 gems."
+    },
+    "ludo.gems.medium": {
+      "name": "Bag of Gems",
+      "blurb": "900 gems — the season pass and more."
+    },
+    "ludo.gems.large": {
+      "name": "Chest of Gems",
+      "blurb": "4,200 gems for the whole collection."
+    },
+    "ludo.coins.small": {
+      "name": "Stack of Coins",
+      "blurb": "12,000 coins — a seat at the 10K table."
+    },
+    "ludo.coins.large": {
+      "name": "Vault of Coins",
+      "blurb": "75,000 coins — the 50K table awaits."
+    },
+    "ludo.pass": {
+      "name": "Premium Pass",
+      "blurb": "This season’s premium track, paid directly."
+    },
+    "ludo.piggy": {
+      "name": "Piggy Bank",
+      "blurb": "Every game feeds it. Crack it open and keep everything inside."
+    },
+    "ludo.club": {
+      "name": "Ludo Club",
+      "blurb": "Free extra spins and 10 gems with every daily gift."
+    }
+  },
+  "preview": {
+    "title": "Preview",
+    "rarityKind": "{{rarity}} {{kind}}",
+    "includes": "Includes {{board}}, matching dice, and coordinated player cards. Equip the full look together or mix its board and dice with your collection.",
+    "unlockPrice": "Unlock price",
+    "guestNote": "Coins and unlocked looks are kept on your account. Sign in to use them here.",
+    "walletFailed": "Your coins could not be loaded. Reconnect and try again before unlocking.",
+    "balanceAfter": "Your balance after purchase",
+    "saving": "Saving…",
+    "currentlyEquipped": "✓ Currently equipped",
+    "equip": "Equip this look",
+    "signIn": "Sign in to unlock",
+    "reconnect": "Reconnect to unlock",
+    "earnMoreCoins": "Earn more coins to unlock",
+    "earnMoreGems": "Earn more gems to unlock",
+    "unlockCoins_one": "Unlock & equip · {{count}} coin",
+    "unlockCoins_other": "Unlock & equip · {{count}} coins",
+    "unlockGems_one": "Unlock & equip · {{count}} gem",
+    "unlockGems_other": "Unlock & equip · {{count}} gems",
+    "giftCoins_one": "Gift to a friend · {{count}} coin",
+    "giftCoins_other": "Gift to a friend · {{count}} coins",
+    "giftGems_one": "Gift to a friend · {{count}} gem",
+    "giftGems_other": "Gift to a friend · {{count}} gems",
+    "trialActive": "Trying it now · {{time}} left",
+    "trialOffer": "Try it free for 24 hours",
+    "trialReward": "Watch one short ad",
+    "trialActiveCaption": "Enjoy! Sign in any time to make it yours forever.",
+    "trialCaption": "The whole app dresses in this board for a day.",
+    "oneUnlock": "One unlock. Yours on every board view."
+  },
+  "gift": {
+    "title": "Send as a gift",
+    "bodyCoins_one": "{{name}} · {{count}} coin from your balance. Your friend keeps it forever.",
+    "bodyCoins_other": "{{name}} · {{count}} coins from your balance. Your friend keeps it forever.",
+    "bodyGems_one": "{{name}} · {{count}} gem from your balance. Your friend keeps it forever.",
+    "bodyGems_other": "{{name}} · {{count}} gems from your balance. Your friend keeps it forever.",
+    "loading": "Loading your friends…",
+    "empty": "No friends yet — add some from the Friends screen and share the fun.",
+    "sendA11y": "Send to {{name}}",
+    "send": "Send"
+  },
+  "packPreview": {
+    "player": "PLAYER",
+    "yourTurn": "Your turn"
+  },
+  "notices": {
+    "adNotFinished": "The ad did not finish. Try again in a moment.",
+    "trialStarted": "Enjoy it for the next 24 hours — sign in to make it yours forever.",
+    "trialFailed": "The trial could not start.",
+    "giftSent": "{{name}} is on its way to {{friend}}!",
+    "giftFailed": "The gift could not be sent.",
+    "purchaseDone": "Purchase complete. Enjoy!",
+    "purchaseFailed": "The purchase did not go through.",
+    "equipped": "{{name}} is equipped. Make it a good game!",
+    "saveFailed": "Purchase could not be saved. Try again."
+  }
+}

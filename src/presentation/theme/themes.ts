@@ -171,14 +171,15 @@ export function getCardDesign(id?: string | null) {
 export const ui = {
   text: '#dee1f7',
   muted: '#c2c6d6',
-  subtle: '#8c909f',
+  // Every text colour keeps at least 4.5:1 contrast (WCAG AA) on all theme surfaces.
+  subtle: '#9ca0ac',
   line: '#ffffff14',
   green: '#4edea3',
   gold: '#ffb95f',
-  violet: '#a78bfa',
+  violet: '#aa8efa',
   danger: '#ff8795',
   /** Royal blue for secondary calls to action and progress. */
-  blue: '#4d8eff',
+  blue: '#689fff',
   blueSoft: '#adc6ff',
   /** Gems. */
   gem: '#c084fc',

@@ -22,11 +22,12 @@ import {
 import { accumulateStats } from './matchStats';
 import { getGameCue, type GameFeedback } from '../audio/gameFeedback';
 import { useSocial } from '../state/SocialProvider';
+import { i18n } from '../i18n';
 
 type Connection = 'connecting' | 'live' | 'polling' | 'reconnecting';
 type ViewState = { snapshot: OnlineMatchSnapshot; board: GameState };
 const messageFor = (e: unknown) =>
-  e instanceof Error ? e.message : 'Could not reach the table. Please retry.';
+  e instanceof Error ? e.message : i18n.t('online:errors.tableUnreachable');
 
 export function useOnlineMatch(lobbyId: string, paused: boolean) {
   const { signedIn } = useSocial();
@@ -282,7 +283,7 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
       try {
         submit(applyMove(board, selected));
       } catch {
-        setError('The board changed. Select a highlighted coin again.');
+        setError(i18n.t('online:errors.boardChanged'));
         void refresh();
       }
     },
@@ -367,9 +368,9 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
     error,
     connection,
     fatal: !signedIn
-      ? 'Sign in to rejoin your online game.'
+      ? i18n.t('online:errors.signInToRejoin')
       : !matchSyncRepository
-        ? 'Online play is not configured in this build.'
+        ? i18n.t('online:errors.notConfigured')
         : null,
     current: board ? getCurrentPlayer(board) : null,
     humanTurn: myTurn,

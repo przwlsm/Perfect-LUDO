@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Text } from './AppText';
 import { CoinIcon, GemIcon } from './Currency';
 import { ui } from '../theme/themes';
@@ -35,11 +36,12 @@ export function AdTile({
   compact?: boolean;
   onPress(): void;
 }) {
+  const { t } = useTranslation('home');
   const off = disabled && !busy;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${title}. ${reward}`}
+      accessibilityLabel={t('ad.a11y', { title, reward })}
       accessibilityState={{ disabled: disabled || busy }}
       disabled={disabled || busy}
       onPress={onPress}
@@ -70,7 +72,7 @@ export function AdTile({
         </View>
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={[s.title, compact && { fontSize: 15 }]}>
-            {busy ? 'Loading your ad…' : title}
+            {busy ? t('ad.loading') : title}
           </Text>
           <View style={s.rewardRow}>
             {icon === 'coin' && <CoinIcon size={compact ? 13 : 15} />}
@@ -79,7 +81,7 @@ export function AdTile({
           </View>
           {(busy || caption) && (
             <Text style={s.caption} numberOfLines={2}>
-              {busy ? 'Hang tight — your reward lands right after.' : caption}
+              {busy ? t('ad.hangTight') : caption}
             </Text>
           )}
         </View>
@@ -90,7 +92,7 @@ export function AdTile({
                 <View key={i} style={[s.dot, i < left && { backgroundColor: ui.gold }]} />
               ))}
             </View>
-            <Text style={s.dotsText}>{left} LEFT</Text>
+            <Text style={s.dotsText}>{t('ad.left', { left })}</Text>
           </View>
         )}
       </LinearGradient>

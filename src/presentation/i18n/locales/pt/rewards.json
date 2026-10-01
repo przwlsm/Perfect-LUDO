@@ -1,0 +1,107 @@
+{
+  "title": "Recompensas",
+  "subtitle": "GIRO · MISSÕES · PASSE DE TEMPORADA",
+  "errors": {
+    "claimFailed": "Não foi possível resgatar agora.",
+    "adNotFinished": "O anúncio não terminou. Tente de novo daqui a pouco.",
+    "addFailed": "Não foi possível adicionar agora."
+  },
+  "vaultCarry": {
+    "label": "SEUS GANHOS COMO CONVIDADO",
+    "title": "{{amount}} moedas de antes de você entrar",
+    "a11y": "Resgatar {{amount}} moedas do cofre",
+    "claim": "Resgatar"
+  },
+  "gift": {
+    "label": "RECOMPENSA DIÁRIA",
+    "collectedTitle": "Dia {{day}} resgatado — volte amanhã",
+    "readyTitle": "Dia {{day}} disponível",
+    "dayShort": "D{{day}}",
+    "hint": "Resgate todo dia para avançar no calendário. O dia 7 paga {{coins}} moedas e {{gems}} gemas — se perder um dia, começa de novo.",
+    "claiming": "Resgatando…",
+    "collected": "Resgatado — volte amanhã",
+    "claimDay": "Resgatar dia {{day}} · {{coins}} moedas",
+    "claimDayGems": "Resgatar dia {{day}} · {{coins}} moedas + {{gems}} gemas"
+  },
+  "rescue": {
+    "label": "RESGATE DE VOLTA",
+    "title": "Pouca moeda?",
+    "boostHint": "Veja um anúncio para somar mais {{amount}} moedas ao resgate de hoje.",
+    "spentHint": "O resgate de hoje já foi usado. As mesas grátis estão sempre abertas.",
+    "claimHint": "Resgate {{amount}} moedas para voltar às mesas. Uma vez por dia.",
+    "boostA11y": "Ver um anúncio para ganhar mais {{amount}} moedas",
+    "claimA11y": "Resgatar {{amount}} moedas de resgate"
+  },
+  "spin": {
+    "label": "GIRO DA SORTE DIÁRIO",
+    "title": "Gire e ganhe até 1.000 moedas",
+    "streakHint": "Dia 7: +25 gemas",
+    "openA11y": "Abrir a roleta da sorte",
+    "freeReady": "Giro grátis disponível",
+    "extra": "Giro extra · {{gems}} gemas",
+    "backTomorrow": "Volte amanhã",
+    "sheetTitle": "Giro da sorte",
+    "youWon": "VOCÊ GANHOU",
+    "prizeCoins": "{{amount}} moedas",
+    "prizeGems": "{{amount}} gemas",
+    "prizeXp": "{{amount}} XP",
+    "streakBonus": "Bônus de 7 dias seguidos: +{{gems}} gemas",
+    "about": "{{slots}} prêmios na roleta. Um giro grátis por dia, e até {{extra}} a mais por {{gems}} gemas cada.",
+    "spinning": "Girando…",
+    "spinFree": "Girar grátis",
+    "spinAgain": "Girar de novo · {{gems}} gemas",
+    "noneLeft": "Sem giros hoje",
+    "adTitle": "Gire grátis",
+    "adReward": "Veja um anúncio curto",
+    "hub": "GIRAR"
+  },
+  "gemAd": {
+    "title": "Veja um anúncio, ganhe uma gema",
+    "reward": "+1 gema",
+    "caption": "Cerca de 30 segundos. Sempre opcional.",
+    "done": "Tudo resgatado por hoje — volte amanhã."
+  },
+  "missions": {
+    "title": "Missões de hoje",
+    "newIn": "Novas em {{time}}",
+    "loading": "Carregando suas missões…",
+    "claimed": "Resgatada",
+    "claimA11y": "Resgatar {{title}}",
+    "claim": "RESGATAR"
+  },
+  "season": {
+    "label": "PASSE DA TEMPORADA {{number}}",
+    "tier": "Nível {{tier}} / {{total}}",
+    "endsIn": "Termina em {{time}}",
+    "complete": "Todos os níveis alcançados. Lendário.",
+    "progress": "{{xp}} / {{needed}} XP para o nível {{next}}. Toda partida rende XP de temporada.",
+    "premiumTitle": "Desbloqueie a trilha premium",
+    "premiumHint": "Mais moedas em cada nível e 40 gemas a cada cinco níveis.",
+    "premiumA11y": "Desbloquear premium por {{gems}} gemas",
+    "tierFreeA11y": "Recompensa grátis do nível {{tier}}",
+    "tierPremiumA11y": "Recompensa premium do nível {{tier}}",
+    "claim": "RESGATAR"
+  },
+  "guest": {
+    "subtitle": "SEU COFRE ESTÁ ENCHENDO",
+    "vaultLabel": "SEU COFRE",
+    "vaultHint": "Tudo aqui vai ser seu",
+    "max": "MÁX. {{amount}}",
+    "full": "Seu cofre está cheio! Entre para resgatar tudo.",
+    "winHint": "Vença uma partida: +{{coins}} moedas. Tudo é liberado assim que você entrar.",
+    "signInClaim": "Entrar e resgatar {{amount}} moedas",
+    "signInStart": "Entre para começar a ganhar",
+    "adTitle": "Veja um anúncio",
+    "adReward": "+{{coins}} para o seu cofre",
+    "adFull": "Seu cofre está cheio — entre para resgatá-lo primeiro.",
+    "adAdded": "+{{coins}} moedas no seu cofre!",
+    "accountTitle": "Uma conta libera o resto",
+    "accountBody": "A roleta da sorte, as missões diárias, o passe de temporada, as ligas, as gemas e as mesas online valendo moedas — tudo fica na sua conta grátis, junto com tudo o que está no seu cofre."
+  },
+  "time": {
+    "now": "agora",
+    "daysHours": "{{days}}d {{hours}}h",
+    "hoursMinutes": "{{hours}}h {{minutes}}min",
+    "minutes": "{{minutes}}min"
+  }
+}

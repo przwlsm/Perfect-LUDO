@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -36,6 +37,7 @@ export function LuckyWheel({
   motionEnabled: boolean;
   onLanded(): void;
 }) {
+  const { t } = useTranslation('rewards');
   const rotation = useSharedValue(0);
   const count = SPIN_SLOTS.length;
   const step = 360 / count;
@@ -132,7 +134,9 @@ export function LuckyWheel({
           justifyContent: 'center',
         }}
       >
-        <Text style={{ fontSize: size * 0.07, color: '#472a00', fontWeight: '900' }}>SPIN</Text>
+        <Text style={{ fontSize: size * 0.07, color: '#472a00', fontWeight: '900' }}>
+          {t('spin.hub')}
+        </Text>
       </LinearGradient>
       <View
         style={{

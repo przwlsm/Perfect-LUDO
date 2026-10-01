@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Pressable, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import Animated, {
   cancelAnimation,
@@ -60,6 +61,7 @@ export function PlayerPanel({
   motionEnabled: boolean;
   onRoll(): void;
 }) {
+  const { t } = useTranslation('game');
   const tile = height - 12;
   const token = Math.max(20, Math.round(height * 0.38));
   const nudge = useSharedValue(0);
@@ -120,12 +122,12 @@ export function PlayerPanel({
       {lives &&
         (lives.out ? (
           <Text style={{ color: ui.danger, fontSize: 9, fontWeight: '900', letterSpacing: 0.8 }}>
-            OUT
+            {t('panel.out')}
           </Text>
         ) : (
           <View
             accessible
-            accessibilityLabel={`${lives.left} of ${lives.total} lifelines left`}
+            accessibilityLabel={t('panel.livesA11y', { left: lives.left, total: lives.total })}
             style={{ flexDirection: 'row', gap: 2 }}
           >
             {Array.from({ length: lives.total }, (_, i) => (
@@ -180,8 +182,8 @@ export function PlayerPanel({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${label}: roll dice`}
-      accessibilityHint={canRoll ? 'Your turn. Tap to roll.' : 'Wait for your turn.'}
+      accessibilityLabel={t('dice.rollA11y', { name: label })}
+      accessibilityHint={canRoll ? t('dice.yourTurnHint') : t('dice.waitHint')}
       accessibilityState={{ disabled: !canRoll }}
       disabled={!canRoll}
       onPress={onRoll}
@@ -227,7 +229,7 @@ export function PlayerPanel({
           </View>
           <View
             pointerEvents="none"
-            accessibilityLabel={`${secondsLeft} seconds left`}
+            accessibilityLabel={t('panel.secondsLeft', { count: secondsLeft })}
             style={{
               position: 'absolute',
               top: -9,
@@ -240,7 +242,9 @@ export function PlayerPanel({
               borderColor: secondsLeft <= 5 ? ui.danger : color,
             }}
           >
-            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{secondsLeft}s</Text>
+            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>
+              {t('panel.secondsShort', { seconds: secondsLeft })}
+            </Text>
           </View>
         </>
       )}

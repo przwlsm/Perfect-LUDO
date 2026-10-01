@@ -41,3 +41,6 @@ export * from './ports/ISocialIdentityRepository';
 export * from './ports/IMatchmakingRepository';
 export * from './ports/IConnectivityService';
 export * from './connectivity/connectionState';
+export * from './entities/AppVersion';
+export * from './ports/IAppVersionRepository';
+export * from './ports/ICrashReporter';

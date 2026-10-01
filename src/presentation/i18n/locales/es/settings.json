@@ -1,0 +1,59 @@
+{
+  "title": "Justo como te gusta.",
+  "subtitle": "TUS PREFERENCIAS",
+  "language": {
+    "label": "IDIOMA",
+    "title": "Elige tu idioma",
+    "system": "Idioma del teléfono",
+    "systemHint": "Actualmente: {{language}}",
+    "a11y": "{{name}}, {{englishName}}"
+  },
+  "name": {
+    "label": "EN LA MESA",
+    "title": "¿Cómo te llamamos?",
+    "a11y": "Nombre del jugador",
+    "placeholder": "Tu nombre",
+    "save": "Guardar nombre"
+  },
+  "lookAndFeel": {
+    "label": "ASPECTO",
+    "board3d": {
+      "title": "Jugar en 3D",
+      "hint": "Un tablero con relieve y fichas esculpidas. Cambia de vista en cualquier partida."
+    },
+    "reducedMotion": {
+      "title": "Movimiento reducido",
+      "hint": "Fichas y dados sin animación, con contornos claros en las fichas que puedes mover."
+    },
+    "soundEnabled": {
+      "title": "Sonidos del juego",
+      "hint": "Dados rodando suavemente, golpes de madera, capturas y campanas al llegar a la meta."
+    }
+  },
+  "saved": "Preferencias guardadas.",
+  "saveFailed": "No se pudieron guardar las preferencias. Inténtalo de nuevo.",
+  "about": {
+    "label": "SOBRE EL CLUB",
+    "title": "Buenos ratos, estés donde estés.",
+    "offline": "Ludo Rumble funciona sin conexión. Las partidas y los ajustes se guardan en este dispositivo; las monedas y tu colección se guardan en tu cuenta cuando inicias sesión.",
+    "currency": "Los regalos diarios se reinician a la medianoche UTC. Las monedas y gemas se pueden ganar jugando o comprar en la app, pero nunca se pueden transferir ni canjear por dinero.",
+    "feedback": "Enviar comentarios o reportar un error",
+    "howToPlay": "Cómo jugar",
+    "adPrivacy": "Opciones de privacidad de anuncios"
+  },
+  "version": {
+    "label": "VERSIÓN DE LA APP",
+    "name": "Ludo Rumble {{version}}",
+    "includesUpdate": "Incluye la actualización {{id}}",
+    "storeRelease": "Versión de la tienda",
+    "check": "Buscar actualizaciones",
+    "checking": "Comprobando…",
+    "result": {
+      "up-to-date": "Tienes la versión más reciente.",
+      "downloaded": "Actualización descargada. Reinicia para aplicarla.",
+      "unavailable": "En esta versión, las actualizaciones se instalan desde la tienda.",
+      "failed": "No se pudo buscar actualizaciones. Revisa tu conexión e inténtalo de nuevo.",
+      "store": "Hay una nueva versión disponible en la tienda."
+    }
+  }
+}

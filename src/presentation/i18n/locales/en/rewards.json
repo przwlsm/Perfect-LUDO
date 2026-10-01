@@ -1,0 +1,107 @@
+{
+  "title": "Rewards",
+  "subtitle": "SPIN · MISSIONS · SEASON PASS",
+  "errors": {
+    "claimFailed": "Could not claim that right now.",
+    "adNotFinished": "The ad did not finish. Try again in a moment.",
+    "addFailed": "Could not add that right now."
+  },
+  "vaultCarry": {
+    "label": "YOUR GUEST WINNINGS",
+    "title": "{{amount}} coins from before you signed in",
+    "a11y": "Claim {{amount}} vault coins",
+    "claim": "Claim"
+  },
+  "gift": {
+    "label": "DAILY REWARD",
+    "collectedTitle": "Day {{day}} collected — back tomorrow",
+    "readyTitle": "Day {{day}} is ready",
+    "dayShort": "D{{day}}",
+    "hint": "Claim every day to climb the calendar. Day 7 pays {{coins}} coins and {{gems}} gems — miss a day and it starts over.",
+    "claiming": "Claiming…",
+    "collected": "Collected — back tomorrow",
+    "claimDay": "Claim day {{day}} · {{coins}} coins",
+    "claimDayGems": "Claim day {{day}} · {{coins}} coins + {{gems}} gems"
+  },
+  "rescue": {
+    "label": "COMEBACK RESCUE",
+    "title": "Low on coins?",
+    "boostHint": "Watch an ad to add {{amount}} more coins to today’s rescue.",
+    "spentHint": "Today’s rescue is used. Free tables always stay open.",
+    "claimHint": "Claim {{amount}} coins to get back to the tables. Once a day.",
+    "boostA11y": "Watch an ad for {{amount}} more coins",
+    "claimA11y": "Claim {{amount}} rescue coins"
+  },
+  "spin": {
+    "label": "DAILY LUCKY SPIN",
+    "title": "Spin to win up to 1,000 coins",
+    "streakHint": "Day 7: +25 gems",
+    "openA11y": "Open the lucky wheel",
+    "freeReady": "Free spin ready",
+    "extra": "Extra spin · {{gems}} gems",
+    "backTomorrow": "Back tomorrow",
+    "sheetTitle": "Lucky spin",
+    "youWon": "YOU WON",
+    "prizeCoins": "{{amount}} coins",
+    "prizeGems": "{{amount}} gems",
+    "prizeXp": "{{amount}} XP",
+    "streakBonus": "7-day streak bonus: +{{gems}} gems",
+    "about": "{{slots}} prizes on the wheel. One free spin a day, up to {{extra}} more for {{gems}} gems each.",
+    "spinning": "Spinning…",
+    "spinFree": "Spin free",
+    "spinAgain": "Spin again · {{gems}} gems",
+    "noneLeft": "No spins left today",
+    "adTitle": "Spin free instead",
+    "adReward": "Watch one short ad",
+    "hub": "SPIN"
+  },
+  "gemAd": {
+    "title": "Watch an ad, earn a gem",
+    "reward": "+1 gem",
+    "caption": "About 30 seconds. Always your choice.",
+    "done": "All collected for today — back tomorrow."
+  },
+  "missions": {
+    "title": "Today's missions",
+    "newIn": "New in {{time}}",
+    "loading": "Loading your missions…",
+    "claimed": "Claimed",
+    "claimA11y": "Claim {{title}}",
+    "claim": "CLAIM"
+  },
+  "season": {
+    "label": "SEASON {{number}} PASS",
+    "tier": "Tier {{tier}} / {{total}}",
+    "endsIn": "Ends in {{time}}",
+    "complete": "Every tier reached. Legendary.",
+    "progress": "{{xp}} / {{needed}} XP to tier {{next}}. Every match earns season XP.",
+    "premiumTitle": "Unlock the premium track",
+    "premiumHint": "More coins on every tier and 40 gems every fifth.",
+    "premiumA11y": "Unlock premium for {{gems}} gems",
+    "tierFreeA11y": "Tier {{tier}} free reward",
+    "tierPremiumA11y": "Tier {{tier}} premium reward",
+    "claim": "CLAIM"
+  },
+  "guest": {
+    "subtitle": "YOUR VAULT IS FILLING",
+    "vaultLabel": "YOUR VAULT",
+    "vaultHint": "Everything here becomes yours",
+    "max": "MAX {{amount}}",
+    "full": "Your vault is full! Sign in to claim it all.",
+    "winHint": "Win a game: +{{coins}} coins. It all unlocks the moment you sign in.",
+    "signInClaim": "Sign in & claim {{amount}} coins",
+    "signInStart": "Sign in to start earning",
+    "adTitle": "Watch an ad",
+    "adReward": "+{{coins}} to your vault",
+    "adFull": "Your vault is full — sign in to claim it first.",
+    "adAdded": "+{{coins}} coins in your vault!",
+    "accountTitle": "An account unlocks the rest",
+    "accountBody": "The lucky wheel, daily missions, the season pass, leagues, gems and online tables for coins — all of it lives on your free account, along with everything in your vault."
+  },
+  "time": {
+    "now": "now",
+    "daysHours": "{{days}}d {{hours}}h",
+    "hoursMinutes": "{{hours}}h {{minutes}}m",
+    "minutes": "{{minutes}}m"
+  }
+}

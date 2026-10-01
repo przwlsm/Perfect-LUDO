@@ -1,5 +1,6 @@
 import { Component, Suspense, lazy, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -7,7 +8,6 @@ import { profileService } from '@/config/container';
 import {
   REACTION_COOLDOWN_MS,
   REACTIONS,
-  VARIANT_INFO,
   variantOf,
   type DieValue,
   type GameState,
@@ -23,11 +23,14 @@ import { Board2D } from '../board/Board2D';
 import type { Board3DProps } from '../board/Board3D';
 import { tableArrangement } from '../board/tableLayout';
 import { PlayerPanel } from './PlayerPanel';
+import { RULES } from './rules';
 import { RoundBoardOverlay } from './RoundBoardOverlay';
 import { ZoomableBoard } from '../board/ZoomableBoard';
 import { Body, Button, Card, Label, Screen, shared, Sheet } from '../components/Kit';
 import { useProfile } from '../state/ProfileProvider';
+import { useCatalogText } from '../i18n/useCatalogText';
 import { ui } from '../theme/themes';
+import { keepLtr } from '../i18n/rtl';
 
 /**
  * Loaded on demand so the 3D renderer never costs the 2D table anything.
@@ -155,9 +158,11 @@ export function GameTable({
   resultSheet: ReactNode;
 }) {
   const { profile, theme, perform } = useProfile();
+  const { t } = useTranslation('game');
+  const catalog = useCatalogText();
   const insets = useSafeAreaInsets();
   const [savingView, setSavingView] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<'boardSaveFailed' | null>(null);
   const { match, current, humanTurn, busy, error } = game;
   const [picker, setPicker] = useState(false);
   const lastSent = useRef(0);
@@ -173,7 +178,7 @@ export function GameTable({
     try {
       await perform(() => profileService.update({ board3d: !profile.board3d }));
     } catch {
-      setNotice('Could not save board preference. Please try again.');
+      setNotice('boardSaveFailed');
     } finally {
       setSavingView(false);
     }
@@ -186,8 +191,8 @@ export function GameTable({
           {error ? (
             <>
               <Body>{error}</Body>
-              <Button onPress={game.retry}>Try again</Button>
-              <Button onPress={() => router.replace('/')}>Back to lobby</Button>
+              <Button onPress={game.retry}>{t('table.tryAgain')}</Button>
+              <Button onPress={() => router.replace('/')}>{t('table.backToLobby')}</Button>
             </>
           ) : (
             <ActivityIndicator color={theme.accent} />
@@ -225,8 +230,7 @@ export function GameTable({
     onSelectMove: (selected: Move) => game.move(selected),
   };
 
-  const nameOf = (color: PlayerColor) =>
-    seatLabel?.(color) ?? color.charAt(0) + color.slice(1).toLowerCase();
+  const nameOf = (color: PlayerColor) => seatLabel?.(color) ?? t(`colors.${color}`);
 
   /** One seat's panel, or an empty slot that keeps the others beside their own yard. */
   function panel(color: PlayerColor | null, index: number, side: 'before' | 'after') {
@@ -282,6 +286,8 @@ export function GameTable({
   return (
     <View
       style={{
+        // The table is a physical board: players keep their corners in RTL.
+        ...keepLtr,
         flex: 1,
         overflow: 'hidden',
         backgroundColor: theme.background,
@@ -294,7 +300,7 @@ export function GameTable({
       <View style={s.header}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Pause game"
+          accessibilityLabel={t('pause.a11y')}
           onPress={() => setMenu(true)}
           android_ripple={{ color: '#ffffff20' }}
           style={[s.iconButton, { backgroundColor: theme.surface }]}
@@ -304,7 +310,7 @@ export function GameTable({
         {reactions?.send ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Send a reaction"
+            accessibilityLabel={t('table.reactA11y')}
             accessibilityState={{ expanded: picker }}
             onPress={() => setPicker((open) => !open)}
             android_ripple={{ color: '#ffffff20' }}
@@ -316,7 +322,7 @@ export function GameTable({
             <Ionicons name="happy" size={24} color={picker ? theme.accent : ui.muted} />
           </Pressable>
         ) : (
-          <View style={{ width: 44 }} />
+          <View style={{ width: 48 }} />
         )}
         <View style={{ flex: 1, alignItems: 'center', gap: 3 }}>
           <Label color={theme.accent}>{label}</Label>
@@ -327,14 +333,16 @@ export function GameTable({
             </View>
           ) : (
             <Text style={shared.small}>
-              {match.state.players.length} players / {profile.board3d ? '3D' : 'Classic'} table
+              {profile.board3d
+                ? t('table.info3d', { count: match.state.players.length })
+                : t('table.infoClassic', { count: match.state.players.length })}
             </Text>
           )}
         </View>
-        <View style={{ width: 44 }} />
+        <View style={{ width: 48 }} />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Switch to ${profile.board3d ? '2D' : '3D'} board`}
+          accessibilityLabel={t('table.switchView', { mode: profile.board3d ? '2D' : '3D' })}
           disabled={savingView}
           onPress={() => void toggleView()}
           android_ripple={{ color: `${theme.accent}25` }}
@@ -377,7 +385,7 @@ export function GameTable({
               <Pressable
                 key={emoji}
                 accessibilityRole="button"
-                accessibilityLabel={`React ${emoji}`}
+                accessibilityLabel={t('table.reactWith', { emoji })}
                 onPress={() => react(emoji)}
                 android_ripple={{ color: '#ffffff25', borderless: true }}
                 style={s.pickerItem}
@@ -456,17 +464,19 @@ export function GameTable({
         >
           {statusLine}
         </Text>
-        {(notice || error) && <Text style={shared.error}>{error ?? notice}</Text>}
+        {(notice || error) && (
+          <Text style={shared.error}>{error ?? (notice ? t(`table.${notice}`) : null)}</Text>
+        )}
         {error && (
           <Button compact secondary onPress={game.retry}>
-            Retry turn
+            {t('table.retryTurn')}
           </Button>
         )}
       </View>
 
-      <Sheet visible={menu} onClose={() => setMenu(false)} title="Take your time.">
+      <Sheet visible={menu} onClose={() => setMenu(false)} title={t('pause.title')}>
         <Body>{pauseBody}</Body>
-        <Button onPress={() => setMenu(false)}>Back to the game</Button>
+        <Button onPress={() => setMenu(false)}>{t('pause.backToGame')}</Button>
         <Button secondary disabled={busy} onPress={onExit}>
           {exitLabel}
         </Button>
@@ -477,26 +487,26 @@ export function GameTable({
             setRules(true);
           }}
         >
-          How to play
+          {t('pause.howToPlay')}
         </Button>
       </Sheet>
 
-      <Sheet visible={rules} onClose={() => setRules(false)} title="A classic for a reason.">
+      <Sheet visible={rules} onClose={() => setRules(false)} title={t('rulesSheet.title')}>
         {variantOf(match.state) !== 'classic' && (
           <Card style={{ borderColor: `${theme.accent}55` }}>
-            <Label color={theme.accent}>THIS TABLE</Label>
+            <Label color={theme.accent}>{t('rulesSheet.thisTable')}</Label>
             <Text style={[shared.sectionTitle, { fontSize: 15 }]}>
-              {VARIANT_INFO[variantOf(match.state)].title}
+              {catalog.variantTitle(variantOf(match.state))}
             </Text>
-            <Body>{VARIANT_INFO[variantOf(match.state)].description}</Body>
+            <Body>{catalog.variantDescription(variantOf(match.state))}</Body>
           </Card>
         )}
-        {RULES.map(([n, title, description]) => (
+        {RULES.map(({ n, id }) => (
           <View key={n} style={shared.row}>
             <Text style={{ color: theme.accent, fontWeight: '900', fontSize: 18 }}>{n}</Text>
             <View style={{ flex: 1, gap: 6 }}>
-              <Text style={[shared.sectionTitle, { fontSize: 15 }]}>{title}</Text>
-              <Body>{description}</Body>
+              <Text style={[shared.sectionTitle, { fontSize: 15 }]}>{t(`rules.${id}.title`)}</Text>
+              <Body>{t(`rules.${id}.text`)}</Body>
             </View>
           </View>
         ))}
@@ -506,34 +516,6 @@ export function GameTable({
     </View>
   );
 }
-
-const RULES: readonly (readonly [string, string, string])[] = [
-  [
-    '01',
-    'Make an entrance',
-    'Roll a six to move a piece out of your yard. A six gives you another roll.',
-  ],
-  [
-    '02',
-    'Make your way home',
-    'Move clockwise around the track, then up your colored lane. You need an exact roll to finish.',
-  ],
-  [
-    '03',
-    'A friendly little rivalry',
-    'Land on an opponent to send their piece back. Star and entry squares are safe. Captures and finishes earn a bonus turn.',
-  ],
-  [
-    '04',
-    'Keep it fair',
-    'Three consecutive sixes forfeit the third roll. Earlier moves remain. Two coins of the same color block an opponent from landing on that square.',
-  ],
-  [
-    '05',
-    'Bring everyone home',
-    'The first player to finish all four pieces wins. Signed-in players earn coins and XP: online wins pay the most, and every online game scores tournament points.',
-  ],
-];
 
 export const gameTableStyles = StyleSheet.create({
   winTitle: { fontSize: 30, fontWeight: '900', textAlign: 'center' },
@@ -548,10 +530,10 @@ const s = StyleSheet.create({
     paddingVertical: 4,
   },
   iconButton: {
-    width: 44,
-    height: 44,
-    minWidth: 44,
-    minHeight: 44,
+    width: 48,
+    height: 48,
+    minWidth: 48,
+    minHeight: 48,
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
@@ -598,13 +580,13 @@ const s = StyleSheet.create({
     borderColor: '#ffffff20',
     boxShadow: '0 10px 28px #00000090',
   },
-  pickerItem: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  pickerItem: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   viewButton: {
     borderWidth: 1,
     paddingHorizontal: 12,
-    height: 44,
-    minWidth: 44,
-    minHeight: 44,
+    height: 48,
+    minWidth: 48,
+    minHeight: 48,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',

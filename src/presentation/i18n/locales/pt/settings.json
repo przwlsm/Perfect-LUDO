@@ -1,0 +1,59 @@
+{
+  "title": "Do jeito que você gosta.",
+  "subtitle": "SUAS PREFERÊNCIAS",
+  "language": {
+    "label": "IDIOMA",
+    "title": "Escolha seu idioma",
+    "system": "Idioma do celular",
+    "systemHint": "Atualmente {{language}}",
+    "a11y": "{{name}}, {{englishName}}"
+  },
+  "name": {
+    "label": "NA MESA",
+    "title": "Como devemos chamar você?",
+    "a11y": "Nome do jogador",
+    "placeholder": "Seu nome",
+    "save": "Salvar nome"
+  },
+  "lookAndFeel": {
+    "label": "VISUAL",
+    "board3d": {
+      "title": "Jogar em 3D",
+      "hint": "Um tabuleiro com profundidade e peões esculpidos. Troque a visão durante qualquer partida."
+    },
+    "reducedMotion": {
+      "title": "Movimento reduzido",
+      "hint": "Peões e dados ficam parados, com contornos nítidos nos peões que podem jogar."
+    },
+    "soundEnabled": {
+      "title": "Sons do jogo",
+      "hint": "Dados rolando suaves, toques de madeira, capturas e sinos de chegada em casa."
+    }
+  },
+  "saved": "Preferências salvas.",
+  "saveFailed": "Não foi possível salvar as preferências. Tente de novo.",
+  "about": {
+    "label": "SOBRE O CLUBE",
+    "title": "Bons momentos, onde você estiver.",
+    "offline": "O Ludo Rumble funciona offline. As partidas e configurações ficam salvas neste aparelho; as moedas e sua coleção ficam na sua conta quando você entra.",
+    "currency": "Os presentes diários são renovados à meia-noite UTC. Moedas e gemas podem ser ganhas jogando ou compradas no app, mas nunca podem ser transferidas nem trocadas por dinheiro.",
+    "feedback": "Enviar sugestão ou relatar um bug",
+    "howToPlay": "Como jogar",
+    "adPrivacy": "Opções de privacidade de anúncios"
+  },
+  "version": {
+    "label": "VERSÃO DO APP",
+    "name": "Ludo Rumble {{version}}",
+    "includesUpdate": "Inclui a atualização {{id}}",
+    "storeRelease": "Versão da loja",
+    "check": "Verificar atualizações",
+    "checking": "Verificando…",
+    "result": {
+      "up-to-date": "Você está na versão mais recente.",
+      "downloaded": "Atualização baixada. Reinicie para aplicar.",
+      "unavailable": "Nesta versão, as atualizações são instaladas pela loja.",
+      "failed": "Não foi possível verificar atualizações. Verifique sua conexão e tente de novo.",
+      "store": "Uma nova versão está disponível na loja."
+    }
+  }
+}

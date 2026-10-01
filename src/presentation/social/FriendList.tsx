@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { displayNameOf, type Friend } from '@/domain';
 import { Body, Button, Card, shared } from '../components/Kit';
@@ -16,11 +17,12 @@ export function FriendList({
   onChallenge(id: string): void;
   onRemove(id: string): void;
 }) {
+  const { t } = useTranslation('social');
   if (friends.length === 0) {
     return (
       <Card>
-        <Text style={shared.sectionTitle}>No friends yet</Text>
-        <Body>Search for a username above and send a request to start playing together.</Body>
+        <Text style={shared.sectionTitle}>{t('friends.empty.title')}</Text>
+        <Body>{t('friends.empty.body')}</Body>
       </Card>
     );
   }
@@ -40,14 +42,16 @@ export function FriendList({
             {/* Friends mid-game stay challengeable: the invite simply waits
                 for them as a notification. */}
             <Button compact disabled={busyId === friend.id} onPress={() => onChallenge(friend.id)}>
-              Challenge
+              {t('search.challenge')}
             </Button>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Remove ${name}`}
+              accessibilityLabel={t('friends.remove', { name })}
               disabled={busyId === friend.id}
               onPress={() => onRemove(friend.id)}
               android_ripple={{ color: '#ffffff20' }}
+              // Kept narrow so the name has room; the slop reaches 48 wide within the row gap.
+              hitSlop={{ left: 7, right: 7 }}
               style={s.remove}
             >
               <Text style={{ color: ui.subtle, fontSize: 17 }}>×</Text>
@@ -60,5 +64,5 @@ export function FriendList({
 }
 
 const s = StyleSheet.create({
-  remove: { width: 34, height: 40, alignItems: 'center', justifyContent: 'center' },
+  remove: { width: 34, height: 48, alignItems: 'center', justifyContent: 'center' },
 });

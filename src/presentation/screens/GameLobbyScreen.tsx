@@ -10,8 +10,9 @@ import {
   seatColors,
   type LobbyPlayer,
   tablePrize,
-  VARIANT_INFO,
 } from '@/domain';
+import { useTranslation } from 'react-i18next';
+import { useCatalogText } from '../i18n/useCatalogText';
 import { Body, Button, Card, Label, Screen, shared, Sheet } from '../components/Kit';
 import { useLobby } from '../hooks/useLobby';
 import { useProfile } from '../state/ProfileProvider';
@@ -21,36 +22,41 @@ import { TeamSeats } from '../social/TeamSeats';
 import { LiveDot } from '../components/Live';
 import { shareInvite } from '../social/inviteLink';
 import { ui } from '../theme/themes';
+import { numberLocale } from '../i18n/format';
 
 type SeatState = {
-  readonly label: string;
+  /** online:lobby.seat.<label> */
+  readonly label:
+    'noAnswer' | 'declined' | 'left' | 'disconnected' | 'ready' | 'notReady' | 'waiting';
   readonly color: string;
   readonly muted: boolean;
 };
 
 function seatState(player: LobbyPlayer): SeatState {
   if (player.invitationStatus === 'EXPIRED') {
-    return { label: '⏱ No answer', color: ui.subtle, muted: true };
+    return { label: 'noAnswer', color: ui.subtle, muted: true };
   }
-  if (player.status === 'DECLINED') return { label: 'Declined', color: ui.danger, muted: true };
-  if (player.status === 'LEFT') return { label: 'Left the game', color: ui.danger, muted: true };
+  if (player.status === 'DECLINED') return { label: 'declined', color: ui.danger, muted: true };
+  if (player.status === 'LEFT') return { label: 'left', color: ui.danger, muted: true };
   if (isLobbyPlayerDisconnected(player)) {
-    return { label: '🔴 Disconnected', color: ui.danger, muted: false };
+    return { label: 'disconnected', color: ui.danger, muted: false };
   }
   if (player.status === 'JOINED') {
     return {
-      label: player.isReady ? '✓ Ready' : 'Joined · not ready',
+      label: player.isReady ? 'ready' : 'notReady',
       color: player.isReady ? ui.green : ui.gold,
       muted: false,
     };
   }
-  return { label: 'Waiting…', color: ui.gold, muted: true };
+  return { label: 'waiting', color: ui.gold, muted: true };
 }
 
 export default function GameLobbyScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const lobbyId = typeof params.id === 'string' ? params.id : null;
   const { theme } = useProfile();
+  const { t } = useTranslation(['online', 'common']);
+  const { variantTitle, variantDescription } = useCatalogText();
   const { signedIn, identity, member } = useSocial();
   const lobby = useLobby(signedIn ? lobbyId : null);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -60,10 +66,10 @@ export default function GameLobbyScreen() {
   const link = snapshot?.challenge.kind === 'LINK';
   const home = quick || link || !member ? '/online' : '/friends';
   const homeLabel = quick
-    ? 'Find another match'
+    ? t('lobby.findAnother')
     : member && !link
-      ? 'Back to friends'
-      : 'Back to online play';
+      ? t('lobby.backToFriends')
+      : t('backToOnline');
   const [copied, setCopied] = useState(false);
 
   async function leaveAndExit() {
@@ -95,10 +101,10 @@ export default function GameLobbyScreen() {
 
   if (!signedIn) {
     return (
-      <Screen nav={false} back title="Game lobby">
+      <Screen nav={false} back title={t('lobby.title')}>
         <Card>
-          <Body>Sign in to join this game.</Body>
-          <Button onPress={() => router.replace('/login')}>Sign in</Button>
+          <Body>{t('lobby.signInToJoin')}</Body>
+          <Button onPress={() => router.replace('/login')}>{t('lobby.signIn')}</Button>
         </Card>
       </Screen>
     );
@@ -106,10 +112,10 @@ export default function GameLobbyScreen() {
 
   if (lobby.fatal) {
     return (
-      <Screen nav={false} back title="Game unavailable">
+      <Screen nav={false} back title={t('lobby.unavailable')}>
         <Card>
           <Body>{lobby.fatal}</Body>
-          <Button onPress={() => void lobby.refresh()}>Retry connection</Button>
+          <Button onPress={() => void lobby.refresh()}>{t('lobby.retryConnection')}</Button>
           <Button onPress={() => router.replace(home)}>{homeLabel}</Button>
         </Card>
       </Screen>
@@ -118,7 +124,7 @@ export default function GameLobbyScreen() {
 
   if (!snapshot) {
     return (
-      <Screen nav={false} back title="Game lobby">
+      <Screen nav={false} back title={t('lobby.title')}>
         <ActivityIndicator color={theme.accent} style={{ marginVertical: 40 }} />
       </Screen>
     );
@@ -149,9 +155,13 @@ export default function GameLobbyScreen() {
     <Screen
       nav={false}
       back
-      title={closed ? 'Game closed' : 'Game lobby'}
+      title={closed ? t('lobby.closedTitle') : t('lobby.title')}
       subtitle={
-        quick ? 'QUICK PLAY TABLE' : link ? 'PRIVATE GAME · INVITE LINK' : 'A PRIVATE TABLE'
+        quick
+          ? t('lobby.subtitle.quick')
+          : link
+            ? t('lobby.subtitle.link')
+            : t('lobby.subtitle.private')
       }
     >
       {closed ? (
@@ -159,33 +169,33 @@ export default function GameLobbyScreen() {
           <Label color={ui.danger}>
             {challenge.status === 'EXPIRED'
               ? link
-                ? 'LINK EXPIRED'
-                : 'INVITATION EXPIRED'
+                ? t('lobby.closed.linkExpired')
+                : t('lobby.closed.invitationExpired')
               : quick
-                ? 'TABLE BROKE UP'
+                ? t('lobby.closed.tableBrokeUp')
                 : link
-                  ? 'GAME CLOSED'
-                  : 'CHALLENGE CANCELLED'}
+                  ? t('lobby.closed.gameClosed')
+                  : t('lobby.closed.challengeCancelled')}
           </Label>
           <Text style={shared.sectionTitle}>
             {challenge.status === 'EXPIRED'
               ? link
-                ? 'Nobody joined in time'
-                : 'Nobody answered in time'
+                ? t('lobby.closed.nobodyJoined')
+                : t('lobby.closed.nobodyAnswered')
               : link
-                ? 'The host closed this game'
+                ? t('lobby.closed.hostClosed')
                 : quick
-                  ? 'Someone left before the start'
-                  : 'This game was called off'}
+                  ? t('lobby.closed.someoneLeft')
+                  : t('lobby.closed.calledOff')}
           </Text>
           <Body>
             {link
-              ? 'Invite links stay open for 30 minutes. Start a new private game and share the fresh link.'
+              ? t('lobby.closed.linkBody')
               : challenge.status === 'EXPIRED'
-                ? 'The invitation timed out. Start a fresh challenge whenever you are ready.'
+                ? t('lobby.closed.expiredBody')
                 : quick
-                  ? 'Quick-play tables only start with everyone present. Search again and you will be seated with the next players.'
-                  : 'Everyone invited has been told. You can set up another game any time.'}
+                  ? t('lobby.closed.quickBody')
+                  : t('lobby.closed.cancelledBody')}
           </Body>
           <Button onPress={() => router.replace(home)}>{homeLabel}</Button>
         </Card>
@@ -193,9 +203,11 @@ export default function GameLobbyScreen() {
         <>
           {link && room.inviteCode && room.status === 'WAITING' && (
             <Card style={{ borderColor: `${theme.accent}60`, gap: 12 }}>
-              <Label color={theme.accent}>INVITE YOUR PLAYERS</Label>
+              <Label color={theme.accent}>{t('lobby.invite.label')}</Label>
               <Text
-                accessibilityLabel={`Invite code ${room.inviteCode.split('').join(' ')}`}
+                accessibilityLabel={t('lobby.invite.codeA11y', {
+                  code: room.inviteCode.split('').join(' '),
+                })}
                 selectable
                 style={[s.inviteCode, { color: theme.accent }]}
               >
@@ -203,13 +215,13 @@ export default function GameLobbyScreen() {
               </Text>
               <Body>
                 {room.maxPlayers - joined > 0
-                  ? `Waiting for ${room.maxPlayers - joined} more. Anyone with the link or code can take a seat.`
-                  : 'Everyone is here.'}
+                  ? t('lobby.invite.waitingMore', { count: room.maxPlayers - joined })
+                  : t('lobby.invite.everyoneHere')}
               </Body>
               <View style={shared.row}>
                 <View style={{ flex: 1 }}>
                   <Button compact onPress={() => void shareInvite(room.inviteCode!)}>
-                    Share link
+                    {t('lobby.invite.share')}
                   </Button>
                 </View>
                 <View style={{ flex: 1 }}>
@@ -220,7 +232,7 @@ export default function GameLobbyScreen() {
                       void Clipboard.setStringAsync(room.inviteCode!).then(() => setCopied(true))
                     }
                   >
-                    {copied ? '✓ Copied' : 'Copy code'}
+                    {copied ? t('lobby.invite.copied') : t('lobby.invite.copy')}
                   </Button>
                 </View>
               </View>
@@ -231,35 +243,42 @@ export default function GameLobbyScreen() {
               <View style={{ gap: 5 }}>
                 <Label color={theme.accent}>
                   {room.status === 'STARTED'
-                    ? 'GAME START'
+                    ? t('lobby.state.started')
                     : room.status === 'COUNTDOWN'
-                      ? 'EVERYONE IS HERE'
-                      : 'WAITING FOR PLAYERS'}
+                      ? t('lobby.state.countdown')
+                      : t('lobby.state.waiting')}
                 </Label>
-                <Text style={s.count}>
-                  {joined} / {room.maxPlayers} players
-                </Text>
+                <Text style={s.count}>{t('lobby.count', { joined, max: room.maxPlayers })}</Text>
                 {room.teams && (
                   <Text style={{ color: ui.gem, fontWeight: '800', fontSize: 13 }}>
-                    2 v 2 teams: the player opposite you is your partner.
+                    {t('lobby.teamsNote')}
                   </Text>
                 )}
                 {room.variant !== 'classic' && (
                   <Text style={{ color: ui.blueSoft, fontWeight: '800', fontSize: 13 }}>
-                    {VARIANT_INFO[room.variant].title}: {VARIANT_INFO[room.variant].description}
+                    {t('lobby.modeNote', {
+                      mode: variantTitle(room.variant),
+                      description: variantDescription(room.variant),
+                    })}
                   </Text>
                 )}
                 {room.stake > 0 && (
                   <Text style={{ color: ui.gold, fontWeight: '800', fontSize: 13 }}>
-                    🪙 {room.stake.toLocaleString()} entry · winner takes{' '}
-                    {tablePrize(room.stake, room.maxPlayers).toLocaleString()}
+                    {t('lobby.stakeNote', {
+                      stake: room.stake.toLocaleString(numberLocale()),
+                      prize: tablePrize(room.stake, room.maxPlayers).toLocaleString(numberLocale()),
+                    })}
                   </Text>
                 )}
               </View>
               {room.status === 'COUNTDOWN' || room.status === 'STARTED' ? (
                 <View style={[s.countdown, { borderColor: theme.accent }]}>
-                  <Text style={[s.countdownText, { color: theme.accent }]}>
-                    {room.status === 'STARTED' ? '▶' : lobby.countdown || 'GO'}
+                  <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    style={[s.countdownText, { color: theme.accent }]}
+                  >
+                    {room.status === 'STARTED' ? '▶' : lobby.countdown || t('lobby.go')}
                   </Text>
                 </View>
               ) : (
@@ -281,16 +300,21 @@ export default function GameLobbyScreen() {
               <View style={s.seeking}>
                 <LiveDot color={ui.green} active />
                 <Text style={{ color: ui.green, fontWeight: '800', flex: 1 }}>
-                  Looking for another team of friends… Random 2 v 2 players can fill in after 20
-                  seconds.
+                  {t('lobby.seeking')}
                 </Text>
                 {isHost && (
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => void lobby.seekOpponents(false)}
                     disabled={lobby.busy}
+                    style={{
+                      minWidth: 48,
+                      minHeight: 48,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
-                    <Text style={{ color: ui.muted, fontWeight: '800' }}>Stop</Text>
+                    <Text style={{ color: ui.muted, fontWeight: '800' }}>{t('lobby.stop')}</Text>
                   </Pressable>
                 )}
               </View>
@@ -319,11 +343,15 @@ export default function GameLobbyScreen() {
                           </Text>
                           {player.isHost && (
                             <View style={[s.hostTag, { borderColor: `${theme.accent}55` }]}>
-                              <Text style={[s.hostText, { color: theme.accent }]}>HOST</Text>
+                              <Text style={[s.hostText, { color: theme.accent }]}>
+                                {t('lobby.host')}
+                              </Text>
                             </View>
                           )}
                         </View>
-                        <Text style={[s.status, { color: state.color }]}>{state.label}</Text>
+                        <Text style={[s.status, { color: state.color }]}>
+                          {t(`lobby.seat.${state.label}`)}
+                        </Text>
                       </View>
                     </View>
                   );
@@ -333,12 +361,14 @@ export default function GameLobbyScreen() {
 
             <Text style={shared.small}>
               {room.status === 'STARTED'
-                ? 'Opening the board…'
+                ? t('lobby.footer.opening')
                 : room.status === 'COUNTDOWN'
-                  ? 'Everyone is ready. Starting together…'
+                  ? t('lobby.footer.starting')
                   : waitingFor.length > 0
-                    ? `Waiting for ${waitingFor.map(displayNameOf).join(' and ')}…`
-                    : 'Waiting for players to be ready…'}
+                    ? t('lobby.footer.waitingFor', {
+                        names: waitingFor.map(displayNameOf).join(t('lobby.nameJoiner')),
+                      })
+                    : t('lobby.footer.waitingReady')}
             </Text>
           </Card>
 
@@ -350,20 +380,18 @@ export default function GameLobbyScreen() {
 
           {canSeek && (
             <Button disabled={lobby.busy} onPress={() => void lobby.seekOpponents(true)}>
-              Find opponents for your team
+              {t('lobby.findOpponents')}
             </Button>
           )}
           {link && teamRoom && isHost && room.status === 'WAITING' && !room.seeking && !canSeek && (
             <Text style={[shared.small, { textAlign: 'center' }]}>
-              {seatTaken(2)
-                ? 'Invite two more friends, or keep the other side empty to find opponents.'
-                : 'When your friend joins they sit opposite you as your partner. Then find opponents, or invite two more friends.'}
+              {seatTaken(2) ? t('lobby.hostHint.inviteMore') : t('lobby.hostHint.whenJoins')}
             </Text>
           )}
 
           {room.status === 'WAITING' && me?.status === 'JOINED' && !me.isReady && (
             <Button disabled={lobby.busy} onPress={() => void lobby.setReady(true)}>
-              I’m ready
+              {t('lobby.imReady')}
             </Button>
           )}
 
@@ -379,14 +407,18 @@ export default function GameLobbyScreen() {
               disabled={lobby.busy}
               onPress={() => (isHost ? setConfirmCancel(true) : void leaveAndExit())}
             >
-              {isHost ? 'Cancel game' : 'Leave game'}
+              {isHost ? t('lobby.cancelGame') : t('lobby.leaveGame')}
             </Button>
           )}
         </>
       )}
 
-      <Sheet visible={confirmCancel} onClose={() => setConfirmCancel(false)} title="Cancel game?">
-        <Body>All invited players will be told the game is off.</Body>
+      <Sheet
+        visible={confirmCancel}
+        onClose={() => setConfirmCancel(false)}
+        title={t('lobby.cancelSheet.title')}
+      >
+        <Body>{t('lobby.cancelSheet.body')}</Body>
         <Button
           disabled={lobby.busy}
           onPress={() => {
@@ -394,10 +426,10 @@ export default function GameLobbyScreen() {
             void lobby.cancel();
           }}
         >
-          Cancel game
+          {t('lobby.cancelGame')}
         </Button>
         <Button secondary onPress={() => setConfirmCancel(false)}>
-          Keep waiting
+          {t('lobby.cancelSheet.keepWaiting')}
         </Button>
       </Sheet>
     </Screen>
@@ -413,17 +445,18 @@ function CountdownBanner({
   seconds: number;
   accent: string;
 }) {
+  const { t } = useTranslation('online');
   if (!visible) return null;
   return (
     <View
       accessibilityLiveRegion="polite"
-      accessibilityLabel={`Starting in ${seconds}`}
+      accessibilityLabel={t('lobby.banner.a11y', { seconds })}
       style={[s.banner, { borderColor: `${accent}55`, backgroundColor: `${accent}12` }]}
     >
-      <Text style={[s.bannerNumber, { color: accent }]}>{seconds || 'GO'}</Text>
+      <Text style={[s.bannerNumber, { color: accent }]}>{seconds || t('lobby.go')}</Text>
       <View style={{ flex: 1, gap: 3 }}>
-        <Text style={s.bannerTitle}>Get ready</Text>
-        <Text style={shared.small}>Everyone starts at the same moment, timed by the server.</Text>
+        <Text style={s.bannerTitle}>{t('lobby.banner.title')}</Text>
+        <Text style={shared.small}>{t('lobby.banner.body')}</Text>
       </View>
     </View>
   );

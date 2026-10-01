@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator } from 'react-native';
 import { Text } from '../components/AppText';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { parseInviteCode } from '@/domain';
 import { challengeRepository } from '@/config/container';
 import { Body, Button, Card, Label, Screen, shared } from '../components/Kit';
@@ -19,9 +20,11 @@ export default function JoinByCodeScreen() {
   const params = useLocalSearchParams<{ code?: string }>();
   const code = parseInviteCode(typeof params.code === 'string' ? params.code : '');
   const { theme } = useProfile();
+  const { t } = useTranslation(['online', 'common']);
   const { enabled, signedIn } = useSocial();
   const auth = useAuthSession();
-  const [error, setError] = useState<string | null>(null);
+  // The server's message as written, or null text for our own (translated) fallback.
+  const [error, setError] = useState<{ text: string | null } | null>(null);
   const [attempt, setAttempt] = useState(0);
   const started = useRef(-1);
 
@@ -32,46 +35,42 @@ export default function JoinByCodeScreen() {
     challengeRepository
       .joinLinkRoom(code)
       .then((lobbyId) => router.replace({ pathname: '/lobby/[id]', params: { id: lobbyId } }))
-      .catch((e: unknown) =>
-        setError(e instanceof Error ? e.message : 'Could not join that game. Please try again.'),
-      );
+      .catch((e: unknown) => setError({ text: e instanceof Error ? e.message : null }));
   }, [code, signedIn, attempt]);
 
   if (!enabled || !challengeRepository)
     return (
-      <Screen nav={false} back title="Join a game" subtitle="INVITE LINK">
+      <Screen nav={false} back title={t('join.title')} subtitle={t('join.subtitle')}>
         <Card>
-          <Body>This build has no game server configured, so invite links cannot be used.</Body>
-          <Button onPress={() => router.replace('/')}>Back to the game</Button>
+          <Body>{t('join.noServer')}</Body>
+          <Button onPress={() => router.replace('/')}>{t('backToGame')}</Button>
         </Card>
       </Screen>
     );
 
   if (!code)
     return (
-      <Screen nav={false} back title="Join a game" subtitle="INVITE LINK">
+      <Screen nav={false} back title={t('join.title')} subtitle={t('join.subtitle')}>
         <Card>
-          <Text style={shared.sectionTitle}>That link does not have a valid code</Text>
-          <Body>
-            Ask your friend to share the invite again, or enter the code on the Online tab.
-          </Body>
-          <Button onPress={() => router.replace('/online')}>Go to online play</Button>
+          <Text style={shared.sectionTitle}>{t('join.invalidTitle')}</Text>
+          <Body>{t('join.invalidBody')}</Body>
+          <Button onPress={() => router.replace('/online')}>{t('join.goOnline')}</Button>
         </Card>
       </Screen>
     );
 
   if (!signedIn)
     return (
-      <Screen nav={false} back title="You’re invited" subtitle="INVITE LINK">
+      <Screen nav={false} back title={t('join.invited')} subtitle={t('join.subtitle')}>
         <Card style={{ borderColor: `${theme.accent}40` }}>
-          <Label color={theme.accent}>GAME {code}</Label>
-          <Text style={shared.sectionTitle}>Take your seat</Text>
-          <Body>Join as a guest right away, or sign in to play with your account.</Body>
+          <Label color={theme.accent}>{t('join.gameCode', { code })}</Label>
+          <Text style={shared.sectionTitle}>{t('join.takeSeat')}</Text>
+          <Body>{t('join.invitedBody')}</Body>
           <Button disabled={auth.busy} onPress={() => void auth.continueAsGuest()}>
-            {auth.busy ? 'Setting up your seat…' : 'Continue as Guest'}
+            {auth.busy ? t('settingUpSeat') : t('continueAsGuest')}
           </Button>
           <Button secondary disabled={auth.busy} onPress={() => router.push(LOGIN_HREF)}>
-            Login / Sign Up
+            {t('loginSignUp')}
           </Button>
           {auth.error && <Text style={shared.error}>{auth.error}</Text>}
         </Card>
@@ -79,23 +78,23 @@ export default function JoinByCodeScreen() {
     );
 
   return (
-    <Screen nav={false} back title="Joining the game" subtitle="INVITE LINK">
+    <Screen nav={false} back title={t('join.joining')} subtitle={t('join.subtitle')}>
       <Card>
-        <Label color={theme.accent}>GAME {code}</Label>
+        <Label color={theme.accent}>{t('join.gameCode', { code })}</Label>
         {error ? (
           <>
             <Text accessibilityLiveRegion="polite" style={shared.error}>
-              {error}
+              {error.text ?? t('errors.joinFailedPlease')}
             </Text>
-            <Button onPress={() => setAttempt((n) => n + 1)}>Try again</Button>
+            <Button onPress={() => setAttempt((n) => n + 1)}>{t('tryAgain')}</Button>
             <Button secondary onPress={() => router.replace('/online')}>
-              Back to online play
+              {t('backToOnline')}
             </Button>
           </>
         ) : (
           <>
             <ActivityIndicator color={theme.accent} />
-            <Body>Finding your seat…</Body>
+            <Body>{t('join.finding')}</Body>
           </>
         )}
       </Card>

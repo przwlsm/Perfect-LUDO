@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import type { PresenceStatus } from '@/domain';
 import { shared } from '../components/Kit';
@@ -28,6 +29,7 @@ export function PlayerRow({
   children?: ReactNode;
 }) {
   const { theme } = useProfile();
+  const { t } = useTranslation('social');
   return (
     <View style={[s.row, { backgroundColor: theme.surface }]}>
       <UserAvatar id={id} name={name} emoji={emoji} presence={presence} />
@@ -42,8 +44,8 @@ export function PlayerRow({
             <Text style={shared.small}>{subtitle}</Text>
           )}
           {publicId && (
-            <Text style={s.id} accessibilityLabel={`User ID ${publicId}`}>
-              ID {publicId}
+            <Text style={s.id} accessibilityLabel={t('player.idA11y', { id: publicId })}>
+              {t('player.id', { id: publicId })}
             </Text>
           )}
         </View>

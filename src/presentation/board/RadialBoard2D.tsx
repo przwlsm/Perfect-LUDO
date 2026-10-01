@@ -1,4 +1,5 @@
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { ALL_PLAYER_COLORS, isSafeSquare } from '@/domain';
 import type { Board2DProps } from './Board2D';
@@ -14,6 +15,7 @@ import {
   radialPoint,
 } from './radialLayout';
 import { getCellForPiece } from './getCellForPiece';
+import { keepLtr } from '../i18n/rtl';
 export function RadialBoard2D({
   state,
   validMoves,
@@ -23,6 +25,7 @@ export function RadialBoard2D({
   homeStyle = 'triangle',
   onSelectMove,
 }: Board2DProps) {
+  const { t } = useTranslation('game');
   const count = state.players.length,
     grid = radialGrid(count),
     cell = size / grid,
@@ -38,6 +41,7 @@ export function RadialBoard2D({
   return (
     <View
       style={{
+        ...keepLtr,
         width: size,
         height: size,
         borderWidth: 0,
@@ -248,7 +252,7 @@ export function RadialBoard2D({
           justifyContent: 'center',
         }}
       >
-        <Text style={{ fontSize: cell * 0.6, color: theme.background }}>HOME</Text>
+        <Text style={{ fontSize: cell * 0.6, color: theme.background }}>{t('board.home')}</Text>
       </View>
       {pieces.map(({ piece, slot, cell: location }) => {
         const key = location.join(','),

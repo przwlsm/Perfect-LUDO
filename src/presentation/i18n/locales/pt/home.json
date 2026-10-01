@@ -1,0 +1,201 @@
+{
+  "restoreFailed": "Não foi possível restaurar sua partida.",
+  "profile": {
+    "guest": "Convidado · entre para subir de nível",
+    "levelTag": "NV.{{level}}",
+    "titles": {
+      "grandmaster": "GRÃO-MESTRE",
+      "master": "MESTRE",
+      "proRoller": "JOGADOR PRO",
+      "roller": "JOGADOR",
+      "rookie": "NOVATO"
+    }
+  },
+  "spin": {
+    "a11y": "Giro da sorte diário",
+    "a11yReady": "Giro da sorte diário, giro grátis disponível",
+    "free": "GRÁTIS",
+    "title": "Giro da Sorte Diário",
+    "winUpTo": "Gire e ganhe até {{amount}} moedas!",
+    "nextIn": "Próximo giro grátis em {{time}}",
+    "signIn": "Entre para girar todo dia",
+    "streak": "DIA {{day}}/7",
+    "spinButton": "GIRAR",
+    "openButton": "ABRIR",
+    "signInButton": "ENTRAR"
+  },
+  "resume": {
+    "resultReady": "Seu resultado está pronto",
+    "tableWaiting": "Sua mesa está esperando",
+    "ai_one": "{{count}} jogador · Contra o computador",
+    "ai_many": "{{count}} de jogadores · Contra o computador",
+    "ai_other": "{{count}} jogadores · Contra o computador",
+    "local_one": "{{count}} jogador · Passa e joga",
+    "local_many": "{{count}} de jogadores · Passa e joga",
+    "local_other": "{{count}} jogadores · Passa e joga",
+    "viewResult": "Ver resultado",
+    "resume": "Continuar →"
+  },
+  "online": {
+    "title": "Jogar Online",
+    "subtitle": "Jogadores reais · maiores recompensas",
+    "live": "AO VIVO",
+    "offline": "OFFLINE",
+    "mostPlayed": "MAIS JOGADO",
+    "quickMatch": "PARTIDA RÁPIDA",
+    "body": "Jogadores reais, mesa na hora. Cada vitória paga <coins>+{{coins}} moedas</coins> e <xp>+{{xp}} XP</xp>.",
+    "teamsA11y": "Partida 2 x 2 aleatória",
+    "seatsA11y": "Partida de {{seats}} jogadores",
+    "teamsShort": "2x2",
+    "seatsShort": "{{seats}}J",
+    "playNow": "⚡ Jogar agora",
+    "offlineButton": "Offline"
+  },
+  "tournament": {
+    "a11y": "Torneio semanal",
+    "live": "AO VIVO",
+    "title": "Torneio Semanal",
+    "prize": "Prêmio máximo 3.000 moedas + 60 gemas · termina em {{time}}",
+    "toTopTen": "{{points}} pts · faltam {{need}} para o top 10",
+    "firstToScore": "{{points}} pts · seja o primeiro a pontuar"
+  },
+  "friends": {
+    "title": "Jogar com Amigos",
+    "subtitle": "Sala privada, um celular ou sua lista de amigos",
+    "party": {
+      "title": "Sala de Festa",
+      "subtitle": "Sala privada com código para amigos.",
+      "pill": "Criar"
+    },
+    "pass": {
+      "title": "Passa e Joga",
+      "subtitle": "Um celular, até oito amigos.",
+      "pill": "2–8"
+    },
+    "challenge": {
+      "title": "Desafiar Amigos",
+      "subtitle": "Convide alguém da sua lista de amigos.",
+      "pillMember": "Amigos",
+      "pillGuest": "Conta"
+    },
+    "teamUp": {
+      "title": "2 x 2 com um amigo",
+      "subtitle": "Forme uma dupla e enfrente outra dupla de amigos.",
+      "pill": "Formar dupla"
+    }
+  },
+  "computer": {
+    "title": "Jogar contra o Computador",
+    "subtitle": "Offline, a qualquer hora · escolha um modo",
+    "classic": {
+      "title": "Ludo Clássico",
+      "subtitle": "Regras originais, os quatro peões em casa.",
+      "pill": "+{{coins}} / vitória"
+    },
+    "quick": {
+      "subtitle": "Primeiro peão em casa vence. Minutos.",
+      "pill": "Rápido"
+    },
+    "kill": {
+      "subtitle": "Capture primeiro, depois siga para casa.",
+      "pill": "Difícil"
+    },
+    "teams": {
+      "title": "Equipes 2x2",
+      "subtitle": "Você e um parceiro contra dois.",
+      "pill": "Em dupla"
+    }
+  },
+  "progress": {
+    "title": "Seu Progresso",
+    "subtitle": "Passe de temporada, missões e estilo",
+    "seasonA11y": "Passe de temporada",
+    "seasonTitle": "Passe da Temporada {{number}}",
+    "pro": "PRO",
+    "seasonNext": "{{xp}} XP para o próximo nível · termina em {{time}}"
+  },
+  "missions": {
+    "title": "MISSÕES DE HOJE",
+    "ready_one": "{{count}} PRONTA PARA RESGATAR",
+    "ready_many": "{{count}} PRONTAS PARA RESGATAR",
+    "ready_other": "{{count}} PRONTAS PARA RESGATAR",
+    "resetsIn": "RENOVA EM {{time}}",
+    "claimed": "RESGATADA",
+    "claim": "RESGATAR",
+    "claimA11y": "Resgatar {{title}}"
+  },
+  "store": {
+    "title": "Deixe com a sua cara",
+    "subtitle": "Tabuleiros, dados e estilos de mesa na loja."
+  },
+  "setup": {
+    "aiTitle": "Monte sua mesa",
+    "localTitle": "Chame a galera",
+    "aiBody": "Você joga com o vermelho. Escolha seus adversários e faça sua jogada.",
+    "localBody": "Passe o aparelho quando a vez mudar. Cada lugar é controlado por uma pessoa.",
+    "players": "JOGADORES",
+    "playersA11y_one": "{{count}} jogador",
+    "playersA11y_many": "{{count}} de jogadores",
+    "playersA11y_other": "{{count}} jogadores",
+    "playersUnit": "jogadores",
+    "gameMode": "MODO DE JOGO",
+    "teams": "EQUIPES",
+    "teamsOnHint": "parceiros frente a frente",
+    "teamsOffHint": "cada um por si",
+    "teamsAi": "Você e o amarelo (um parceiro computador) contra o verde e o azul. Parceiros nunca se capturam, e quando seus peões estiverem em casa, você joga pelo seu parceiro.",
+    "teamsLocal": "Vermelho e amarelo contra verde e azul. Parceiros nunca se capturam, e quando seus peões estiverem em casa, você joga pelo seu parceiro.",
+    "whoIsPlaying": "QUEM VAI JOGAR?",
+    "namesHint": "Os nomes aparecem ao lado de cada base no tabuleiro. Deixe em branco para usar a cor.",
+    "seatPlaceholder": {
+      "RED": "Jogador vermelho",
+      "GREEN": "Jogador verde",
+      "YELLOW": "Jogador amarelo",
+      "BLUE": "Jogador azul",
+      "PURPLE": "Jogador roxo",
+      "ORANGE": "Jogador laranja",
+      "PINK": "Jogador rosa",
+      "CYAN": "Jogador ciano"
+    },
+    "seatNameA11y": {
+      "RED": "Nome do jogador vermelho",
+      "GREEN": "Nome do jogador verde",
+      "YELLOW": "Nome do jogador amarelo",
+      "BLUE": "Nome do jogador azul",
+      "PURPLE": "Nome do jogador roxo",
+      "ORANGE": "Nome do jogador laranja",
+      "PINK": "Nome do jogador rosa",
+      "CYAN": "Nome do jogador ciano"
+    },
+    "difficulty": "DIFICULDADE DO COMPUTADOR",
+    "easy": "Tranquilo",
+    "smart": "Esperto",
+    "easyHint": "Escolhe uma jogada válida aleatória. Perfeito para uma partida relaxada.",
+    "smartHint": "Procura capturas, chegadas em casa e chances de sair da base.",
+    "replacesSaved": "Começar um jogo novo substitui sua partida salva.",
+    "start": "Bora jogar →",
+    "footer": "Grátis para jogar · Não precisa de conexão"
+  },
+  "teams": {
+    "on": "Equipes 2 x 2",
+    "off": "Cada um por si",
+    "offA11y": "Cada jogador por si",
+    "hint": "Você e o jogador à sua frente são parceiros: vocês nunca se capturam e vencem juntos. Os dois vencedores dividem o prêmio."
+  },
+  "stake": {
+    "freeA11y": "Mesa grátis",
+    "tableA11y": "Mesa de {{amount}} moedas",
+    "tableGatedA11y": "Mesa de {{amount}} moedas, libera no nível {{level}}",
+    "tableLockedA11y": "Mesa de {{amount}} moedas, moedas insuficientes ou sem conta",
+    "free": "GRÁTIS",
+    "gate": "Nv {{level}}",
+    "freeHint": "Mesa grátis: jogue por XP, moedas e pontos de torneio.",
+    "guestHint": "Convidados jogam em mesas grátis. Crie uma conta para jogar valendo moedas.",
+    "paidHint": "Todos pagam {{stake}} quando a partida começa. O vencedor leva {{prize}} moedas."
+  },
+  "ad": {
+    "a11y": "{{title}}. {{reward}}",
+    "loading": "Carregando seu anúncio…",
+    "hangTight": "Aguenta aí — sua recompensa chega logo depois.",
+    "left": "RESTAM {{left}}"
+  }
+}

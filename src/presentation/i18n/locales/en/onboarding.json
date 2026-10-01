@@ -1,0 +1,25 @@
+{
+  "step": "{{current}} / {{total}}",
+  "skip": "Skip",
+  "skipA11y": "Skip the tour",
+  "next": "Next",
+  "start": "Let’s play",
+  "pages": {
+    "roll": {
+      "title": "Roll a six to start",
+      "text": "Roll a six to bring a piece out of your yard. Every six earns you another roll."
+    },
+    "race": {
+      "title": "Race your pieces home",
+      "text": "Move clockwise around the board, then up your own coloured lane. You need an exact roll to finish."
+    },
+    "capture": {
+      "title": "Capture, or stay safe",
+      "text": "Land on a rival to send them back to their yard. Star and entry squares are safe, and a capture earns a bonus roll."
+    },
+    "modes": {
+      "title": "Play your way",
+      "text": "Take on the computer offline, pass one phone around with friends, or go online for quick matches. Sign in to keep your coins and progress."
+    }
+  }
+}

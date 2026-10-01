@@ -1,0 +1,81 @@
+# Daily Supabase database backup (free-plan substitute for managed backups).
+#
+# Dumps roles, schema and data with the Supabase CLI, encrypts the bundle
+# with a passphrase (this repo is public, so artifacts must never be
+# readable as-is), and keeps it as a workflow artifact for 30 days.
+# Restore steps: docs/BACKUPS.md.
+#
+# Required repository secrets:
+#   SUPABASE_DB_URL    Session pooler connection string (port 5432).
+#   BACKUP_PASSPHRASE  Long random passphrase used to encrypt the bundle.
+#
+# Scheduled workflows only run from the default branch (main).
+name: Database backup
+
+on:
+  schedule:
+    - cron: '30 20 * * *' # 02:00 IST daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: supabase/setup-cli@v3
+        with:
+          version: latest
+
+      - name: Dump database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not set"
+            exit 1
+          fi
+          mkdir backup
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/roles.sql --role-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/data.sql --use-copy --data-only \
+            -x "storage.buckets_vectors" -x "storage.vector_indexes"
+
+      - name: Verify dump
+        run: |
+          for f in roles schema data; do
+            test -s "backup/$f.sql" || { echo "::error::backup/$f.sql is empty"; exit 1; }
+          done
+          grep -q 'CREATE TABLE' backup/schema.sql || { echo "::error::schema.sql has no tables"; exit 1; }
+          if ! grep -q 'COPY "auth"."users"' backup/data.sql; then
+            echo "::warning::auth.users is not in data.sql, so player logins are not covered by this backup"
+          fi
+          ls -lh backup
+
+      - name: Encrypt
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ ${#BACKUP_PASSPHRASE} -lt 20 ]; then
+            echo "::error::BACKUP_PASSPHRASE secret is missing or shorter than 20 characters"
+            exit 1
+          fi
+          name="ludo-db-$(date -u +%Y%m%d-%H%M)"
+          tar -czf "$name.tar.gz" backup
+          gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 -o "$name.tar.gz.gpg" "$name.tar.gz" <<< "$BACKUP_PASSPHRASE"
+          rm -rf backup "$name.tar.gz"
+          echo "BACKUP_NAME=$name" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.BACKUP_NAME }}
+          path: ${{ env.BACKUP_NAME }}.tar.gz.gpg
+          retention-days: 30
+          if-no-files-found: error

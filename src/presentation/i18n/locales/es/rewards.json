@@ -1,0 +1,107 @@
+{
+  "title": "Recompensas",
+  "subtitle": "RULETA · MISIONES · PASE DE TEMPORADA",
+  "errors": {
+    "claimFailed": "No se pudo reclamar en este momento.",
+    "adNotFinished": "El anuncio no terminó. Inténtalo de nuevo en un momento.",
+    "addFailed": "No se pudo agregar en este momento."
+  },
+  "vaultCarry": {
+    "label": "TUS GANANCIAS COMO INVITADO",
+    "title": "{{amount}} monedas de antes de iniciar sesión",
+    "a11y": "Reclamar {{amount}} monedas de la bóveda",
+    "claim": "Reclamar"
+  },
+  "gift": {
+    "label": "RECOMPENSA DIARIA",
+    "collectedTitle": "Día {{day}} cobrado: vuelve mañana",
+    "readyTitle": "El día {{day}} está listo",
+    "dayShort": "D{{day}}",
+    "hint": "Reclama cada día para avanzar en el calendario. El día 7 da {{coins}} monedas y {{gems}} gemas; si te saltas un día, vuelves a empezar.",
+    "claiming": "Reclamando…",
+    "collected": "Cobrado: vuelve mañana",
+    "claimDay": "Reclamar día {{day}} · {{coins}} monedas",
+    "claimDayGems": "Reclamar día {{day}} · {{coins}} monedas + {{gems}} gemas"
+  },
+  "rescue": {
+    "label": "RESCATE",
+    "title": "¿Te quedan pocas monedas?",
+    "boostHint": "Mira un anuncio para sumar {{amount}} monedas más al rescate de hoy.",
+    "spentHint": "Ya usaste el rescate de hoy. Las mesas gratis siempre están abiertas.",
+    "claimHint": "Reclama {{amount}} monedas para volver a las mesas. Una vez al día.",
+    "boostA11y": "Mira un anuncio para obtener {{amount}} monedas más",
+    "claimA11y": "Reclamar {{amount}} monedas de rescate"
+  },
+  "spin": {
+    "label": "RULETA DE LA SUERTE DIARIA",
+    "title": "Gira y gana hasta 1000 monedas",
+    "streakHint": "Día 7: +25 gemas",
+    "openA11y": "Abrir la ruleta de la suerte",
+    "freeReady": "Giro gratis disponible",
+    "extra": "Giro extra · {{gems}} gemas",
+    "backTomorrow": "Vuelve mañana",
+    "sheetTitle": "Ruleta de la suerte",
+    "youWon": "GANASTE",
+    "prizeCoins": "{{amount}} monedas",
+    "prizeGems": "{{amount}} gemas",
+    "prizeXp": "{{amount}} XP",
+    "streakBonus": "Bono por racha de 7 días: +{{gems}} gemas",
+    "about": "{{slots}} premios en la ruleta. Un giro gratis al día y hasta {{extra}} más por {{gems}} gemas cada uno.",
+    "spinning": "Girando…",
+    "spinFree": "Girar gratis",
+    "spinAgain": "Girar otra vez · {{gems}} gemas",
+    "noneLeft": "No te quedan giros hoy",
+    "adTitle": "Mejor gira gratis",
+    "adReward": "Mira un anuncio corto",
+    "hub": "GIRAR"
+  },
+  "gemAd": {
+    "title": "Mira un anuncio y gana una gema",
+    "reward": "+1 gema",
+    "caption": "Unos 30 segundos. Siempre es tu decisión.",
+    "done": "Ya cobraste todo hoy: vuelve mañana."
+  },
+  "missions": {
+    "title": "Misiones de hoy",
+    "newIn": "Nuevas en {{time}}",
+    "loading": "Cargando tus misiones…",
+    "claimed": "Reclamada",
+    "claimA11y": "Reclamar {{title}}",
+    "claim": "RECLAMAR"
+  },
+  "season": {
+    "label": "PASE DE LA TEMPORADA {{number}}",
+    "tier": "Nivel {{tier}} / {{total}}",
+    "endsIn": "Termina en {{time}}",
+    "complete": "Alcanzaste todos los niveles. Legendario.",
+    "progress": "{{xp}} / {{needed}} XP para el nivel {{next}}. Cada partida da XP de temporada.",
+    "premiumTitle": "Desbloquea el camino premium",
+    "premiumHint": "Más monedas en cada nivel y 40 gemas cada cinco niveles.",
+    "premiumA11y": "Desbloquear premium por {{gems}} gemas",
+    "tierFreeA11y": "Recompensa gratis del nivel {{tier}}",
+    "tierPremiumA11y": "Recompensa premium del nivel {{tier}}",
+    "claim": "RECLAMAR"
+  },
+  "guest": {
+    "subtitle": "TU BÓVEDA SE ESTÁ LLENANDO",
+    "vaultLabel": "TU BÓVEDA",
+    "vaultHint": "Todo lo que hay aquí será tuyo",
+    "max": "MÁX. {{amount}}",
+    "full": "¡Tu bóveda está llena! Inicia sesión para reclamarlo todo.",
+    "winHint": "Gana una partida: +{{coins}} monedas. Todo se desbloquea en cuanto inicies sesión.",
+    "signInClaim": "Inicia sesión y reclama {{amount}} monedas",
+    "signInStart": "Inicia sesión para empezar a ganar",
+    "adTitle": "Mira un anuncio",
+    "adReward": "+{{coins}} a tu bóveda",
+    "adFull": "Tu bóveda está llena: inicia sesión para reclamarla primero.",
+    "adAdded": "¡+{{coins}} monedas en tu bóveda!",
+    "accountTitle": "Una cuenta desbloquea todo lo demás",
+    "accountBody": "La ruleta de la suerte, las misiones diarias, el pase de temporada, las ligas, las gemas y las mesas en línea por monedas: todo vive en tu cuenta gratis, junto con todo lo que hay en tu bóveda."
+  },
+  "time": {
+    "now": "ahora",
+    "daysHours": "{{days}} d {{hours}} h",
+    "hoursMinutes": "{{hours}} h {{minutes}} min",
+    "minutes": "{{minutes}} min"
+  }
+}

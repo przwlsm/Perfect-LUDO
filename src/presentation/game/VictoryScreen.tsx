@@ -21,6 +21,8 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { levelInfo, type MatchStats } from '@/domain';
 import { Text } from '../components/AppText';
 import { CoinPill, GemPill } from '../components/Kit';
@@ -29,6 +31,8 @@ import { ProgressBar, RewardChips } from '../components/Progress';
 import { UserAvatar } from '../social/UserAvatar';
 import { useProfile } from '../state/ProfileProvider';
 import { ui } from '../theme/themes';
+import { numberLocale } from '../i18n/format';
+import { forwardArrow } from '../i18n/rtl';
 
 export type VictoryOutcome = 'win' | 'loss' | 'abandoned';
 
@@ -88,6 +92,7 @@ export function VictoryScreen({
   motionEnabled: boolean;
 }) {
   const { profile, member } = useProfile();
+  const { t } = useTranslation('game');
   const insets = useSafeAreaInsets();
   const before = levelInfo(profile.xp);
   const after = reward ? levelInfo(profile.xp + reward.xp) : before;
@@ -107,7 +112,7 @@ export function VictoryScreen({
       >
         {win && motion && <Confetti />}
         <View style={s.topBar}>
-          <Text style={s.topTitle}>MATCH RESULTS</Text>
+          <Text style={s.topTitle}>{t('victory.title')}</Text>
           <View style={s.pills}>
             <GemPill />
             <CoinPill />
@@ -117,7 +122,7 @@ export function VictoryScreen({
           <View style={s.completed}>
             <Ionicons name="star" size={12} color={ui.gold} />
             <Text style={s.completedText}>
-              {outcome === 'abandoned' ? 'MATCH ENDED' : 'MATCH COMPLETED'}
+              {outcome === 'abandoned' ? t('victory.ended') : t('victory.completed')}
             </Text>
             <Ionicons name="star" size={12} color={ui.gold} />
           </View>
@@ -170,16 +175,18 @@ export function VictoryScreen({
               <View style={s.rowBetween}>
                 <View style={[s.row, { gap: 8 }]}>
                   <Ionicons name="gift" size={20} color={ui.gold} />
-                  <Text style={s.cardTitle}>Rewards</Text>
+                  <Text style={s.cardTitle}>{t('victory.rewards')}</Text>
                 </View>
                 <RewardChips coins={reward.coins} xp={reward.xp} />
               </View>
               <View style={s.levelBox}>
                 <View style={s.rowBetween}>
                   <Text style={s.levelText}>
-                    Level {before.level}
+                    {t('victory.level', { level: before.level })}
                     {levelUp ? (
-                      <Text style={{ color: ui.gold }}>{`  →  Level ${after.level}`}</Text>
+                      <Text style={{ color: ui.gold }}>
+                        {`  ${forwardArrow}  ${t('victory.level', { level: after.level })}`}
+                      </Text>
                     ) : null}
                   </Text>
                   <Text style={[s.levelText, { color: ui.green }]}>+{reward.xp} XP</Text>
@@ -195,8 +202,10 @@ export function VictoryScreen({
                   </Text>
                   <Text style={[s.small, { color: levelUp ? ui.gold : ui.green }]}>
                     {levelUp
-                      ? 'LEVEL UP!'
-                      : `${Math.round((after.into / after.need) * 100)}% to next`}
+                      ? t('victory.levelUp')
+                      : t('victory.toNext', {
+                          percent: Math.round((after.into / after.need) * 100),
+                        })}
                   </Text>
                 </View>
               </View>
@@ -210,23 +219,33 @@ export function VictoryScreen({
           {stats && (
             <Animated.View entering={rise(420)} style={{ gap: 10 }}>
               <View style={s.rowBetween}>
-                <Text style={s.section}>BATTLE PERFORMANCE</Text>
+                <Text style={s.section}>{t('victory.performance')}</Text>
                 {durationMs !== null && (
                   <View style={[s.row, { gap: 4 }]}>
                     <Ionicons name="time-outline" size={14} color={ui.muted} />
-                    <Text style={s.small}>{formatDuration(durationMs)}</Text>
+                    <Text style={s.small}>{formatDuration(durationMs, t)}</Text>
                   </View>
                 )}
               </View>
               <View style={s.statsGrid}>
-                <StatTile icon="dice" label="Sixes rolled" value={stats.sixes} color={ui.gold} />
+                <StatTile
+                  icon="dice"
+                  label={t('victory.sixes')}
+                  value={stats.sixes}
+                  color={ui.gold}
+                />
                 <StatTile
                   icon="flash"
-                  label="Coins captured"
+                  label={t('victory.captured')}
                   value={stats.captures}
                   color="#f87171"
                 />
-                <StatTile icon="home" label="Coins home" value={stats.home} color={ui.green} />
+                <StatTile
+                  icon="home"
+                  label={t('victory.home')}
+                  value={stats.home}
+                  color={ui.green}
+                />
               </View>
             </Animated.View>
           )}
@@ -249,7 +268,7 @@ export function VictoryScreen({
             />
             <Ionicons name="refresh" size={20} color="#3b2400" />
             <Text style={s.primaryText}>
-              {primary.busy ? 'SAVING…' : primary.label.toUpperCase()}
+              {primary.busy ? t('victory.saving') : primary.label.toUpperCase()}
             </Text>
           </Pressable>
           <View style={[s.row, { gap: 10 }]}>
@@ -269,7 +288,7 @@ export function VictoryScreen({
                 style={s.secondary}
               >
                 <Ionicons name="share-social" size={18} color={ui.blueSoft} />
-                <Text style={[s.secondaryText, { color: ui.blueSoft }]}>Share</Text>
+                <Text style={[s.secondaryText, { color: ui.blueSoft }]}>{t('victory.share')}</Text>
               </Pressable>
             )}
           </View>
@@ -279,10 +298,11 @@ export function VictoryScreen({
   );
 }
 
+/** Text: game:victory.place.<id>. */
 const PLACE = {
-  1: { label: 'WINNER', tint: ui.gold, size: 84 },
-  2: { label: 'SILVER', tint: '#cbd5e1', size: 62 },
-  3: { label: 'BRONZE', tint: '#d97706', size: 62 },
+  1: { id: 'winner', tint: ui.gold, size: 84 },
+  2: { id: 'silver', tint: '#cbd5e1', size: 62 },
+  3: { id: 'bronze', tint: '#d97706', size: 62 },
 } as const;
 
 function PodiumColumn({
@@ -298,6 +318,7 @@ function PodiumColumn({
   goal: number;
   motion: boolean;
 }) {
+  const { t } = useTranslation('game');
   const style = PLACE[place];
   const avatar = entry.userId ? (
     <UserAvatar
@@ -340,10 +361,9 @@ function PodiumColumn({
         </View>
       </View>
       <Text numberOfLines={1} style={[s.podiumName, entry.you && { color: ui.gold }]}>
-        {entry.name}
-        {entry.you ? ' (You)' : ''}
+        {entry.you ? t('victory.you', { name: entry.name }) : entry.name}
       </Text>
-      <Text style={[s.placeLabel, { color: style.tint }]}>{style.label}</Text>
+      <Text style={[s.placeLabel, { color: style.tint }]}>{t(`victory.place.${style.id}`)}</Text>
       <View
         style={[
           s.podiumBox,
@@ -352,13 +372,11 @@ function PodiumColumn({
       >
         {reward ? (
           <>
-            <Text style={s.rewardCoins}>+{reward.coins.toLocaleString()} 🪙</Text>
+            <Text style={s.rewardCoins}>+{reward.coins.toLocaleString(numberLocale())} 🪙</Text>
             <Text style={s.rewardXp}>+{reward.xp} XP</Text>
           </>
         ) : (
-          <Text style={s.homeText}>
-            {entry.coinsHome}/{goal} home
-          </Text>
+          <Text style={s.homeText}>{t('victory.homeCount', { home: entry.coinsHome, goal })}</Text>
         )}
       </View>
     </View>
@@ -459,11 +477,13 @@ function ConfettiBit({
   );
 }
 
-function formatDuration(ms: number): string {
+function formatDuration(ms: number, t: TFunction<'game'>): string {
   const total = Math.max(0, Math.round(ms / 1000));
   const m = Math.floor(total / 60);
   const sec = total % 60;
-  return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+  return m > 0
+    ? t('victory.minutesSeconds', { minutes: m, seconds: sec })
+    : t('victory.seconds', { seconds: sec });
 }
 
 const s = StyleSheet.create({
@@ -588,7 +608,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   statValue: { color: ui.text, fontSize: 22, fontWeight: '900' },
-  statLabel: { color: ui.subtle, fontSize: 11, fontWeight: '700' },
+  statLabel: { color: ui.subtle, fontSize: 11, fontWeight: '700', textAlign: 'center' },
   error: { color: ui.danger, textAlign: 'center' },
   actions: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, gap: 10 },
   primary: {

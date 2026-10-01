@@ -1,4 +1,5 @@
 import { ActivityIndicator, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import {
   displayNameOf,
@@ -32,17 +33,18 @@ function Action({
   onAccept(requestId: string): void;
   onChallenge(id: string): void;
 }) {
+  const { t } = useTranslation('social');
   switch (relationship) {
     case 'SELF':
-      return <Text style={shared.small}>That’s you</Text>;
+      return <Text style={shared.small}>{t('search.self')}</Text>;
     case 'FRIEND':
       return (
         <Button compact disabled={busyId === userId} onPress={() => onChallenge(userId)}>
-          Challenge
+          {t('search.challenge')}
         </Button>
       );
     case 'REQUEST_SENT':
-      return <Text style={shared.small}>Request sent</Text>;
+      return <Text style={shared.small}>{t('search.requestSent')}</Text>;
     case 'REQUEST_RECEIVED':
       return (
         <Button
@@ -50,13 +52,13 @@ function Action({
           disabled={!pendingRequestId || busyId === pendingRequestId}
           onPress={() => pendingRequestId && onAccept(pendingRequestId)}
         >
-          Accept
+          {t('requests.accept')}
         </Button>
       );
     default:
       return (
         <Button compact disabled={busyId === userId} onPress={() => onAdd(userId)}>
-          Add friend
+          {t('search.addFriend')}
         </Button>
       );
   }
@@ -80,13 +82,14 @@ export function SearchResultList({
   onChallenge(id: string): void;
 }) {
   const { theme } = useProfile();
+  const { t } = useTranslation('social');
   if (searching && results.length === 0) {
     return <ActivityIndicator color={theme.accent} style={{ marginVertical: 30 }} />;
   }
   if (results.length === 0) {
     return (
       <Card>
-        <Body>No players found. Try the full handle, or their user ID.</Body>
+        <Body>{t('search.noResults')}</Body>
       </Card>
     );
   }

@@ -1379,6 +1379,44 @@ try {
   console.log(
     'PASS: team parties: the first friend in a 2 v 2 room sits opposite as partner; players can change to an empty seat; a searching pair meets another searching pair at once (at the older table, partners kept opposite), and only after 20 seconds without one do 2 v 2 quick-play strangers fill in; modes never mix.',
   );
+
+  // --- store-version policy (migration 0029) ------------------------------------
+  const policyOf = async (platform) =>
+    (await db.query('select public.get_app_version_policy($1) as p', [platform])).rows[0].p;
+  // Seeded rows ask nothing of anyone.
+  assert.deepEqual(await policyOf('android'), {
+    min_version: '0.0.0',
+    latest_version: '0.0.0',
+    store_url: null,
+    message: null,
+  });
+  assert.equal(await policyOf('web'), null, 'unknown platforms have no policy');
+  await db.query("update public.app_versions set min_version='1.1.0', latest_version='1.2.0' where platform='ios'");
+  assert.equal((await policyOf('ios')).min_version, '1.1.0');
+  await assert.rejects(
+    db.query("update public.app_versions set min_version='1.x' where platform='android'"),
+    /check constraint/,
+  );
+  await assert.rejects(
+    db.query("update public.app_versions set store_url='http://example.test' where platform='ios'"),
+    /check constraint/,
+  );
+  assert.equal(
+    (await db.query("select count(*)::int as n from pg_policies where tablename='app_versions'")).rows[0].n,
+    0,
+    'app_versions must have no RLS policies: read through the function only',
+  );
+  assert.equal(
+    await privilege("select has_function_privilege('anon','public.get_app_version_policy(text)','EXECUTE') as ok"),
+    true,
+  );
+  assert.equal(
+    await privilege("select has_function_privilege('anon','public.touch_app_versions()','EXECUTE') as ok"),
+    false,
+  );
+  console.log(
+    'PASS: store-version policy is readable by anyone through its function, validated on write, and has no client write path.',
+  );
 } finally {
   await db.close();
 }

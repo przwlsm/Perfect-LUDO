@@ -7,6 +7,7 @@ import {
   type FriendRequest,
   type PublicUser,
 } from '@/domain';
+import { i18n } from '../i18n';
 import { useSocial } from '../state/SocialProvider';
 import { useUserSearch } from './useUserSearch';
 
@@ -23,8 +24,16 @@ interface Lists {
 }
 const EMPTY: Lists = { friends: NO_FRIENDS, incoming: NO_REQUESTS, sent: NO_REQUESTS };
 
-function messageFor(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
+/** Confirmations, held as codes so a language switch re-translates them. */
+type Notice = 'requestSent' | 'nowFriends' | 'requestCancelled' | 'friendRemoved';
+
+/** The server's own message when there is one; the fallback is translated at render. */
+interface Problem {
+  readonly message?: string;
+}
+
+function problemOf(error: unknown): Problem {
+  return error instanceof Error ? { message: error.message } : {};
 }
 
 /**
@@ -36,8 +45,8 @@ export function useFriends() {
   const enabled = Boolean(friendsRepository) && signedIn;
   const [lists, setLists] = useState<Lists>(EMPTY);
   const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<Problem | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const mounted = useRef(true);
@@ -64,7 +73,7 @@ export function useFriends() {
         setError(null);
       })
       .catch((e: unknown) => {
-        if (mounted.current) setError(messageFor(e));
+        if (mounted.current) setError(problemOf(e));
       })
       .finally(() => {
         if (mounted.current) setLoaded(true);
@@ -110,7 +119,7 @@ export function useFriends() {
   const results = useMemo(() => search.results.map(age), [search.results, age]);
 
   const run = useCallback(
-    async (id: string, action: () => Promise<void>, success?: string) => {
+    async (id: string, action: () => Promise<void>, success?: Notice) => {
       setBusyId(id);
       setError(null);
       setNotice(null);
@@ -119,7 +128,7 @@ export function useFriends() {
         if (success && mounted.current) setNotice(success);
         await reload();
       } catch (e) {
-        if (mounted.current) setError(messageFor(e));
+        if (mounted.current) setError(problemOf(e));
       } finally {
         if (mounted.current) setBusyId(null);
       }
@@ -138,8 +147,8 @@ export function useFriends() {
     searching: search.searching,
     isSearching: search.active,
     loading: enabled && !loaded,
-    error: error ?? search.error,
-    notice,
+    error: error ? (error.message ?? i18n.t('common:errors.generic')) : search.error,
+    notice: notice ? i18n.t(`social:notice.${notice}`) : null,
     busyId,
     clearMessages: () => {
       setError(null);
@@ -147,18 +156,14 @@ export function useFriends() {
     },
     reload,
     sendRequest: (userId: string) =>
-      run(userId, () => friendsRepository!.sendRequest(userId), 'Friend request sent.'),
+      run(userId, () => friendsRepository!.sendRequest(userId), 'requestSent'),
     acceptRequest: (requestId: string) =>
-      run(
-        requestId,
-        () => friendsRepository!.respondToRequest(requestId, true),
-        'You are friends!',
-      ),
+      run(requestId, () => friendsRepository!.respondToRequest(requestId, true), 'nowFriends'),
     declineRequest: (requestId: string) =>
       run(requestId, () => friendsRepository!.respondToRequest(requestId, false)),
     cancelRequest: (requestId: string) =>
-      run(requestId, () => friendsRepository!.cancelRequest(requestId), 'Request cancelled.'),
+      run(requestId, () => friendsRepository!.cancelRequest(requestId), 'requestCancelled'),
     removeFriend: (userId: string) =>
-      run(userId, () => friendsRepository!.removeFriend(userId), 'Friend removed.'),
+      run(userId, () => friendsRepository!.removeFriend(userId), 'friendRemoved'),
   };
 }

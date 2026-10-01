@@ -1,11 +1,11 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import type { SocialProvider } from '@/domain';
 
 const BRAND: Record<
   SocialProvider,
   {
-    label: string;
     bg: string;
     text: string;
     border: string;
@@ -15,7 +15,6 @@ const BRAND: Record<
   }
 > = {
   google: {
-    label: 'Continue with Google',
     bg: '#ffffff',
     text: '#1f1f1f',
     border: '#dadce0',
@@ -24,7 +23,6 @@ const BRAND: Record<
     letter: 'G',
   },
   facebook: {
-    label: 'Continue with Facebook',
     bg: '#1877f2',
     text: '#ffffff',
     border: '#1877f2',
@@ -43,11 +41,13 @@ export function SocialButton({
   disabled?: boolean;
   onPress(): void;
 }) {
+  const { t } = useTranslation('account');
   const brand = BRAND[provider];
+  const label = t(`social.${provider}`);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={brand.label}
+      accessibilityLabel={label}
       disabled={disabled}
       onPress={onPress}
       android_ripple={{ color: '#00000018' }}
@@ -64,7 +64,7 @@ export function SocialButton({
       <View style={[s.badge, { backgroundColor: brand.badgeBg }]}>
         <Text style={[s.badgeText, { color: brand.badgeFg }]}>{brand.letter}</Text>
       </View>
-      <Text style={[s.label, { color: brand.text }]}>{brand.label}</Text>
+      <Text style={[s.label, { color: brand.text }]}>{label}</Text>
     </Pressable>
   );
 }

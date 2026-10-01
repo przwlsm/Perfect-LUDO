@@ -8,10 +8,11 @@ import type {
   SpinResult,
   TournamentView,
 } from '@/domain';
+import { i18n } from '../i18n';
 import { useProfile } from '../state/ProfileProvider';
 
-const message = (e: unknown) =>
-  e instanceof Error ? e.message : 'Something went wrong. Please try again.';
+/** The server's message, or the generic fallback in the current language. */
+const message = (e: unknown) => (e instanceof Error ? e.message : i18n.t('common:errors.generic'));
 
 /**
  * Daily spin, missions and the season pass for the signed-in member. Loads

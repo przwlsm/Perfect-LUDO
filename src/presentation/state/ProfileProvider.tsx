@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react';
 import { AppState } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
   accountProfiles,
   authProvider,
@@ -19,6 +20,7 @@ import {
   type WalletSnapshot,
 } from '@/domain';
 import { getBoardTheme } from '../theme/themes';
+import { i18n } from '../i18n';
 import { getCosmetic } from '@/domain/cosmetics/catalog';
 
 interface ProfileContextValue {
@@ -69,14 +71,32 @@ interface ProfileContextValue {
 }
 const ProfileContext = createContext<ProfileContextValue | null>(null);
 
+type WarningKey = 'walletStale' | 'cloudSyncSignedIn' | 'restoreFailed' | 'cloudSyncUnavailable';
+type ErrorKey = 'loadFailed' | 'accountLoadFailed';
+/**
+ * Held as a key, so a message already on screen follows a language change;
+ * `text` is another layer's own message, shown as written.
+ */
+type Message<K extends string> = { readonly key: K } | { readonly text: string };
+
+/** `AccountProfiles` reports in English; known warnings map to catalogue keys. */
+const ACTIVATION_WARNINGS: Readonly<Record<string, WarningKey>> = {
+  [WALLET_STALE_WARNING]: 'walletStale',
+  'Signed in. Cloud sync is unavailable; your progress is saved on this device.':
+    'cloudSyncSignedIn',
+};
+const warningFrom = (text: string | null): Message<WarningKey> | null =>
+  text === null ? null : ACTIVATION_WARNINGS[text] ? { key: ACTIVATION_WARNINGS[text] } : { text };
+
 const sessionKey = (user: AuthUser | null) => (user ? `${user.uid}:${user.isGuest}` : '');
 const isMember = (user: AuthUser | null) => user !== null && !user.isGuest;
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState(INITIAL_PROFILE);
   const [ready, setReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [syncWarning, setSyncWarning] = useState<string | null>(null);
+  const { t } = useTranslation('account');
+  const [error, setError] = useState<Message<ErrorKey> | null>(null);
+  const [syncWarning, setSyncWarning] = useState<Message<WarningKey> | null>(null);
   const [user, setUser] = useState<AuthUser | null>(() => authProvider?.getCurrentUser() ?? null);
   const [wallet, setWallet] = useState<WalletState>('none');
   const switching = useRef(true);
@@ -91,7 +111,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   function adopt(result: { profile: Profile; warning: string | null; wallet: WalletState }) {
     setProfile(result.profile);
-    setSyncWarning(result.warning);
+    setSyncWarning(warningFrom(result.warning));
     setWallet(result.wallet);
     cloudReady.current = !result.warning || result.wallet !== 'none';
     pushedName.current = result.profile.name;
@@ -107,7 +127,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       setReady(true);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load your profile.');
+      setError(e instanceof Error ? { text: e.message } : { key: 'loadFailed' });
     }
   }
   useEffect(() => {
@@ -133,7 +153,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         })
         .catch(() => {
           if (cancelled || ticket !== generation) return;
-          setError('Could not load this account profile. Please reopen the app to retry.');
+          setError({ key: 'accountLoadFailed' });
         });
     };
     const unsubscribe = authProvider?.onAuthStateChanged((next) => {
@@ -146,7 +166,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         .then((next) => activate(next))
         .catch(() => {
           activate(null);
-          setSyncWarning('Could not restore your login. Please sign in again.');
+          setSyncWarning({ key: 'restoreFailed' });
         });
     } else activate(null);
     return () => {
@@ -181,7 +201,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   /** Runs a local profile change and shows its result, unless the account changed meanwhile. */
   async function perform(action: () => Promise<Profile>) {
-    if (!ready || switching.current) throw new Error('Your profile is still loading.');
+    if (!ready || switching.current) throw new Error(i18n.t('account:profileState.stillLoading'));
     const owner = currentKey();
     const next = await action();
     if (switching.current || owner !== currentKey()) return;
@@ -208,9 +228,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           pushedName.current = next.name;
         } catch {
           if (uid === authProvider?.getCurrentUser()?.uid)
-            setSyncWarning(
-              'Cloud sync is unavailable. Your progress is saved on this device; retry from your profile.',
-            );
+            setSyncWarning({ key: 'cloudSyncUnavailable' });
         }
       });
     pushQueue.current = task;
@@ -220,7 +238,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   function memberWallet() {
     if (!isMember(authProvider?.getCurrentUser() ?? null)) throw new SignInRequiredError();
     const account = accountProfiles.memberWallet();
-    if (!account) throw new Error('The store is not available in this build.');
+    if (!account) throw new Error(i18n.t('account:profileState.storeUnavailable'));
     return account;
   }
 
@@ -239,11 +257,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       if (owner !== currentKey() || switching.current) return;
       setProfile(next);
       setWallet('ready');
-      setSyncWarning((w) => (w === WALLET_STALE_WARNING ? null : w));
+      setSyncWarning((w) => (w && 'key' in w && w.key === 'walletStale' ? null : w));
     } catch {
       if (owner !== currentKey() || switching.current) return;
       setWallet('stale');
-      setSyncWarning(WALLET_STALE_WARNING);
+      setSyncWarning({ key: 'walletStale' });
     } finally {
       refreshing.current = false;
     }
@@ -333,8 +351,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       value={{
         profile,
         ready,
-        error,
-        syncWarning,
+        error: error && ('text' in error ? error.text : t(`profileState.${error.key}`)),
+        syncWarning:
+          syncWarning &&
+          ('text' in syncWarning ? syncWarning.text : t(`profileState.${syncWarning.key}`)),
         member: isMember(user),
         wallet,
         reload,

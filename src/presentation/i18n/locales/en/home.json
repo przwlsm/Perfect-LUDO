@@ -1,0 +1,197 @@
+{
+  "restoreFailed": "Could not restore your match.",
+  "profile": {
+    "guest": "Guest · sign in to level up",
+    "levelTag": "LV.{{level}}",
+    "titles": {
+      "grandmaster": "GRANDMASTER",
+      "master": "MASTER",
+      "proRoller": "PRO ROLLER",
+      "roller": "ROLLER",
+      "rookie": "ROOKIE"
+    }
+  },
+  "spin": {
+    "a11y": "Daily lucky spin",
+    "a11yReady": "Daily lucky spin, free spin ready",
+    "free": "FREE",
+    "title": "Daily Lucky Spin",
+    "winUpTo": "Spin to win up to {{amount}} coins!",
+    "nextIn": "Next free spin in {{time}}",
+    "signIn": "Sign in to spin every day",
+    "streak": "DAY {{day}}/7",
+    "spinButton": "SPIN",
+    "openButton": "OPEN",
+    "signInButton": "SIGN IN"
+  },
+  "resume": {
+    "resultReady": "Your result is ready",
+    "tableWaiting": "Your table is waiting",
+    "ai_one": "{{count}} players · Against the computer",
+    "ai_other": "{{count}} players · Against the computer",
+    "local_one": "{{count}} players · Pass & play",
+    "local_other": "{{count}} players · Pass & play",
+    "viewResult": "View result",
+    "resume": "Resume →"
+  },
+  "online": {
+    "title": "Play Online",
+    "subtitle": "Real players · biggest rewards",
+    "live": "LIVE",
+    "offline": "OFFLINE",
+    "mostPlayed": "MOST PLAYED",
+    "quickMatch": "QUICK MATCH",
+    "body": "Real players, instant table. Every win pays <coins>+{{coins}} coins</coins> and <xp>+{{xp}} XP</xp>.",
+    "teamsA11y": "Random 2 v 2 match",
+    "seatsA11y": "{{seats}} player match",
+    "teamsShort": "2v2",
+    "seatsShort": "{{seats}}P",
+    "playNow": "⚡ Play now",
+    "offlineButton": "Offline"
+  },
+  "tournament": {
+    "a11y": "Weekly tournament",
+    "live": "LIVE",
+    "title": "Weekly Tournament",
+    "prize": "Top prize 3,000 coins + 60 gems · ends in {{time}}",
+    "toTopTen": "{{points}} pts · {{need}} to reach the top 10",
+    "firstToScore": "{{points}} pts · be the first to score"
+  },
+  "friends": {
+    "title": "Play with Friends",
+    "subtitle": "Private room, one phone, or your friends list",
+    "party": {
+      "title": "Party Room",
+      "subtitle": "Private room with a code for friends.",
+      "pill": "Host"
+    },
+    "pass": {
+      "title": "Pass & Play",
+      "subtitle": "One phone, up to eight friends.",
+      "pill": "2–8"
+    },
+    "challenge": {
+      "title": "Challenge Friends",
+      "subtitle": "Invite someone from your friends list.",
+      "pillMember": "Friends",
+      "pillGuest": "Account"
+    },
+    "teamUp": {
+      "title": "2 v 2 with a friend",
+      "subtitle": "Team up, then take on another team of friends.",
+      "pill": "Team up"
+    }
+  },
+  "computer": {
+    "title": "Play vs Computer",
+    "subtitle": "Offline, any time · pick a mode",
+    "classic": {
+      "title": "Classic Ludo",
+      "subtitle": "Original rules, all four coins home.",
+      "pill": "+{{coins}} / win"
+    },
+    "quick": {
+      "subtitle": "First coin home wins. Minutes.",
+      "pill": "Fast"
+    },
+    "kill": {
+      "subtitle": "Capture first, then head home.",
+      "pill": "Hard"
+    },
+    "teams": {
+      "title": "Team 2v2",
+      "subtitle": "You and a partner against two.",
+      "pill": "Pair up"
+    }
+  },
+  "progress": {
+    "title": "Your Progress",
+    "subtitle": "Season pass, missions and style",
+    "seasonA11y": "Season pass",
+    "seasonTitle": "Season {{number}} Pass",
+    "pro": "PRO",
+    "seasonNext": "{{xp}} XP to the next tier · ends in {{time}}"
+  },
+  "missions": {
+    "title": "TODAY’S MISSIONS",
+    "ready_one": "{{count}} READY TO CLAIM",
+    "ready_other": "{{count}} READY TO CLAIM",
+    "resetsIn": "RESETS IN {{time}}",
+    "claimed": "CLAIMED",
+    "claim": "CLAIM",
+    "claimA11y": "Claim {{title}}"
+  },
+  "store": {
+    "title": "Make it your own",
+    "subtitle": "Boards, dice and table styles in the store."
+  },
+  "setup": {
+    "aiTitle": "Set your table",
+    "localTitle": "Bring your people",
+    "aiBody": "You play red. Choose your opponents and make your move.",
+    "localBody": "Pass the device when the turn changes. Every seat is controlled by a person.",
+    "players": "PLAYERS",
+    "playersA11y_one": "{{count}} players",
+    "playersA11y_other": "{{count}} players",
+    "playersUnit": "players",
+    "gameMode": "GAME MODE",
+    "teams": "TEAMS",
+    "teamsOnHint": "partners sit opposite",
+    "teamsOffHint": "for themselves",
+    "teamsAi": "You and yellow (a computer partner) against green and blue. Partners never capture each other, and once your coins are home you roll for your partner.",
+    "teamsLocal": "Red and yellow against green and blue. Partners never capture each other, and once your coins are home you roll for your partner.",
+    "whoIsPlaying": "WHO’S PLAYING?",
+    "namesHint": "Names appear beside each home on the board. Leave one blank to use the colour.",
+    "seatPlaceholder": {
+      "RED": "Red player",
+      "GREEN": "Green player",
+      "YELLOW": "Yellow player",
+      "BLUE": "Blue player",
+      "PURPLE": "Purple player",
+      "ORANGE": "Orange player",
+      "PINK": "Pink player",
+      "CYAN": "Cyan player"
+    },
+    "seatNameA11y": {
+      "RED": "Name for the red player",
+      "GREEN": "Name for the green player",
+      "YELLOW": "Name for the yellow player",
+      "BLUE": "Name for the blue player",
+      "PURPLE": "Name for the purple player",
+      "ORANGE": "Name for the orange player",
+      "PINK": "Name for the pink player",
+      "CYAN": "Name for the cyan player"
+    },
+    "difficulty": "COMPUTER DIFFICULTY",
+    "easy": "Easy going",
+    "smart": "Play smart",
+    "easyHint": "Picks a random legal move. Perfect for a relaxed game.",
+    "smartHint": "Looks for captures, finishes, and chances to leave the yard.",
+    "replacesSaved": "Starting a new game replaces your saved match.",
+    "start": "Let’s play →",
+    "footer": "Free to play · No connection needed"
+  },
+  "teams": {
+    "on": "2 v 2 teams",
+    "off": "Every player",
+    "offA11y": "Every player for themselves",
+    "hint": "You and the player opposite are partners: you never capture each other, and you win together. Both winners share the prize."
+  },
+  "stake": {
+    "freeA11y": "Free table",
+    "tableA11y": "{{amount}} coin table",
+    "tableGatedA11y": "{{amount}} coin table, unlocks at level {{level}}",
+    "tableLockedA11y": "{{amount}} coin table, not enough coins or no account",
+    "free": "FREE",
+    "gate": "Lv {{level}}",
+    "freeHint": "Free table: play for XP, coins and tournament points.",
+    "guestHint": "Guests play free tables. Create an account to play for coins.",
+    "paidHint": "Everyone pays {{stake}} when the game starts. Winner takes {{prize}} coins."
+  },
+  "ad": {
+    "a11y": "{{title}}. {{reward}}",
+    "loading": "Loading your ad…",
+    "hangTight": "Hang tight — your reward lands right after.",
+    "left": "{{left}} LEFT"
+  }
+}

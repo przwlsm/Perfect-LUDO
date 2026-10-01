@@ -1,8 +1,9 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { GAME_VARIANTS, VARIANT_INFO, type GameVariant } from '@/domain';
+import { GAME_VARIANTS, type GameVariant } from '@/domain';
 import { Text } from './AppText';
 import { useProfile } from '../state/ProfileProvider';
+import { useCatalogText } from '../i18n/useCatalogText';
 import { ui } from '../theme/themes';
 
 const ICONS: Record<GameVariant, keyof typeof Ionicons.glyphMap> = {
@@ -21,6 +22,7 @@ export function VariantPicker({
   onChange(variant: GameVariant): void;
 }) {
   const { theme } = useProfile();
+  const { variantTitle, variantDescription } = useCatalogText();
   return (
     <View style={{ gap: 8 }}>
       <View style={s.grid}>
@@ -30,8 +32,8 @@ export function VariantPicker({
             <Pressable
               key={variant}
               accessibilityRole="button"
-              accessibilityLabel={VARIANT_INFO[variant].title}
-              accessibilityHint={VARIANT_INFO[variant].description}
+              accessibilityLabel={variantTitle(variant)}
+              accessibilityHint={variantDescription(variant)}
               accessibilityState={{ selected }}
               onPress={() => onChange(variant)}
               android_ripple={{ color: `${theme.accent}30` }}
@@ -47,13 +49,13 @@ export function VariantPicker({
                 color={selected ? theme.accent : ui.muted}
               />
               <Text style={[s.chipText, selected && { color: theme.accent }]}>
-                {VARIANT_INFO[variant].title}
+                {variantTitle(variant)}
               </Text>
             </Pressable>
           );
         })}
       </View>
-      <Text style={s.hint}>{VARIANT_INFO[value].description}</Text>
+      <Text style={s.hint}>{variantDescription(value)}</Text>
     </View>
   );
 }
@@ -63,7 +65,7 @@ const s = StyleSheet.create({
   chip: {
     flexBasis: '48%',
     flexGrow: 1,
-    minHeight: 44,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

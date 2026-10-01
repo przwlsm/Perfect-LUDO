@@ -23,6 +23,9 @@ import { NotificationBell } from '../social/NotificationBell';
 import { LudoLoader } from './LudoLoader';
 import { useMotionEnabled } from '../hooks/useMotionEnabled';
 import { getCardDesign, ui } from '../theme/themes';
+import { useTranslation } from 'react-i18next';
+import { numberLocale } from '../i18n/format';
+import { mirrorInRtl } from '../i18n/rtl';
 
 export function Label({ children, color = ui.muted }: { children: ReactNode; color?: string }) {
   return <Text style={[s.label, { color }]}>{children}</Text>;
@@ -49,6 +52,7 @@ export function Button({
   danger,
   disabled,
   compact,
+  fit,
 }: {
   children: ReactNode;
   onPress(): void;
@@ -57,6 +61,8 @@ export function Button({
   danger?: boolean;
   disabled?: boolean;
   compact?: boolean;
+  /** Keep the label on one line, shrinking it slightly in longer languages. */
+  fit?: boolean;
 }) {
   const { theme } = useProfile();
   const accent = danger ? ui.danger : theme.accent;
@@ -84,7 +90,7 @@ export function Button({
               borderBottomColor: shade(accent, -0.5),
               boxShadow: `0 6px 18px ${accent}40`,
             },
-        compact && { paddingVertical: 10, minHeight: 46 },
+        compact && { paddingVertical: 10, minHeight: 48 },
         pressed && { transform: [{ translateY: secondary ? 2 : 3 }] },
       ]}
     >
@@ -106,6 +112,7 @@ export function Button({
             ? { color: danger ? ui.danger : ui.text }
             : { color: shade(accent, -0.78), textTransform: 'uppercase', letterSpacing: 0.9 },
         ]}
+        {...(fit ? { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.75 } : {})}
       >
         {children}
       </Text>
@@ -136,19 +143,23 @@ export function Card({ children, style }: { children: ReactNode; style?: ViewSty
 export function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
   if (n >= 100_000) return `${(n / 1000).toFixed(1)}K`;
-  return n.toLocaleString();
+  return n.toLocaleString(numberLocale());
 }
+/** The header pills stay 40 high to fit; this lifts their touch area to 48. */
+const PILL_HIT_SLOP = { top: 4, bottom: 4 };
 export function CoinPill() {
   const { profile, member, wallet, refreshWallet } = useProfile();
+  const { t } = useTranslation();
   if (!member)
     // A guest's header shows the vault filling up; tapping it opens Rewards,
     // where the sign-in claim lives.
     return (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${profile.vaultCoins} coins in your vault. Open rewards`}
+        accessibilityLabel={t('wallet.vaultA11y', { amount: profile.vaultCoins })}
         onPress={() => router.push('/rewards')}
         android_ripple={{ color: '#ffc56840' }}
+        hitSlop={PILL_HIT_SLOP}
         style={s.coins}
       >
         <CoinIcon size={22} />
@@ -160,9 +171,10 @@ export function CoinPill() {
     return (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Coins could not be loaded. Retry"
+        accessibilityLabel={t('wallet.loadFailedA11y')}
         onPress={() => void refreshWallet()}
         android_ripple={{ color: '#ffc56840' }}
+        hitSlop={PILL_HIT_SLOP}
         style={s.coins}
       >
         <CoinIcon size={22} />
@@ -173,9 +185,10 @@ export function CoinPill() {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${profile.coins} coins. Open store`}
+      accessibilityLabel={t('wallet.coinsA11y', { amount: profile.coins })}
       onPress={() => router.push('/store')}
       android_ripple={{ color: '#ffc56840' }}
+      hitSlop={PILL_HIT_SLOP}
       style={s.coins}
     >
       <CoinIcon size={22} />
@@ -187,13 +200,15 @@ export function CoinPill() {
 /** Gems, for members once the wallet has loaded; opens the rewards page. */
 export function GemPill() {
   const { profile, member, wallet } = useProfile();
+  const { t } = useTranslation();
   if (!member || wallet !== 'ready') return null;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${profile.gems} gems. Open rewards`}
+      accessibilityLabel={t('wallet.gemsA11y', { amount: profile.gems })}
       onPress={() => router.push('/rewards')}
       android_ripple={{ color: '#c084fc40' }}
+      hitSlop={PILL_HIT_SLOP}
       style={[s.coins, { paddingRight: 12, gap: 6 }]}
     >
       <GemIcon size={20} />
@@ -217,6 +232,7 @@ export function Screen({
   immersive?: boolean;
 }) {
   const { theme, ready, error, reload, member, wallet, profile } = useProfile();
+  const { t } = useTranslation();
   const loaderMotion = useMotionEnabled(profile.reducedMotion, !ready);
   const level = member && wallet === 'ready' ? levelInfo(profile.xp).level : null;
   const { width, height, fontScale } = useWindowDimensions();
@@ -254,15 +270,15 @@ export function Screen({
         <View style={[s.header, landscape && { paddingVertical: 8 }]}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={back ? 'Back' : 'Ludo Rumble home'}
+            accessibilityLabel={back ? t('actions.back') : t('brand.homeA11y')}
             onPress={() => (back && router.canGoBack() ? router.back() : router.replace('/'))}
             android_ripple={{ color: '#ffffff1f' }}
             style={s.brand}
           >
             <View style={[s.brandMark, { backgroundColor: theme.accent }]}>
-              <Text style={s.brandDie}>{back ? '‹' : '⚄'}</Text>
+              <Text style={[s.brandDie, back && mirrorInRtl]}>{back ? '‹' : '⚄'}</Text>
               {level !== null && !back && (
-                <View accessibilityLabel={`Level ${level}`} style={s.levelBadge}>
+                <View accessibilityLabel={t('wallet.levelA11y', { level })} style={s.levelBadge}>
                   <Text style={s.levelText}>{level}</Text>
                 </View>
               )}
@@ -272,7 +288,7 @@ export function Screen({
                 <Text style={s.brandText}>
                   LUDO<Text style={{ color: theme.accent }}> RUMBLE</Text>
                 </Text>
-                <Text style={s.brandSub}>GOOD TIMES. GREAT MOVES.</Text>
+                <Text style={s.brandSub}>{t('brand.tagline')}</Text>
               </View>
             )}
           </Pressable>
@@ -288,7 +304,7 @@ export function Screen({
           {error ? (
             <>
               <Body>{error}</Body>
-              <Button onPress={() => void reload()}>Retry loading</Button>
+              <Button onPress={() => void reload()}>{t('actions.retryLoading')}</Button>
             </>
           ) : (
             <LudoLoader motionEnabled={loaderMotion} />
@@ -310,7 +326,7 @@ export function Screen({
           >
             {title && (
               <View style={s.heading}>
-                <Label color={theme.accent}>{subtitle ?? 'MAKE YOUR NEXT MOVE'}</Label>
+                <Label color={theme.accent}>{subtitle ?? t('brand.defaultSubtitle')}</Label>
                 <Title>{title}</Title>
               </View>
             )}
@@ -326,14 +342,15 @@ function BottomNav({ compact }: { compact: boolean }) {
   const path = usePathname();
   const { theme } = useProfile();
   const { account } = useSocial();
+  const { t } = useTranslation();
   // Guests still reach Friends, where the account offer explains the lock.
   const locked = (href: string) => account === 'guest' && href === '/friends';
   const tabs = [
-    ['/', 'game-controller', 'Play'],
-    ['/online', 'globe', 'Online'],
-    ['/rewards', 'gift', 'Rewards'],
-    ['/friends', 'people', 'Friends'],
-    ['/profile', 'person-circle', 'Profile'],
+    ['/', 'game-controller', t('nav.play')],
+    ['/online', 'globe', t('nav.online')],
+    ['/rewards', 'gift', t('nav.rewards')],
+    ['/friends', 'people', t('nav.friends')],
+    ['/profile', 'person-circle', t('nav.profile')],
   ] as const;
   const here = tabs.findIndex(([href]) => href === path);
   /** Slides the next tab in from the side it sits on, like native tabs. */
@@ -347,7 +364,7 @@ function BottomNav({ compact }: { compact: boolean }) {
         <Pressable
           key={href}
           accessibilityRole="button"
-          accessibilityLabel={locked(href) ? `${label}, account required` : label}
+          accessibilityLabel={locked(href) ? t('nav.accountRequired', { label }) : label}
           accessibilityState={{ selected: path === href }}
           onPress={() => open(href, index)}
           android_ripple={{ color: '#ffffff1f' }}
@@ -381,6 +398,7 @@ export function Sheet({
   children: ReactNode;
 }) {
   const { theme } = useProfile();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   return (
     // Translucent bars so the dialog draws edge to edge like the rest of the
@@ -405,7 +423,7 @@ export function Sheet({
             <Text style={s.sheetTitle}>{title}</Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Close dialog"
+              accessibilityLabel={t('actions.closeDialog')}
               onPress={onClose}
               android_ripple={{ color: '#ffffff25' }}
               style={s.close}
@@ -447,7 +465,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
-  brand: { minHeight: 44, flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  brand: { minHeight: 48, flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   levelBadge: {
     position: 'absolute',
@@ -599,8 +617,8 @@ const s = StyleSheet.create({
   },
   sheetTitle: { fontSize: 22, color: ui.text, fontWeight: '800', flex: 1 },
   close: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ffffff08',

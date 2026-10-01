@@ -1,0 +1,198 @@
+{
+  "colors": {
+    "RED": "Red",
+    "GREEN": "Green",
+    "YELLOW": "Yellow",
+    "BLUE": "Blue",
+    "PURPLE": "Purple",
+    "ORANGE": "Orange",
+    "PINK": "Pink",
+    "CYAN": "Cyan"
+  },
+  "colorPlayer": {
+    "RED": "red player",
+    "GREEN": "green player",
+    "YELLOW": "yellow player",
+    "BLUE": "blue player",
+    "PURPLE": "purple player",
+    "ORANGE": "orange player",
+    "PINK": "pink player",
+    "CYAN": "cyan player"
+  },
+  "seat": {
+    "you": "You",
+    "partner": "Partner",
+    "rival1": "Rival 1",
+    "rival2": "Rival 2",
+    "computer": "Computer",
+    "computerNumbered": "Computer {{index}}"
+  },
+  "label": {
+    "passAndPlay": "PASS & PLAY",
+    "solo": "SOLO TABLE",
+    "teams": "2 V 2"
+  },
+  "prize": {
+    "win_one": "Win: +{{count}} coin",
+    "win_other": "Win: +{{count}} coins"
+  },
+  "status": {
+    "finished": "A good game, well played.",
+    "rolling": "Rolling the dice...",
+    "moving": "Moving the coins...",
+    "playableCoins_one": "{{count}} playable coin - tap a bouncing coin",
+    "playableCoins_other": "{{count}} playable coins - tap a bouncing coin",
+    "onlyOne": "Only one move - playing it for you...",
+    "threeSixes": "Three sixes! Your turn passes.",
+    "noMoves": "No moves this time. Passing the dice…",
+    "computerChoosing": "Computer is choosing a move…",
+    "rollForPartner": "Your coins are home - roll for your partner!",
+    "killFirst": "roll - capture a coin to open your home path",
+    "killFirstNamed": "{{name}}, roll - capture a coin to open your home path",
+    "tapToRoll": "tap the dice to roll",
+    "tapToRollNamed": "{{name}}, tap the dice to roll",
+    "computerReady": "Computer is getting ready…"
+  },
+  "errors": {
+    "noSavedMatch": "No saved match was found. Start a new game from the lobby.",
+    "loadFailed": "Could not load match.",
+    "moveSaveFailed": "Could not save your move. Try again."
+  },
+  "pause": {
+    "a11y": "Pause game",
+    "title": "Take your time.",
+    "body": "Your game is paused and saved on this device. Your table will be here when you get back.",
+    "exit": "Save & return to lobby",
+    "backToGame": "Back to the game",
+    "howToPlay": "How to play"
+  },
+  "rulesSheet": {
+    "title": "A classic for a reason.",
+    "thisTable": "THIS TABLE"
+  },
+  "rules": {
+    "entrance": {
+      "title": "Make an entrance",
+      "text": "Roll a six to move a piece out of your yard. A six gives you another roll."
+    },
+    "home": {
+      "title": "Make your way home",
+      "text": "Move clockwise around the track, then up your colored lane. You need an exact roll to finish."
+    },
+    "rivalry": {
+      "title": "A friendly little rivalry",
+      "text": "Land on an opponent to send their piece back. Star and entry squares are safe. Captures and finishes earn a bonus turn."
+    },
+    "fair": {
+      "title": "Keep it fair",
+      "text": "Three consecutive sixes forfeit the third roll. Earlier moves remain. Two coins of the same color block an opponent from landing on that square."
+    },
+    "finish": {
+      "title": "Bring everyone home",
+      "text": "The first player to finish all four pieces wins. Signed-in players earn coins and XP: online wins pay the most, and every online game scores tournament points."
+    }
+  },
+  "table": {
+    "tryAgain": "Try again",
+    "backToLobby": "Back to lobby",
+    "retryTurn": "Retry turn",
+    "boardSaveFailed": "Could not save board preference. Please try again.",
+    "reactA11y": "Send a reaction",
+    "reactWith": "React {{emoji}}",
+    "switchView": "Switch to {{mode}} board",
+    "info3d_one": "{{count}} player / 3D table",
+    "info3d_other": "{{count}} players / 3D table",
+    "infoClassic_one": "{{count}} player / Classic table",
+    "infoClassic_other": "{{count}} players / Classic table"
+  },
+  "dice": {
+    "rollA11y": "{{name}}: roll dice",
+    "yourTurnHint": "Your turn. Tap to roll.",
+    "waitHint": "Wait for your turn.",
+    "label": "Dice",
+    "showing": "Dice showing {{value}}",
+    "readyToRoll": "Dice ready to roll",
+    "rolling": "Dice rolling",
+    "ready": "Ready to roll"
+  },
+  "panel": {
+    "out": "OUT",
+    "livesA11y": "{{left}} of {{total}} lifelines left",
+    "secondsLeft_one": "{{count}} second left",
+    "secondsLeft_other": "{{count}} seconds left",
+    "secondsShort": "{{seconds}}s"
+  },
+  "victory": {
+    "title": "MATCH RESULTS",
+    "ended": "MATCH ENDED",
+    "completed": "MATCH COMPLETED",
+    "rewards": "Rewards",
+    "level": "Level {{level}}",
+    "levelUp": "LEVEL UP!",
+    "toNext": "{{percent}}% to next",
+    "performance": "BATTLE PERFORMANCE",
+    "sixes": "Sixes rolled",
+    "captured": "Coins captured",
+    "home": "Coins home",
+    "saving": "SAVING…",
+    "share": "Share",
+    "place": {
+      "winner": "WINNER",
+      "silver": "SILVER",
+      "bronze": "BRONZE"
+    },
+    "you": "{{name}} (You)",
+    "homeCount": "{{home}}/{{goal}} home",
+    "minutesSeconds": "{{minutes}}m {{seconds}}s",
+    "seconds": "{{seconds}}s"
+  },
+  "result": {
+    "playerWins": "{{name}} wins!",
+    "teamVictory": "TEAM VICTORY!",
+    "victory": "VICTORY!",
+    "goodGame": "GOOD GAME",
+    "soClose": "So close · {{mode}}",
+    "subtitle": "{{mode}} · {{how}}",
+    "guestWonNote_one": "+{{count}} coin is in your vault — sign in any time to claim everything in it.",
+    "guestWonNote_other": "+{{count}} coins are in your vault — sign in any time to claim everything in it.",
+    "guestLostNote_one": "Win to add {{count}} coin to your vault, or {{online}} online.",
+    "guestLostNote_other": "Win to add {{count}} coins to your vault, or {{online}} online.",
+    "loadingAd": "Loading ad…",
+    "watchAdRematch": "Watch an ad · Rematch",
+    "playAgain": "Play again",
+    "goHome": "Go home",
+    "lobby": "Lobby",
+    "sharePlayer": "{{name}} just won a {{mode}} game of Ludo Rumble! 🎲🏆",
+    "shareMine": "I just won a {{mode}} game of Ludo Rumble! 🎲🏆",
+    "saveFailed": "Could not save your result. Tap again to retry.",
+    "adIncomplete": "The ad did not finish. Try again, or head home."
+  },
+  "winLine": {
+    "allEight": "All eight coins home",
+    "partners": "Both partners reached {{goal}} home",
+    "first": "First coin home",
+    "two": "Two coins home",
+    "allFour": "All four coins home"
+  },
+  "piece": {
+    "label": "{{color}} piece",
+    "numbered": "{{color}} piece {{number}}",
+    "tapToMove": "{{label}}, tap to move",
+    "hint": "Move this piece using the rolled dice value"
+  },
+  "zoom": {
+    "resetA11y": "Reset zoom",
+    "zoomA11y": "Zoom in on the board",
+    "reset": "Reset",
+    "pinch": "Pinch to zoom"
+  },
+  "board": {
+    "home": "HOME"
+  },
+  "turnBanner": {
+    "youWon": "You won!",
+    "wins": "{{color}} wins",
+    "yourTurn": "Your turn",
+    "turn": "{{color}}'s turn"
+  }
+}

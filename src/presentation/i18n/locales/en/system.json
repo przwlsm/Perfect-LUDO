@@ -1,0 +1,33 @@
+{
+  "update": {
+    "installed": "INSTALLED",
+    "new": "NEW",
+    "versionsA11y": "Installed version {{from}}. New version {{to}}.",
+    "appStoreHint": "Open the App Store and search for Ludo Rumble to update.",
+    "required": {
+      "label": "UPDATE REQUIRED",
+      "title": "Time for a fresh roll",
+      "body": "This version of Ludo Rumble is no longer supported. Update to keep playing — your coins, gems and progress are saved to your account.",
+      "updateNow": "Update now",
+      "checkAgain": "I’ve updated — check again",
+      "checking": "Checking…"
+    },
+    "offer": {
+      "title": "New version available",
+      "body": "A new version of Ludo Rumble is ready with improvements and fixes. It only takes a moment.",
+      "update": "Update"
+    },
+    "ready": {
+      "title": "Update ready",
+      "body": "Restart to get the latest fixes.",
+      "restart": "Restart",
+      "restartA11y": "Restart now to update"
+    }
+  },
+  "crash": {
+    "title": "That roll went wrong",
+    "body": "Something unexpected happened and we’ve been notified. Your coins and progress are safe.",
+    "retry": "TRY AGAIN",
+    "retrying": "RESTARTING…"
+  }
+}

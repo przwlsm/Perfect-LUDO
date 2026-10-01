@@ -24,6 +24,7 @@ import {
   distinctMoves,
 } from '@/domain';
 import { accumulateStats } from './matchStats';
+import { i18n } from '../i18n';
 
 export function useMatch(options: MatchOptions, resume: boolean, paused: boolean, animate = false) {
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -52,8 +53,7 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
       try {
         const loaded = resume ? await matchRepository.load() : null;
         if (cancelled) return;
-        if (resume && !loaded)
-          throw new Error('No saved match was found. Start a new game from the lobby.');
+        if (resume && !loaded) throw new Error(i18n.t('game:errors.noSavedMatch'));
         const next =
           loaded ??
           newMatch({
@@ -71,7 +71,7 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
             setSeatRolls({ [getCurrentPlayer(next.state).color]: next.state.lastRoll });
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load match.');
+        if (!cancelled) setError(e instanceof Error ? e.message : i18n.t('game:errors.loadFailed'));
       }
     })();
     const listener = AppState.addEventListener('change', (state) =>
@@ -134,7 +134,7 @@ export function useMatch(options: MatchOptions, resume: boolean, paused: boolean
           });
       } catch (e) {
         if (alive.current)
-          setError(e instanceof Error ? e.message : 'Could not save your move. Try again.');
+          setError(e instanceof Error ? e.message : i18n.t('game:errors.moveSaveFailed'));
       } finally {
         lock.current = false;
         if (alive.current) {

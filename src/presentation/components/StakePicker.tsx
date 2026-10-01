@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { levelInfo, STAKES, stakeMinLevel, tablePrize, type Stake } from '@/domain';
 import { Text } from './AppText';
 import { CoinIcon } from './Currency';
@@ -24,6 +25,7 @@ export function StakePicker({
   onChange(stake: Stake): void;
 }) {
   const { theme, member, wallet, profile } = useProfile();
+  const { t } = useTranslation('home');
   const level = levelInfo(profile.xp).level;
   const canPay = (stake: Stake) =>
     stake === 0 ||
@@ -41,14 +43,12 @@ export function StakePicker({
               accessibilityRole="button"
               accessibilityLabel={
                 stake === 0
-                  ? 'Free table'
-                  : `${stake} coin table${
-                      allowed
-                        ? ''
-                        : gated
-                          ? `, unlocks at level ${stakeMinLevel(stake)}`
-                          : ', not enough coins or no account'
-                    }`
+                  ? t('stake.freeA11y')
+                  : allowed
+                    ? t('stake.tableA11y', { amount: stake })
+                    : gated
+                      ? t('stake.tableGatedA11y', { amount: stake, level: stakeMinLevel(stake) })
+                      : t('stake.tableLockedA11y', { amount: stake })
               }
               accessibilityState={{ selected, disabled: !allowed }}
               disabled={!allowed}
@@ -62,7 +62,7 @@ export function StakePicker({
               ]}
             >
               {stake === 0 ? (
-                <Text style={[s.chipText, selected && { color: ui.gold }]}>FREE</Text>
+                <Text style={[s.chipText, selected && { color: ui.gold }]}>{t('stake.free')}</Text>
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <CoinIcon size={14} />
@@ -71,7 +71,9 @@ export function StakePicker({
                   </Text>
                 </View>
               )}
-              {gated && <Text style={s.gate}>Lv {stakeMinLevel(stake)}</Text>}
+              {gated && (
+                <Text style={s.gate}>{t('stake.gate', { level: stakeMinLevel(stake) })}</Text>
+              )}
             </Pressable>
           );
         })}
@@ -79,11 +81,12 @@ export function StakePicker({
       <Text style={s.hint}>
         {value === 0
           ? member
-            ? 'Free table: play for XP, coins and tournament points.'
-            : 'Guests play free tables. Create an account to play for coins.'
-          : `Everyone pays ${formatCount(value)} when the game starts. Winner takes ${formatCount(
-              tablePrize(value, players),
-            )} coins.`}
+            ? t('stake.freeHint')
+            : t('stake.guestHint')
+          : t('stake.paidHint', {
+              stake: formatCount(value),
+              prize: formatCount(tablePrize(value, players)),
+            })}
       </Text>
     </View>
   );
@@ -94,7 +97,7 @@ const s = StyleSheet.create({
   chip: {
     flexGrow: 1,
     flexBasis: '30%',
-    minHeight: 44,
+    minHeight: 48,
     borderRadius: 13,
     borderWidth: 1,
     borderColor: ui.line,

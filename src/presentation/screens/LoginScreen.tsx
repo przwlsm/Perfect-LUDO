@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { router, useLocalSearchParams } from 'expo-router';
 import { authProvider } from '@/config/container';
 import { Body, Button, Card, Label, Screen, Sheet, shared } from '../components/Kit';
+import { INITIAL_PROFILE } from '@/application/store/ProfileService';
 import { useProfile } from '../state/ProfileProvider';
 import { useAuthSession } from '../state/useAuthSession';
 import { AuthField } from '../auth/AuthField';
@@ -11,8 +13,10 @@ import { SocialButton } from '../auth/SocialButton';
 import { useUsernameAvailability } from '../hooks/useUsernameAvailability';
 import { ui } from '../theme/themes';
 import type { EmailVerification } from '@/domain';
+import { numberLocale } from '../i18n/format';
 
 type Mode = 'signIn' | 'signUp' | 'forgot' | 'confirm';
+type FormError = 'passwordMismatch' | 'nameSaveFailed';
 
 export default function LoginScreen() {
   const params = useLocalSearchParams<{ intent?: string; mode?: string }>();
@@ -21,6 +25,7 @@ export default function LoginScreen() {
   const intentStore = params.intent === 'store';
   const destination = intentOnline ? '/online' : intentStore ? '/store' : '/';
   const { theme, profile, perform, syncWarning, reload } = useProfile();
+  const { t } = useTranslation(['account', 'common']);
   const auth = useAuthSession();
   const guest = auth.user?.isGuest === true;
   // A guest is here to create an account, so that form comes first for them.
@@ -31,10 +36,10 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [repeatPassword, setRepeatPassword] = useState('');
   const [username, setUsername] = useState('');
-  const [name, setName] = useState(profile.name === 'Player' ? '' : profile.name);
+  const [name, setName] = useState(profile.name === INITIAL_PROFILE.name ? '' : profile.name);
   const [verification, setVerification] = useState<EmailVerification>('signup');
   const [cooldown, setCooldown] = useState(0);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<FormError | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   useEffect(() => {
     if (!cooldown) return;
@@ -55,14 +60,14 @@ export default function LoginScreen() {
     setFormError(null);
     if (signingUp) {
       if (password !== repeatPassword) {
-        setFormError('Passwords do not match.');
+        setFormError('passwordMismatch');
         return;
       }
       try {
         const { profileService } = await import('@/config/container');
         await perform(() => profileService.update({ name: name.trim() }));
       } catch {
-        setFormError('Could not save your player name. Please try again.');
+        setFormError('nameSaveFailed');
         return;
       }
       const handle = username.trim() || undefined;
@@ -121,69 +126,80 @@ export default function LoginScreen() {
       back
       title={
         member
-          ? 'Your account'
+          ? t('login.title.account')
           : mode === 'signUp'
             ? guest
-              ? 'Keep your progress'
-              : 'Join the club'
+              ? t('login.title.keepProgress')
+              : t('login.title.join')
             : mode === 'forgot'
-              ? 'Reset your password'
+              ? t('login.title.forgot')
               : mode === 'confirm'
-                ? 'Check your email'
-                : 'Welcome back'
+                ? t('login.title.confirm')
+                : t('login.title.welcome')
       }
     >
       <Card style={cardStyle}>
         {!auth.cloudEnabled ? (
           <>
-            <Body>
-              Account services are not configured for this build. You can still play offline.
-            </Body>
-            <Button onPress={() => router.replace('/')}>Play offline</Button>
+            <Body>{t('login.notConfigured')}</Body>
+            <Button onPress={() => router.replace('/')}>{t('login.playOffline')}</Button>
           </>
         ) : member ? (
           <>
-            <Label color={theme.accent}>SIGNED IN</Label>
-            <Body>{auth.user?.email ?? 'Connected account'}</Body>
+            <Label color={theme.accent}>{t('login.signedIn')}</Label>
+            <Body>{auth.user?.email ?? t('login.connectedAccount')}</Body>
             <Body>
-              {profile.name} / {profile.coins.toLocaleString()} coins / {profile.wins} wins
+              {t('login.summary', {
+                name:
+                  profile.name === INITIAL_PROFILE.name
+                    ? t('common:defaultPlayerName')
+                    : profile.name,
+                coins: profile.coins.toLocaleString(numberLocale()),
+                wins: profile.wins,
+              })}
             </Body>
             {syncWarning && (
               <>
                 <Body>{syncWarning}</Body>
                 <Button secondary disabled={auth.busy} onPress={() => void reload()}>
-                  Retry cloud sync
+                  {t('shared.retrySync')}
                 </Button>
               </>
             )}
             <Button secondary onPress={() => router.push('/auth/reset')}>
-              Change password
+              {t('login.changePassword')}
             </Button>
             <Button secondary disabled={auth.busy} onPress={() => void auth.signOut()}>
-              Sign out
+              {t('login.signOut')}
             </Button>
             <Button onPress={() => router.replace(destination)}>
               {intentOnline
-                ? 'Back to online play'
+                ? t('login.backOnline')
                 : intentStore
-                  ? 'Back to the store'
-                  : 'Back to the game'}
+                  ? t('login.backStore')
+                  : t('shared.backToGame')}
             </Button>
             {/* Tucked away on purpose: this is a permanent, hard-to-undo
                 action, so it should never be the thing a thumb lands on by
                 accident among the ordinary account buttons above. */}
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Delete account"
+              accessibilityLabel={t('login.deleteAccount')}
               disabled={auth.busy}
               onPress={() => {
                 auth.clearError();
                 setConfirmingDelete(true);
               }}
-              style={{ alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 8 }}
+              style={{
+                alignSelf: 'center',
+                minHeight: 48,
+                justifyContent: 'center',
+                paddingVertical: 10,
+                paddingHorizontal: 8,
+              }}
             >
               <Text style={{ fontSize: 12, color: ui.muted, textDecorationLine: 'underline' }}>
-                Delete account
+                {t('login.deleteAccount')}
               </Text>
             </Pressable>
           </>
@@ -193,18 +209,16 @@ export default function LoginScreen() {
               <View style={[shared.row, { alignItems: 'flex-start' }]}>
                 <Text style={{ fontSize: 26 }}>🎟</Text>
                 <View style={{ flex: 1, gap: 3 }}>
-                  <Label color={theme.accent}>PLAYING AS A GUEST</Label>
+                  <Label color={theme.accent}>{t('shared.guestLabel')}</Label>
                   <Text style={shared.small}>
-                    {signingUp
-                      ? 'Your games, coins and seat at the table stay exactly as they are.'
-                      : 'Signing in to another account ends this guest session.'}
+                    {signingUp ? t('login.guestSignUp') : t('login.guestSignIn')}
                   </Text>
                 </View>
               </View>
             )}
             {(mode === 'signIn' || signingUp) && (
               <>
-                {!guest && <Body>Save your progress and pick up where you left off.</Body>}
+                {!guest && <Body>{t('login.pitch')}</Body>}
                 <SocialButton
                   provider="google"
                   disabled={auth.busy}
@@ -215,37 +229,37 @@ export default function LoginScreen() {
                   }
                 />
                 <View style={{ alignItems: 'center', paddingVertical: 4 }}>
-                  <Label>OR USE EMAIL</Label>
+                  <Label>{t('login.orEmail')}</Label>
                 </View>
               </>
             )}
             {mode === 'confirm' && (
               <Body>
                 {verification === 'recovery'
-                  ? 'Open the password reset link we emailed you to continue.'
-                  : 'Open the confirmation link we emailed you. Your account is ready as soon as you do.'}
+                  ? t('login.confirmRecovery')
+                  : t('login.confirmSignup')}
               </Body>
             )}
             {signingUp && (
               <>
                 <AuthField
-                  label="Player name"
+                  label={t('login.name.label')}
                   value={name}
                   onChangeText={setName}
                   maxLength={20}
                   editable={!auth.busy}
-                  placeholder="Your name at the table"
+                  placeholder={t('login.name.placeholder')}
                   autoComplete="nickname"
                 />
                 <AuthField
-                  label="Username"
+                  label={t('login.username.label')}
                   value={username}
                   onChangeText={(text) =>
                     setUsername(text.toLowerCase().replace(/[^a-z0-9_]/g, ''))
                   }
                   maxLength={16}
                   editable={!auth.busy}
-                  placeholder="3–16 letters, numbers or _ (optional)"
+                  placeholder={t('login.username.placeholder')}
                   autoComplete="username"
                 />
                 {availability.status !== 'idle' && (
@@ -258,38 +272,42 @@ export default function LoginScreen() {
                     ]}
                   >
                     {availability.status === 'checking'
-                      ? 'Checking…'
+                      ? t('username.checking')
                       : availability.status === 'available'
-                        ? '✓ Username available'
-                        : `✕ ${availability.reason}`}
+                        ? t('username.available')
+                        : t('username.unavailable', {
+                            reason: availability.reason ?? t('username.fallback'),
+                          })}
                   </Text>
                 )}
               </>
             )}
             <AuthField
-              label="Email address"
+              label={t('login.email.label')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               inputMode="email"
               autoComplete="email"
-              placeholder="you@example.com"
+              placeholder={t('login.email.placeholder')}
               editable={!auth.busy && mode !== 'confirm'}
             />
             {(mode === 'signIn' || signingUp) && (
               <AuthField
-                label="Password"
+                label={t('login.password.label')}
                 password
                 value={password}
                 onChangeText={setPassword}
                 autoComplete={signingUp ? 'new-password' : 'current-password'}
-                placeholder={signingUp ? 'At least 8 characters' : 'Your password'}
+                placeholder={
+                  signingUp ? t('login.password.newPlaceholder') : t('login.password.placeholder')
+                }
                 editable={!auth.busy}
               />
             )}
             {signingUp && (
               <AuthField
-                label="Confirm password"
+                label={t('login.password.confirm')}
                 password
                 value={repeatPassword}
                 onChangeText={setRepeatPassword}
@@ -300,18 +318,18 @@ export default function LoginScreen() {
             {mode !== 'confirm' && (
               <Button disabled={!canSubmit} onPress={() => void submit()}>
                 {auth.busy
-                  ? 'Please wait...'
+                  ? t('login.submit.wait')
                   : signingUp
-                    ? 'Create account'
+                    ? t('login.submit.create')
                     : mode === 'forgot'
-                      ? 'Send reset email'
-                      : 'Sign in'}
+                      ? t('login.submit.sendReset')
+                      : t('login.submit.signIn')}
               </Button>
             )}
             {mode === 'signIn' && (
               <>
                 <Button compact secondary disabled={auth.busy} onPress={() => changeMode('forgot')}>
-                  Forgot password?
+                  {t('login.forgotPassword')}
                 </Button>
                 <Button
                   compact
@@ -327,7 +345,7 @@ export default function LoginScreen() {
                     })
                   }
                 >
-                  Resend verification email
+                  {t('login.resendVerification')}
                 </Button>
               </>
             )}
@@ -338,7 +356,7 @@ export default function LoginScreen() {
                 disabled={auth.busy || cooldown > 0}
                 onPress={() => void resend()}
               >
-                {cooldown > 0 ? `Resend available in ${cooldown}s` : 'Resend email'}
+                {cooldown > 0 ? t('login.resendIn', { seconds: cooldown }) : t('login.resendEmail')}
               </Button>
             )}
             <Button
@@ -348,10 +366,10 @@ export default function LoginScreen() {
               onPress={() => changeMode(mode === 'signIn' ? 'signUp' : 'signIn')}
             >
               {mode === 'signIn'
-                ? 'Create an account'
+                ? t('login.createAccount')
                 : guest
-                  ? 'Sign in to an existing account'
-                  : 'Back to sign in'}
+                  ? t('login.signInExisting')
+                  : t('shared.backToSignIn')}
             </Button>
             {guest ? (
               <Button
@@ -360,22 +378,28 @@ export default function LoginScreen() {
                 disabled={auth.busy}
                 onPress={() => router.replace('/online')}
               >
-                Continue as guest
+                {t('shared.continueGuest')}
               </Button>
             ) : intentOnline ? (
               <Button compact secondary disabled={auth.busy} onPress={() => void continueAsGuest()}>
-                Continue as guest
+                {t('shared.continueGuest')}
               </Button>
             ) : (
               <Button compact secondary disabled={auth.busy} onPress={() => router.replace('/')}>
-                Play offline instead
+                {t('login.playOfflineInstead')}
               </Button>
             )}
           </>
         )}
         {(formError || auth.error) && (
           <Text accessibilityLiveRegion="polite" style={shared.error}>
-            {formError ?? auth.error}
+            {formError
+              ? t(
+                  formError === 'passwordMismatch'
+                    ? 'shared.passwordMismatch'
+                    : 'login.nameSaveFailed',
+                )
+              : auth.error}
           </Text>
         )}
         {auth.notice && (
@@ -389,20 +413,17 @@ export default function LoginScreen() {
         onClose={() => {
           if (!auth.busy) setConfirmingDelete(false);
         }}
-        title="Delete your account?"
+        title={t('login.delete.title')}
       >
-        <Body>
-          This permanently deletes your account: your coins, unlocked looks, statistics and friends.
-          It cannot be undone.
-        </Body>
-        <Body>Your device keeps nothing to restore afterward, and this cannot be reversed.</Body>
+        <Body>{t('login.delete.body')}</Body>
+        <Body>{t('login.delete.noRestore')}</Body>
         {auth.error && (
           <Text accessibilityLiveRegion="polite" style={shared.error}>
             {auth.error}
           </Text>
         )}
         <Button secondary disabled={auth.busy} onPress={() => setConfirmingDelete(false)}>
-          Cancel
+          {t('common:actions.cancel')}
         </Button>
         <Button
           danger
@@ -416,7 +437,7 @@ export default function LoginScreen() {
             })
           }
         >
-          {auth.busy ? 'Deleting…' : 'Yes, permanently delete my account'}
+          {auth.busy ? t('login.delete.deleting') : t('login.delete.confirm')}
         </Button>
       </Sheet>
     </Screen>

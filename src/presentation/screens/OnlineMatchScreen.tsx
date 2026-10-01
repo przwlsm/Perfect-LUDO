@@ -5,15 +5,17 @@ import {
   coinsHome,
   coinsToWin,
   standings,
-  VARIANT_INFO,
   variantOf,
-  winLine,
   displayNameOf,
   distinctMoves,
   placementCoins,
   REWARDS,
   controlledColor,
+  type GameState,
+  type PlayerColor,
 } from '@/domain';
+import { useTranslation } from 'react-i18next';
+import { useCatalogText } from '../i18n/useCatalogText';
 
 import { useOnlineReactions, useReactionBubbles } from '../hooks/useReactions';
 import { useGameSounds } from '../audio/useGameSounds';
@@ -25,9 +27,17 @@ import { useOnlineMatch } from '../hooks/useOnlineMatch';
 import { useConnectivity } from '../state/ConnectivityProvider';
 import { useProfile } from '../state/ProfileProvider';
 import { useAtBoardPresence } from '../state/SocialProvider';
+import { numberLocale } from '../i18n/format';
 
 /** Where every online game returns to: the hub works for guests and members alike. */
 const ONLINE_HOME = '/online';
+
+/** The win condition in words: "First coin home", "All four coins home"… */
+function goalKey(state: Pick<GameState, 'goal' | 'teams'>) {
+  const goal = coinsToWin(state);
+  if (state.teams) return goal === 4 ? ('teamsAll' as const) : ('teams' as const);
+  return goal === 1 ? ('one' as const) : goal === 2 ? ('two' as const) : ('all' as const);
+}
 
 export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
   const { profile, theme, recordOnlineMatch, creditGuestVault, member, ready } = useProfile();
@@ -36,7 +46,9 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
   const [menu, setMenu] = useState(false);
   const [rules, setRules] = useState(false);
   const [tableArea, setTableArea] = useState({ width: 0, height: 0 });
-  const [notice, setNotice] = useState<string | null>(null);
+  const { t } = useTranslation(['online', 'common']);
+  const { variantTitle, variantShort } = useCatalogText();
+  const [notice, setNotice] = useState<'leaveFailed' | 'saveFailed' | null>(null);
   const [saving, setSaving] = useState(false);
   const focused = useIsFocused();
   const motionEnabled = useMotionEnabled(
@@ -101,7 +113,7 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
       setConfirmLeave(false);
       router.replace(ONLINE_HOME);
     } catch {
-      setNotice('Could not leave the table. Check your connection and try again.');
+      setNotice('leaveFailed');
     } finally {
       setLeaving(false);
     }
@@ -109,10 +121,10 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
 
   if (game.fatal) {
     return (
-      <Screen nav={false} back title="Match unavailable">
+      <Screen nav={false} back title={t('match.unavailable')}>
         <Card>
           <Body>{game.fatal}</Body>
-          <Button onPress={() => router.replace(ONLINE_HOME)}>Back to online play</Button>
+          <Button onPress={() => router.replace(ONLINE_HOME)}>{t('backToOnline')}</Button>
         </Card>
       </Screen>
     );
@@ -148,7 +160,7 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
       }
       router.replace(home ? '/' : ONLINE_HOME);
     } catch {
-      setNotice('Could not save your result. Tap again to retry.');
+      setNotice('saveFailed');
     } finally {
       setSaving(false);
     }
@@ -158,68 +170,74 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
   const prizeLine = !match
     ? undefined
     : game.pool > 0
-      ? `Winner takes ${game.prize.toLocaleString()} coins`
+      ? t('match.prize.pool', { amount: game.prize.toLocaleString(numberLocale()) })
       : game.teams
-        ? 'Winning pair: +100 coins each'
+        ? t('match.prize.teams')
         : seatCount === 2
-          ? 'Winner: +100 coins'
+          ? t('match.prize.two')
           : seatCount === 3
-            ? '1st +100 · 2nd +50'
-            : '1st +100 · 2nd +50 · 3rd +20';
+            ? t('match.prize.three')
+            : t('match.prize.four');
 
   const waitingOn = players.find((p) => p.seatIndex === match?.state.currentPlayerIndex);
   const me = players.find((p) => p.seatIndex === mySeat);
   const livesLeft = me ? Math.max(0, game.lifelines - me.missed) : null;
+  const playable = distinctMoves(game.moves).length;
   const statusLine =
     connectionLost && !over
       ? connectivity.state === 'OFFLINE'
-        ? 'Connection lost. Reconnecting… your seat is kept.'
-        : 'Reconnecting to the server… your seat is kept.'
+        ? t('match.status.connectionLost')
+        : t('match.status.reconnectingServer')
       : game.connection === 'reconnecting'
-        ? 'Reconnecting to your table. Your turn will resume when connected.'
+        ? t('match.status.reconnectingTable')
         : !match
           ? ''
           : me?.out && !over
-            ? 'You ran out of lifelines. Your turns are skipped - watch or leave the table.'
+            ? t('match.status.outOfLifelines')
             : game.status === 'ABANDONED'
-              ? 'Someone left. The game has ended.'
+              ? t('match.status.someoneLeft')
               : match.state.status === 'FINISHED'
-                ? 'A good game, well played.'
+                ? t('match.status.goodGame')
                 : busy
                   ? game.activity === 'rolling'
-                    ? 'Rolling the dice...'
-                    : 'Sending your move...'
+                    ? t('match.status.rolling')
+                    : t('match.status.sending')
                   : humanTurn
                     ? match.state.lastRoll !== null
-                      ? distinctMoves(game.moves).length > 1
-                        ? `${distinctMoves(game.moves).length} playable coins - tap a bouncing coin`
-                        : distinctMoves(game.moves).length === 1
-                          ? 'Only one move - playing it for you...'
+                      ? playable > 1
+                        ? t('match.status.playable', { count: playable })
+                        : playable === 1
+                          ? t('match.status.onlyOne')
                           : match.state.consecutiveSixes === 3
-                            ? 'Three sixes! Your turn passes.'
-                            : 'No moves this time. Passing the dice…'
+                            ? t('match.status.threeSixes')
+                            : t('match.status.noMoves')
                       : game.secondsLeft !== null && game.secondsLeft <= 5
-                        ? `Hurry! ${game.secondsLeft}s to roll`
+                        ? t('match.status.hurry', { seconds: game.secondsLeft })
                         : livesLeft !== null && livesLeft < game.lifelines
-                          ? `Your turn - roll before the clock runs out (${livesLeft} ♥ left)`
+                          ? t('match.status.yourTurnLives', { lives: livesLeft })
                           : game.teams &&
                               match &&
                               controlledColor(match.state) !==
                                 match.state.players[mySeat ?? 0]?.color
-                            ? 'Your coins are home - roll for your partner!'
-                            : 'Your turn - tap the dice to roll'
-                    : `Waiting for ${waitingOn ? displayNameOf(waitingOn) : 'the next player'}…`;
+                            ? t('match.status.rollForPartner')
+                            : t('match.status.yourTurn')
+                    : waitingOn
+                      ? t('match.status.waitingFor', { name: displayNameOf(waitingOn) })
+                      : t('match.status.waitingForNext');
 
   const activeRivals = players.filter((p) => p.seatIndex !== mySeat && !p.out).length;
-  const leaveConsequence =
-    (game.pool > 0
-      ? `Your ${game.stake.toLocaleString()}-coin stake stays in the pot and you get no prize. `
-      : 'You get no coins for this game and it counts as a loss. ') +
-    (game.teams
-      ? 'Your partner loses with you, and the other pair wins.'
+  const leaveConsequence = `${
+    game.pool > 0
+      ? t('match.leave.stakeLost', { amount: game.stake.toLocaleString(numberLocale()) })
+      : t('match.leave.noCoins')
+  } ${
+    game.teams
+      ? t('match.leave.partnerLoses')
       : activeRivals >= 2
-        ? 'The others keep playing without you.'
-        : 'Your opponent wins the match.');
+        ? t('match.leave.othersPlayOn')
+        : t('match.leave.opponentWins')
+  }`;
+  const colorName = (color: PlayerColor) => t(`colors.${color}`);
 
   return (
     <>
@@ -228,26 +246,28 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
         onClose={() => {
           if (!leaving) setConfirmLeave(false);
         }}
-        title="Leave this match?"
+        title={t('match.leave.title')}
       >
         <Body>{leaveConsequence}</Body>
         <Button disabled={leaving} onPress={() => setConfirmLeave(false)}>
-          Stay and play
+          {t('match.leave.stay')}
         </Button>
         <Button secondary danger disabled={leaving} onPress={() => void leaveMatch()}>
-          {leaving ? 'Leaving…' : 'Leave & forfeit'}
+          {leaving ? t('match.leave.leaving') : t('match.leave.forfeit')}
         </Button>
-        {notice && confirmLeave && <Body>{notice}</Body>}
+        {notice && confirmLeave && <Body>{t(`errors.${notice}`)}</Body>}
       </Sheet>
       <GameTable
         game={game}
         // Everyone sees the same board, so which colour is yours has to be said.
         label={
           (match && variantOf(match.state) !== 'classic'
-            ? `${VARIANT_INFO[variantOf(match.state)].short} · `
+            ? `${variantShort(variantOf(match.state))} · `
             : '') +
-          (game.teams ? '2 V 2 · ' : '') +
-          (myColor ? `YOU ARE ${myColor}` : 'ONLINE MATCH')
+          (game.teams ? `${t('match.label.teams')} · ` : '') +
+          (myColor
+            ? t('match.label.youAre', { color: colorName(myColor).toUpperCase() })
+            : t('match.label.onlineMatch'))
         }
         prize={prizeLine}
         turnClock={over ? null : game.secondsLeft}
@@ -267,12 +287,10 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
         seatRotation={false}
         seatLabel={(color) => {
           const seat = match?.state.players.findIndex((p) => p.color === color) ?? -1;
-          if (seat === mySeat) return 'You';
+          if (seat === mySeat) return t('match.you');
           const player = players.find((p) => p.seatIndex === seat);
-          const shown = player
-            ? displayNameOf(player)
-            : color.charAt(0) + color.slice(1).toLowerCase();
-          return seat === partnerSeat ? `${shown} 🤝` : shown;
+          const shown = player ? displayNameOf(player) : colorName(color);
+          return seat === partnerSeat ? t('match.partner', { name: shown }) : shown;
         }}
         motionEnabled={motionEnabled}
         tableArea={{
@@ -284,8 +302,8 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
         setMenu={setMenu}
         rules={rules}
         setRules={setRules}
-        pauseBody="The other players are still at the table. Leaving forfeits this game — they play on, or win it outright at a table of two."
-        exitLabel="Leave the match"
+        pauseBody={t('match.pauseBody')}
+        exitLabel={t('match.exit')}
         onExit={() => {
           setMenu(false);
           setConfirmLeave(true);
@@ -299,19 +317,37 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
             <VictoryScreen
               visible={over && !busy}
               outcome={game.status === 'ABANDONED' ? 'abandoned' : won ? 'win' : 'loss'}
-              banner={game.status === 'ABANDONED' ? 'TABLE CLOSED' : won ? 'VICTORY!' : 'GOOD GAME'}
+              banner={
+                game.status === 'ABANDONED'
+                  ? t('match.banner.closed')
+                  : won
+                    ? t('match.banner.victory')
+                    : t('match.banner.goodGame')
+              }
               subtitle={(game.status === 'ABANDONED'
-                ? 'Someone left, so the match ended early'
+                ? t('match.subtitle.abandoned')
                 : won
-                  ? `${VARIANT_INFO[variantOf(match.state)].short} · ${winLine(match.state)} · you beat real players`
-                  : `${winner ? displayNameOf(winner) : 'Your rival'} took this one · rematch?`
+                  ? t('match.subtitle.won', {
+                      mode: variantShort(variantOf(match.state)),
+                      goal: t(`match.goal.${goalKey(match.state)}`, {
+                        goal: coinsToWin(match.state),
+                      }),
+                    })
+                  : winner
+                    ? t('match.subtitle.lost', { name: displayNameOf(winner) })
+                    : t('match.subtitle.lostRival')
               ).toUpperCase()}
               standings={standings(match.state).map((color) => {
                 const seat = match.state.players.findIndex((p) => p.color === color);
                 const player = players.find((p) => p.seatIndex === seat);
                 return {
                   key: color,
-                  name: seat === mySeat ? profile.name : player ? displayNameOf(player) : color,
+                  name:
+                    seat === mySeat
+                      ? profile.name
+                      : player
+                        ? displayNameOf(player)
+                        : colorName(color).toUpperCase(),
                   color: theme.colors[color],
                   you: seat === mySeat,
                   coinsHome: coinsHome(match.state, color),
@@ -331,23 +367,25 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
               note={
                 game.status === 'FINISHED' && !member
                   ? placePay > 0
-                    ? `+${placePay} coins are waiting in your vault — sign in any time to claim everything in it.`
-                    : `Create an account to earn ${REWARDS.online.win.coins} coins for every online win.`
+                    ? t('match.note.vault', { amount: placePay })
+                    : t('match.note.earn', { amount: REWARDS.online.win.coins })
                   : game.status === 'ABANDONED' && game.pool > 0
-                    ? 'The players who stayed split the prize pool. It is added to your coins when you continue.'
+                    ? t('match.note.poolSplit')
                     : undefined
               }
               stats={game.status === 'FINISHED' ? game.getStats() : null}
               durationMs={durationMs}
               goal={coinsToWin(match.state)}
-              primary={{ label: 'Play again', busy: saving, onPress: () => void finish(false) }}
-              secondary={{ label: 'Lobby', onPress: () => void finish(true) }}
+              primary={{
+                label: t('match.playAgain'),
+                busy: saving,
+                onPress: () => void finish(false),
+              }}
+              secondary={{ label: t('match.lobby'), onPress: () => void finish(true) }}
               shareMessage={
-                won
-                  ? `I just beat real players in a ${VARIANT_INFO[variantOf(match.state)].title} game of Ludo Rumble! 🎲🏆`
-                  : undefined
+                won ? t('match.share', { mode: variantTitle(variantOf(match.state)) }) : undefined
               }
-              error={notice}
+              error={notice && t(`errors.${notice}`)}
               motionEnabled={motionEnabled}
             />
           )

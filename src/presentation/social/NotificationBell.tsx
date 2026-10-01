@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Text } from '../components/AppText';
 import { router } from 'expo-router';
 import type { AppNotification } from '@/domain';
@@ -19,13 +21,13 @@ const ICON: Record<AppNotification['type'], string> = {
   GAME_STARTED: '🎲',
 };
 
-function relativeTime(iso: string, nowMs: number): string {
+function relativeTime(t: TFunction<'social'>, iso: string, nowMs: number): string {
   const seconds = Math.max(0, Math.round((nowMs - Date.parse(iso)) / 1000));
   if (!Number.isFinite(seconds)) return '';
-  if (seconds < 60) return 'just now';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
+  if (seconds < 60) return t('notifications.justNow');
+  if (seconds < 3600) return t('notifications.minutesAgo', { count: Math.floor(seconds / 60) });
+  if (seconds < 86400) return t('notifications.hoursAgo', { count: Math.floor(seconds / 3600) });
+  return t('notifications.daysAgo', { count: Math.floor(seconds / 86400) });
 }
 
 /**
@@ -35,6 +37,7 @@ function relativeTime(iso: string, nowMs: number): string {
 export function NotificationBell() {
   const { enabled, signedIn, notifications, unreadCount, markAllRead } = useSocial();
   const { theme } = useProfile();
+  const { t } = useTranslation('social');
   // Timestamps are relative to when the panel was opened, so rendering stays
   // pure and the list does not silently re-time itself under the reader.
   const [openedAt, setOpenedAt] = useState<number | null>(null);
@@ -61,10 +64,14 @@ export function NotificationBell() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={
-          unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'
+          unreadCount > 0
+            ? t('notifications.unreadA11y', { count: unreadCount })
+            : t('notifications.a11y')
         }
         onPress={show}
         android_ripple={{ color: '#ffffff25' }}
+        // The header has no room for a larger bell; the slop lifts its touch area to 48x48.
+        hitSlop={{ top: 6, bottom: 6, left: 6, right: 4 }}
         style={s.bell}
       >
         <Text style={s.bellIcon}>🔔</Text>
@@ -88,10 +95,10 @@ export function NotificationBell() {
             onPress={() => undefined}
           >
             <View style={s.panelHeader}>
-              <Text style={s.panelTitle}>Notifications</Text>
+              <Text style={s.panelTitle}>{t('notifications.title')}</Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Close notifications"
+                accessibilityLabel={t('notifications.close')}
                 onPress={() => setOpenedAt(null)}
                 android_ripple={{ color: '#ffffff25' }}
                 style={s.close}
@@ -100,7 +107,7 @@ export function NotificationBell() {
               </Pressable>
             </View>
             {notifications.length === 0 ? (
-              <Text style={s.empty}>Nothing yet. Friend requests and challenges land here.</Text>
+              <Text style={s.empty}>{t('notifications.empty')}</Text>
             ) : (
               <ScrollView contentContainerStyle={{ gap: 9 }} showsVerticalScrollIndicator={false}>
                 {notifications.map((notification) => (
@@ -116,7 +123,7 @@ export function NotificationBell() {
                       <Text style={s.itemTitle}>{notification.title}</Text>
                       <Text style={s.itemMessage}>{notification.message}</Text>
                       <Text style={s.itemTime}>
-                        {relativeTime(notification.createdAt, openedMs)}
+                        {relativeTime(t, notification.createdAt, openedMs)}
                       </Text>
                     </View>
                   </Pressable>
@@ -159,7 +166,7 @@ const s = StyleSheet.create({
   },
   panelHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   panelTitle: { color: ui.text, fontSize: 20, fontWeight: '800' },
-  close: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  close: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   empty: { color: ui.muted, fontSize: 13.5, lineHeight: 21, paddingVertical: 12 },
   item: {
     flexDirection: 'row',

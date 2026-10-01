@@ -3,16 +3,16 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../components/AppText';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
-  describeConnection,
   MAX_PRIVATE_STAKE,
   parseInviteCode,
   REWARDS,
-  VARIANT_INFO,
   type QuickMatchPlayerCount,
   type Stake,
   type GameVariant,
 } from '@/domain';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import { useCatalogText } from '../i18n/useCatalogText';
 import { challengeRepository } from '@/config/container';
 import { ConnectionPill } from '../components/ConnectionPill';
 import { Body, Button, Card, Label, Screen, Sheet, shared } from '../components/Kit';
@@ -29,8 +29,16 @@ import { useProfile } from '../state/ProfileProvider';
 import { useSocial } from '../state/SocialProvider';
 import { useAuthSession } from '../state/useAuthSession';
 import { ui } from '../theme/themes';
+import { mirrorInRtl } from '../i18n/rtl';
 
 const SEATS: readonly QuickMatchPlayerCount[] = [2, 3, 4];
+
+/** Our own message (as a key, so it follows the language) or the server's, as written. */
+type Problem =
+  | { readonly key: 'teamRoomFailed' | 'createFailed' | 'badCode' | 'joinFailed' }
+  | { readonly text: string };
+const problemFrom = (e: unknown, key: Extract<Problem, { key: unknown }>['key']): Problem =>
+  e instanceof Error ? { text: e.message } : { key };
 
 /**
  * The hub for everything that needs a server: quick play for anyone with a
@@ -39,6 +47,8 @@ const SEATS: readonly QuickMatchPlayerCount[] = [2, 3, 4];
  */
 export default function OnlinePlayScreen() {
   const { theme, profile } = useProfile();
+  const { t } = useTranslation(['online', 'common']);
+  const { variantTitle } = useCatalogText();
   const connectivity = useConnectivity();
   const { enabled, signedIn, account, identity } = useSocial();
   const auth = useAuthSession();
@@ -60,16 +70,17 @@ export default function OnlinePlayScreen() {
   const [privateVariant, setPrivateVariant] = useState<GameVariant>('classic');
   const [teams, setTeams] = useState(params.teams === '1');
   const [teamUpBusy, setTeamUpBusy] = useState(false);
-  const [teamUpError, setTeamUpError] = useState<string | null>(null);
+  const [teamUpError, setTeamUpError] = useState<Problem | null>(null);
   const teamUpStarted = useRef(false);
   const [privateTeams, setPrivateTeams] = useState(false);
-  const [gate, setGate] = useState<string | null>(null);
+  const [gate, setGate] = useState<'challenges' | null>(null);
   // Private game by invite link: pick a table size and share, or join by code.
   const [privateOpen, setPrivateOpen] = useState(params.private === '1');
   const [privateSeats, setPrivateSeats] = useState<QuickMatchPlayerCount>(2);
   const [codeInput, setCodeInput] = useState('');
   const [privateBusy, setPrivateBusy] = useState(false);
-  const [privateError, setPrivateError] = useState<string | null>(null);
+  const [privateError, setPrivateError] = useState<Problem | null>(null);
+  const problemText = (p: Problem) => ('key' in p ? t(`errors.${p.key}`) : p.text);
 
   /**
    * Closes the sheet first and moves on once it has gone: an Android dialog
@@ -89,9 +100,7 @@ export default function OnlinePlayScreen() {
       const room = await challengeRepository.createLinkRoom(4, stake, variant, true);
       openRoom(room.lobbyId);
     } catch (e) {
-      setTeamUpError(
-        e instanceof Error ? e.message : 'Could not create your team room. Try again.',
-      );
+      setTeamUpError(problemFrom(e, 'teamRoomFailed'));
     } finally {
       setTeamUpBusy(false);
     }
@@ -110,7 +119,7 @@ export default function OnlinePlayScreen() {
       );
       openRoom(room.lobbyId);
     } catch (e) {
-      setPrivateError(e instanceof Error ? e.message : 'Could not create the game. Try again.');
+      setPrivateError(problemFrom(e, 'createFailed'));
     } finally {
       setPrivateBusy(false);
     }
@@ -120,7 +129,7 @@ export default function OnlinePlayScreen() {
     if (!challengeRepository || privateBusy) return;
     const code = parseInviteCode(codeInput);
     if (!code) {
-      setPrivateError('That code does not look right. It is six letters and numbers.');
+      setPrivateError({ key: 'badCode' });
       return;
     }
     setPrivateBusy(true);
@@ -130,7 +139,7 @@ export default function OnlinePlayScreen() {
       setCodeInput('');
       openRoom(lobbyId);
     } catch (e) {
-      setPrivateError(e instanceof Error ? e.message : 'Could not join that game. Try again.');
+      setPrivateError(problemFrom(e, 'joinFailed'));
     } finally {
       setPrivateBusy(false);
     }
@@ -154,37 +163,34 @@ export default function OnlinePlayScreen() {
 
   if (!enabled || !connectivity.available) {
     return (
-      <Screen title="Online play" subtitle="PLAY WITH PEOPLE">
+      <Screen title={t('play.title')} subtitle={t('play.subtitle')}>
         <Card>
-          <Body>
-            This build has no game server configured, so online play is not available. Offline games
-            work as usual.
-          </Body>
-          <Button onPress={() => router.replace('/')}>Back to the game</Button>
+          <Body>{t('play.noServer')}</Body>
+          <Button onPress={() => router.replace('/')}>{t('backToGame')}</Button>
         </Card>
       </Screen>
     );
   }
 
-  const status = describeConnection(connectivity.state);
-
   if (!connectivity.online) {
     return (
-      <Screen title="Online play" subtitle="PLAY WITH PEOPLE">
+      <Screen title={t('play.title')} subtitle={t('play.subtitle')}>
         <Card>
           <ConnectionPill large />
-          <Text style={shared.sectionTitle}>Play Online is unavailable</Text>
+          <Text style={shared.sectionTitle}>{t('play.unavailable.title')}</Text>
           <Body>
             {connectivity.state === 'OFFLINE'
-              ? 'No internet connection. Online play returns the moment you are back online; offline games are always ready.'
+              ? t('play.unavailable.offline')
               : connectivity.state === 'SERVER_UNAVAILABLE'
-                ? 'The game server is not answering right now. Try again in a moment, or play offline meanwhile.'
-                : `${status.label} Hang on a second.`}
+                ? t('play.unavailable.server')
+                : t('play.unavailable.connecting', {
+                    status: t(`common:connection.${connectivity.state}`),
+                  })}
           </Body>
           <Button secondary onPress={() => void connectivity.refresh()}>
-            Try again
+            {t('tryAgain')}
           </Button>
-          <Button onPress={() => router.replace('/')}>Play offline instead</Button>
+          <Button onPress={() => router.replace('/')}>{t('play.unavailable.playOffline')}</Button>
         </Card>
       </Screen>
     );
@@ -192,19 +198,16 @@ export default function OnlinePlayScreen() {
 
   if (!signedIn) {
     return (
-      <Screen title="Choose how to play" subtitle="ONLINE PLAY">
+      <Screen title={t('play.choose.title')} subtitle={t('play.choose.subtitle')}>
         <Card style={{ borderColor: `${theme.accent}40` }}>
           <ConnectionPill large />
-          <Text style={shared.sectionTitle}>Jump straight in, or bring your account</Text>
-          <Body>
-            Guests can play online right away. An account adds friends, challenges, your game
-            history and progress that follows you between devices.
-          </Body>
+          <Text style={shared.sectionTitle}>{t('play.choose.heading')}</Text>
+          <Body>{t('play.choose.body')}</Body>
           <Button disabled={auth.busy} onPress={() => void auth.continueAsGuest()}>
-            {auth.busy ? 'Setting up your seat…' : 'Continue as Guest'}
+            {auth.busy ? t('settingUpSeat') : t('continueAsGuest')}
           </Button>
           <Button secondary disabled={auth.busy} onPress={() => router.push(LOGIN_HREF)}>
-            Login / Sign Up
+            {t('loginSignUp')}
           </Button>
           {auth.error && (
             <Text accessibilityLiveRegion="polite" style={shared.error}>
@@ -218,9 +221,20 @@ export default function OnlinePlayScreen() {
 
   const name = identity?.displayName?.trim() || profile.name;
   const searching = quick.phase === 'searching';
+  const searchLine = () => {
+    const values = {
+      count: seats,
+      mode: variantTitle(variant),
+      stake,
+      waiting: quick.ticket?.waiting ?? 1,
+    };
+    if (variant !== 'classic')
+      return stake > 0 ? t('play.quick.tableModeStake', values) : t('play.quick.tableMode', values);
+    return stake > 0 ? t('play.quick.tableStake', values) : t('play.quick.table', values);
+  };
 
   return (
-    <Screen title="Online play" subtitle="PLAY WITH PEOPLE">
+    <Screen title={t('play.title')} subtitle={t('play.subtitle')}>
       <Card>
         <View style={shared.between}>
           <View style={[shared.row, { flex: 1 }]}>
@@ -232,14 +246,19 @@ export default function OnlinePlayScreen() {
             />
             <View style={{ flex: 1, gap: 3 }}>
               <Text style={s.welcome} numberOfLines={1}>
-                Welcome, {name}
+                {t('play.welcome', { name })}
               </Text>
               <Text style={shared.small}>
                 {account === 'guest'
-                  ? `Playing as @${identity?.username ?? 'guest'} · temporary`
+                  ? t('play.guestHandle', { username: identity?.username ?? 'guest' })
                   : identity
-                    ? `@${identity.username}${identity.publicId ? ` · ID ${identity.publicId}` : ''}`
-                    : 'Setting up your profile…'}
+                    ? identity.publicId
+                      ? t('play.handleWithId', {
+                          username: identity.username,
+                          id: identity.publicId,
+                        })
+                      : t('play.handle', { username: identity.username })
+                    : t('play.settingUpProfile')}
               </Text>
             </View>
           </View>
@@ -248,7 +267,7 @@ export default function OnlinePlayScreen() {
       </Card>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Weekly tournament. Open leaderboard"
+        accessibilityLabel={t('play.tournament.a11y')}
         onPress={() => router.push('/tournament')}
         android_ripple={{ color: `${theme.accent}30` }}
         style={[s.tourney, { borderColor: `${theme.accent}55` }]}
@@ -257,17 +276,16 @@ export default function OnlinePlayScreen() {
           <Ionicons name="trophy" size={22} color={theme.accent} />
         </View>
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={s.tourneyTitle}>Weekly tournament</Text>
+          <Text style={s.tourneyTitle}>{t('play.tournament.title')}</Text>
           <Text style={shared.small}>
-            Every game +1 point, every win +3. Free tables pay up to +{REWARDS.online.win.coins}{' '}
-            coins by finish; staked tables pay the pot.
+            {t('play.tournament.body', { coins: REWARDS.online.win.coins })}
           </Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color={ui.subtle} />
+        <Ionicons name="chevron-forward" style={mirrorInRtl} size={20} color={ui.subtle} />
       </Pressable>
 
       <View style={shared.section}>
-        <Text style={shared.sectionTitle}>Quick Play</Text>
+        <Text style={shared.sectionTitle}>{t('play.quick.title')}</Text>
         <Card style={{ borderColor: `${theme.accent}40` }}>
           {searching || quick.phase === 'matched' ? (
             <>
@@ -275,40 +293,35 @@ export default function OnlinePlayScreen() {
                 <ActivityIndicator color={theme.accent} />
                 <View style={{ flex: 1, gap: 3 }}>
                   <Text style={shared.sectionTitle}>
-                    {quick.phase === 'matched' ? 'Opponent found!' : 'Finding opponent…'}
+                    {quick.phase === 'matched' ? t('play.quick.found') : t('play.quick.finding')}
                   </Text>
                   <Text style={shared.small}>
-                    {quick.phase === 'matched'
-                      ? 'Taking you to the table.'
-                      : `${seats}-player ${variant !== 'classic' ? `${VARIANT_INFO[variant].title} ` : ''}${stake > 0 ? `${stake}-coin ` : ''}table · ${quick.ticket?.waiting ?? 1} waiting`}
+                    {quick.phase === 'matched' ? t('play.quick.taking') : searchLine()}
                   </Text>
                 </View>
               </View>
-              <Body>
-                Keep this screen open. Leaving cancels your search, and the other players are
-                strangers who will not wait.
-              </Body>
+              <Body>{t('play.quick.keepOpen')}</Body>
               {quick.error && (
                 <Text accessibilityLiveRegion="polite" style={shared.error}>
                   {quick.error}
                 </Text>
               )}
               <Button secondary onPress={() => void quick.cancel()}>
-                Cancel search
+                {t('cancelSearch')}
               </Button>
             </>
           ) : (
             <>
-              <Label color={theme.accent}>NO FRIENDS NEEDED</Label>
-              <Text style={shared.sectionTitle}>Find an opponent now</Text>
-              <Body>You are seated with the next players looking for the same table.</Body>
-              <Label>TABLE SIZE</Label>
+              <Label color={theme.accent}>{t('play.quick.noFriendsNeeded')}</Label>
+              <Text style={shared.sectionTitle}>{t('play.quick.findNow')}</Text>
+              <Body>{t('play.quick.seatedWith')}</Body>
+              <Label>{t('play.tableSize')}</Label>
               <View style={shared.row}>
                 {SEATS.map((n) => (
                   <Pressable
                     key={n}
                     accessibilityRole="button"
-                    accessibilityLabel={`${n} players`}
+                    accessibilityLabel={t('play.seatsA11y', { count: n })}
                     accessibilityState={{ selected: n === seats }}
                     onPress={() => setSeats(n)}
                     android_ripple={{ color: `${theme.accent}30` }}
@@ -319,14 +332,14 @@ export default function OnlinePlayScreen() {
                     ]}
                   >
                     <Text style={s.choiceText}>{n}</Text>
-                    <Text style={{ color: ui.muted, fontSize: 9 }}>players</Text>
+                    <Text style={{ color: ui.muted, fontSize: 9 }}>{t('play.playersUnit')}</Text>
                   </Pressable>
                 ))}
               </View>
-              <Label>GAME MODE</Label>
+              <Label>{t('play.gameMode')}</Label>
               <VariantPicker value={variant} onChange={setVariant} />
               {seats === 4 && <TeamsToggle value={teams} onChange={setTeams} />}
-              <Label>ENTRY</Label>
+              <Label>{t('play.entry')}</Label>
               <StakePicker value={stake} players={seats} onChange={setStake} />
               {quick.error && (
                 <Text accessibilityLiveRegion="polite" style={shared.error}>
@@ -337,7 +350,7 @@ export default function OnlinePlayScreen() {
                 disabled={!quick.available}
                 onPress={() => void quick.start(seats, stake, variant, teams && seats === 4)}
               >
-                Quick Match →
+                {t('play.quick.start')}
               </Button>
             </>
           )}
@@ -345,15 +358,13 @@ export default function OnlinePlayScreen() {
       </View>
 
       <View style={shared.section}>
-        <Text style={shared.sectionTitle}>2 v 2 teams</Text>
+        <Text style={shared.sectionTitle}>{t('play.teams.title')}</Text>
         <Card style={{ gap: 12, borderColor: `${ui.gem}55` }}>
-          <Text style={shared.small}>
-            Partners sit opposite, never capture each other, and win together.
-          </Text>
+          <Text style={shared.small}>{t('play.teams.body')}</Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Random 2 v 2"
-            accessibilityHint="Play with three players from the queue"
+            accessibilityLabel={t('play.teams.random')}
+            accessibilityHint={t('play.teams.randomHint')}
             disabled={!quick.available || searching}
             onPress={() => {
               setSeats(4);
@@ -368,17 +379,15 @@ export default function OnlinePlayScreen() {
           >
             <Ionicons name="shuffle" size={26} color={ui.gem} />
             <View style={{ flex: 1, gap: 4 }}>
-              <Text style={s.optionTitle}>Random 2 v 2</Text>
-              <Text style={shared.small}>
-                Four players from the queue. Your partner is picked for you.
-              </Text>
+              <Text style={s.optionTitle}>{t('play.teams.random')}</Text>
+              <Text style={shared.small}>{t('play.teams.randomBody')}</Text>
             </View>
             <Text style={[s.arrow, { color: ui.gem }]}>↗</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Team up with a friend"
-            accessibilityHint="Get a code for your friend, then find another team together"
+            accessibilityLabel={t('play.teams.friend')}
+            accessibilityHint={t('play.teams.friendHint')}
             disabled={teamUpBusy}
             onPress={() => void teamUp()}
             android_ripple={{ color: `${ui.gem}30` }}
@@ -390,29 +399,25 @@ export default function OnlinePlayScreen() {
             <Ionicons name="people" size={26} color={ui.gem} />
             <View style={{ flex: 1, gap: 4 }}>
               <Text style={s.optionTitle}>
-                {teamUpBusy ? 'Creating your team…' : 'Team up with a friend'}
+                {teamUpBusy ? t('play.teams.creating') : t('play.teams.friend')}
               </Text>
-              <Text style={shared.small}>
-                Send your friend a code. Together you play another team of friends.
-              </Text>
+              <Text style={shared.small}>{t('play.teams.friendBody')}</Text>
             </View>
             <Text style={[s.arrow, { color: ui.gem }]}>↗</Text>
           </Pressable>
-          {teamUpError && <Text style={shared.error}>{teamUpError}</Text>}
-          <Text style={shared.small}>Uses the game mode and entry you picked above.</Text>
+          {teamUpError && <Text style={shared.error}>{problemText(teamUpError)}</Text>}
+          <Text style={shared.small}>{t('play.teams.usesAbove')}</Text>
         </Card>
       </View>
 
       <View style={shared.section}>
-        <Text style={shared.sectionTitle}>More ways to play</Text>
+        <Text style={shared.sectionTitle}>{t('play.more.title')}</Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={
-            account === 'guest' ? 'Challenge friends, account required' : 'Challenge friends'
+            account === 'guest' ? t('play.more.challengeA11yGuest') : t('play.more.challengeA11y')
           }
-          onPress={() =>
-            account === 'member' ? router.push('/friends') : setGate('friend challenges')
-          }
+          onPress={() => (account === 'member' ? router.push('/friends') : setGate('challenges'))}
           android_ripple={{ color: '#a7beff30' }}
           style={({ pressed }) => [
             s.option,
@@ -421,18 +426,18 @@ export default function OnlinePlayScreen() {
         >
           <Text style={s.optionIcon}>⚈⚈</Text>
           <View style={{ flex: 1, gap: 4 }}>
-            <Text style={s.optionTitle}>Challenge Friends {account === 'guest' ? '🔒' : ''}</Text>
+            <Text style={s.optionTitle}>
+              {t('play.more.challenge')} {account === 'guest' ? '🔒' : ''}
+            </Text>
             <Text style={shared.small}>
-              {account === 'guest'
-                ? 'Create an account to add friends and challenge them.'
-                : 'Pick one or two friends for a private table.'}
+              {account === 'guest' ? t('play.more.challengeGuest') : t('play.more.challengeMember')}
             </Text>
           </View>
           <Text style={[s.arrow, { color: theme.accent }]}>↗</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Create a private game or join with a code"
+          accessibilityLabel={t('play.more.privateA11y')}
           onPress={() => {
             setPrivateError(null);
             setPrivateOpen(true);
@@ -445,8 +450,8 @@ export default function OnlinePlayScreen() {
         >
           <Text style={s.optionIcon}>✉</Text>
           <View style={{ flex: 1, gap: 4 }}>
-            <Text style={s.optionTitle}>Private Game</Text>
-            <Text style={shared.small}>Invite anyone with a link, or join with a code.</Text>
+            <Text style={s.optionTitle}>{t('play.more.private')}</Text>
+            <Text style={shared.small}>{t('play.more.privateBody')}</Text>
           </View>
           <Text style={[s.arrow, { color: theme.accent }]}>↗</Text>
         </Pressable>
@@ -454,19 +459,16 @@ export default function OnlinePlayScreen() {
 
       {account === 'guest' && (
         <Card>
-          <Label color={theme.accent}>PLAYING AS A GUEST</Label>
+          <Label color={theme.accent}>{t('play.guest.label')}</Label>
           <Text style={shared.sectionTitle}>
             {profile.games > 0
-              ? `You’ve played ${profile.games} ${profile.games === 1 ? 'game' : 'games'} as a guest.`
-              : 'Like it here? Make it yours.'}
+              ? t('play.guest.played', { count: profile.games })
+              : t('play.guest.likeIt')}
           </Text>
-          <Body>
-            Create an account to save your game history, keep your coins and progress, and add
-            friends. Nothing you have played is lost.
-          </Body>
-          <Button onPress={() => router.push(SIGN_UP_HREF)}>Sign Up</Button>
+          <Body>{t('play.guest.body')}</Body>
+          <Button onPress={() => router.push(SIGN_UP_HREF)}>{t('play.guest.signUp')}</Button>
           <Button secondary compact onPress={() => router.push(LOGIN_HREF)}>
-            Login
+            {t('play.guest.login')}
           </Button>
         </Card>
       )}
@@ -484,22 +486,26 @@ export default function OnlinePlayScreen() {
         motionEnabled={searchMotion}
         onCancel={() => void quick.cancel()}
       />
-      <AccountGateSheet feature={gate} visible={gate !== null} onClose={() => setGate(null)} />
+      <AccountGateSheet
+        feature={gate === null ? null : t('play.more.challengeFeature')}
+        visible={gate !== null}
+        onClose={() => setGate(null)}
+      />
       <Sheet
         visible={privateOpen}
         onClose={() => {
           if (!privateBusy) setPrivateOpen(false);
         }}
-        title="Private game"
+        title={t('play.private.title')}
       >
-        <Label color={theme.accent}>START A TABLE</Label>
-        <Body>Pick the table size. You will get a link and a code to send to anyone.</Body>
+        <Label color={theme.accent}>{t('play.private.startLabel')}</Label>
+        <Body>{t('play.private.body')}</Body>
         <View style={shared.row}>
           {SEATS.map((n) => (
             <Pressable
               key={n}
               accessibilityRole="button"
-              accessibilityLabel={`${n} players`}
+              accessibilityLabel={t('play.seatsA11y', { count: n })}
               accessibilityState={{ selected: n === privateSeats }}
               onPress={() => setPrivateSeats(n)}
               android_ripple={{ color: `${theme.accent}30` }}
@@ -510,7 +516,7 @@ export default function OnlinePlayScreen() {
               ]}
             >
               <Text style={s.choiceText}>{n}</Text>
-              <Text style={{ color: ui.muted, fontSize: 9 }}>players</Text>
+              <Text style={{ color: ui.muted, fontSize: 9 }}>{t('play.playersUnit')}</Text>
             </Pressable>
           ))}
         </View>
@@ -523,21 +529,19 @@ export default function OnlinePlayScreen() {
           onChange={setPrivateStake}
         />
         <Button disabled={privateBusy} onPress={() => void createPrivate()}>
-          {privateBusy ? 'Working…' : 'Create game & get link'}
+          {privateBusy ? t('play.private.working') : t('play.private.create')}
         </Button>
-        <Label color={theme.accent}>HAVE A CODE?</Label>
-        <Text style={shared.small}>
-          Type the six-character code, or paste the whole invite message.
-        </Text>
+        <Label color={theme.accent}>{t('play.private.haveCode')}</Label>
+        <Text style={shared.small}>{t('play.private.codeHint')}</Text>
         <TextInput
-          accessibilityLabel="Invite code"
+          accessibilityLabel={t('play.private.codeA11y')}
           value={codeInput}
-          onChangeText={(t) => {
-            setCodeInput(t);
+          onChangeText={(text) => {
+            setCodeInput(text);
             setPrivateError(null);
           }}
           editable={!privateBusy}
-          placeholder="e.g. K7Q2MX"
+          placeholder={t('play.private.codePlaceholder')}
           placeholderTextColor={ui.muted}
           autoCapitalize="characters"
           autoCorrect={false}
@@ -550,11 +554,11 @@ export default function OnlinePlayScreen() {
           disabled={privateBusy || !codeInput.trim()}
           onPress={() => void joinByCode()}
         >
-          Join game
+          {t('play.private.join')}
         </Button>
         {privateError && (
           <Text accessibilityLiveRegion="polite" style={shared.error}>
-            {privateError}
+            {problemText(privateError)}
           </Text>
         )}
       </Sheet>

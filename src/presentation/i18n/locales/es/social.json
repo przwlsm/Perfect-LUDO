@@ -1,0 +1,116 @@
+{
+  "friends": {
+    "title": "Amigos",
+    "subtitle": "JUEGA CON GENTE QUE CONOCES",
+    "count_one": "{{count}} amigo",
+    "count_many": "{{count}} amigos",
+    "count_other": "{{count}} amigos",
+    "you": "Eres @{{username}}",
+    "youWithId": "Eres @{{username}} · ID {{id}}",
+    "online": "{{online}} EN LÍNEA",
+    "createChallenge": "Crear un desafío →",
+    "createFailed": "No se pudo crear la partida.",
+    "empty": {
+      "title": "Aún no tienes amigos",
+      "body": "Busca un nombre de usuario arriba y envía una solicitud para empezar a jugar juntos."
+    },
+    "remove": "Eliminar a {{name}}"
+  },
+  "tabs": {
+    "friends": "Amigos",
+    "requests": "Solicitudes",
+    "sent": "Enviadas"
+  },
+  "requests": {
+    "incomingEmpty": "No tienes solicitudes de amistad por ahora.",
+    "sentEmpty": "No has enviado ninguna solicitud.",
+    "accept": "Aceptar",
+    "decline": "Rechazar"
+  },
+  "notice": {
+    "requestSent": "Solicitud de amistad enviada.",
+    "nowFriends": "¡Ya son amigos!",
+    "requestCancelled": "Solicitud cancelada.",
+    "friendRemoved": "Amigo eliminado."
+  },
+  "search": {
+    "a11y": "Buscar nombre de usuario o ID de usuario",
+    "placeholder": "Busca usuario o ID…",
+    "clear": "Borrar búsqueda",
+    "noResults": "No se encontraron jugadores. Prueba con el nombre de usuario completo o su ID.",
+    "unavailable": "La búsqueda no está disponible ahora mismo.",
+    "self": "Eres tú",
+    "challenge": "Desafiar",
+    "requestSent": "Solicitud enviada",
+    "addFriend": "Agregar amigo"
+  },
+  "player": {
+    "id": "ID {{id}}",
+    "idA11y": "ID de usuario {{id}}"
+  },
+  "presence": {
+    "ONLINE": "En línea",
+    "AWAY": "Ausente",
+    "IN_GAME": "En una partida",
+    "OFFLINE": "Desconectado"
+  },
+  "noBackend": {
+    "body": "Para jugar con amigos necesitas una cuenta, y esta versión no tiene un servicio de cuentas configurado. Todo lo demás sigue funcionando sin conexión.",
+    "back": "Volver a la partida"
+  },
+  "guest": {
+    "hint": "Como invitado, igual puedes jugar en línea ahora mismo: la partida rápida te sienta con los siguientes jugadores que buscan partida."
+  },
+  "signedOut": {
+    "label": "UNA CUENTA PARA CADA NOCHE DE JUEGO",
+    "title": "Inicia sesión para agregar amigos",
+    "body": "Tu lista de amigos, desafíos e invitaciones van con tu cuenta, así que te siguen a cualquier dispositivo.",
+    "signIn": "Inicia sesión o crea una cuenta",
+    "offline": "Seguir jugando sin conexión"
+  },
+  "challenge": {
+    "title": "Crear desafío",
+    "howMany": "¿CUÁNTOS JUGADORES?",
+    "playersA11y_one": "{{count}} jugador",
+    "playersA11y_many": "{{count}} jugadores",
+    "playersA11y_other": "{{count}} jugadores",
+    "players": "JUGADORES",
+    "selectFriends_one": "ELIGE {{count}} AMIGO",
+    "selectFriends_many": "ELIGE {{count}} AMIGOS",
+    "selectFriends_other": "ELIGE {{count}} AMIGOS",
+    "selected": "Elegidos: {{picked}} / {{required}}",
+    "noFriends": "Primero agrega un amigo: los desafíos son partidas privadas entre amigos.",
+    "selectA11y": "Elegir a {{name}}",
+    "creating": "Creando…",
+    "start_one": "Iniciar desafío · {{count}} jugador",
+    "start_many": "Iniciar desafío · {{count}} jugadores",
+    "start_other": "Iniciar desafío · {{count}} jugadores",
+    "footnote": "Tus amigos invitados reciben una notificación al instante. Vence si nadie responde."
+  },
+  "invite": {
+    "dismiss": "Descartar invitación",
+    "join": "Unirse a la partida",
+    "decline": "Rechazar",
+    "unavailable": "Esa invitación ya no está disponible.",
+    "share": "¡Únete a mi partida de Ludo Rumble! Toca {{link}} para sentarte, o abre Ludo Rumble → En línea → Partida privada e ingresa {{code}}."
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "a11y": "Notificaciones",
+    "unreadA11y_one": "Notificaciones, {{count}} sin leer",
+    "unreadA11y_many": "Notificaciones, {{count}} sin leer",
+    "unreadA11y_other": "Notificaciones, {{count}} sin leer",
+    "close": "Cerrar notificaciones",
+    "empty": "Nada por aquí. Las solicitudes de amistad y los desafíos llegan aquí.",
+    "justNow": "ahora mismo",
+    "minutesAgo_one": "hace {{count}} min",
+    "minutesAgo_many": "hace {{count}} min",
+    "minutesAgo_other": "hace {{count}} min",
+    "hoursAgo_one": "hace {{count}} h",
+    "hoursAgo_many": "hace {{count}} h",
+    "hoursAgo_other": "hace {{count}} h",
+    "daysAgo_one": "hace {{count}} d",
+    "daysAgo_many": "hace {{count}} d",
+    "daysAgo_other": "hace {{count}} d"
+  }
+}

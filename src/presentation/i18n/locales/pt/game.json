@@ -1,0 +1,205 @@
+{
+  "colors": {
+    "RED": "Vermelho",
+    "GREEN": "Verde",
+    "YELLOW": "Amarelo",
+    "BLUE": "Azul",
+    "PURPLE": "Roxo",
+    "ORANGE": "Laranja",
+    "PINK": "Rosa",
+    "CYAN": "Ciano"
+  },
+  "colorPlayer": {
+    "RED": "jogador vermelho",
+    "GREEN": "jogador verde",
+    "YELLOW": "jogador amarelo",
+    "BLUE": "jogador azul",
+    "PURPLE": "jogador roxo",
+    "ORANGE": "jogador laranja",
+    "PINK": "jogador rosa",
+    "CYAN": "jogador ciano"
+  },
+  "seat": {
+    "you": "Você",
+    "partner": "Parceiro",
+    "rival1": "Rival 1",
+    "rival2": "Rival 2",
+    "computer": "Computador",
+    "computerNumbered": "Computador {{index}}"
+  },
+  "label": {
+    "passAndPlay": "PASSA E JOGA",
+    "solo": "MESA SOLO",
+    "teams": "2 X 2"
+  },
+  "prize": {
+    "win_one": "Vitória: +{{count}} moeda",
+    "win_many": "Vitória: +{{count}} de moedas",
+    "win_other": "Vitória: +{{count}} moedas"
+  },
+  "status": {
+    "finished": "Boa partida, muito bem jogada.",
+    "rolling": "Jogando o dado...",
+    "moving": "Movendo os peões...",
+    "playableCoins_one": "{{count}} peão pode jogar - toque num peão que pula",
+    "playableCoins_many": "{{count}} de peões podem jogar - toque num peão que pula",
+    "playableCoins_other": "{{count}} peões podem jogar - toque num peão que pula",
+    "onlyOne": "Só uma jogada possível - jogando por você...",
+    "threeSixes": "Três seis! Você passa a vez.",
+    "noMoves": "Nenhuma jogada desta vez. Passando o dado…",
+    "computerChoosing": "O computador está escolhendo uma jogada…",
+    "rollForPartner": "Seus peões estão em casa - jogue pelo seu parceiro!",
+    "killFirst": "jogue o dado - capture um peão para abrir seu caminho de casa",
+    "killFirstNamed": "{{name}}, jogue o dado - capture um peão para abrir seu caminho de casa",
+    "tapToRoll": "toque no dado para jogar",
+    "tapToRollNamed": "{{name}}, toque no dado para jogar",
+    "computerReady": "O computador está se preparando…"
+  },
+  "errors": {
+    "noSavedMatch": "Nenhuma partida salva foi encontrada. Comece um jogo novo no lobby.",
+    "loadFailed": "Não foi possível carregar a partida.",
+    "moveSaveFailed": "Não foi possível salvar sua jogada. Tente de novo."
+  },
+  "pause": {
+    "a11y": "Pausar jogo",
+    "title": "Sem pressa.",
+    "body": "Seu jogo está pausado e salvo neste aparelho. Sua mesa vai estar aqui quando você voltar.",
+    "exit": "Salvar e voltar ao lobby",
+    "backToGame": "Voltar ao jogo",
+    "howToPlay": "Como jogar"
+  },
+  "rulesSheet": {
+    "title": "Um clássico por um motivo.",
+    "thisTable": "ESTA MESA"
+  },
+  "rules": {
+    "entrance": {
+      "title": "Faça sua entrada",
+      "text": "Tire um seis para tirar um peão da sua base. Um seis dá direito a jogar de novo."
+    },
+    "home": {
+      "title": "Siga para casa",
+      "text": "Ande no sentido horário pela pista e depois suba pela sua trilha colorida. Você precisa do número exato para terminar."
+    },
+    "rivalry": {
+      "title": "Uma rivalidade amigável",
+      "text": "Pare em cima de um adversário para mandar o peão dele de volta. As casas com estrela e as de entrada são seguras. Capturas e chegadas em casa dão uma jogada bônus."
+    },
+    "fair": {
+      "title": "Jogo limpo",
+      "text": "Três seis seguidos anulam a terceira jogada. As jogadas anteriores continuam valendo. Dois peões da mesma cor impedem que um adversário pare naquela casa."
+    },
+    "finish": {
+      "title": "Leve todos para casa",
+      "text": "Vence o primeiro jogador a levar os quatro peões para casa. Jogadores conectados ganham moedas e XP: vitórias online pagam mais, e toda partida online soma pontos no torneio."
+    }
+  },
+  "table": {
+    "tryAgain": "Tentar de novo",
+    "backToLobby": "Voltar ao lobby",
+    "retryTurn": "Repetir a vez",
+    "boardSaveFailed": "Não foi possível salvar a preferência de tabuleiro. Tente de novo.",
+    "reactA11y": "Enviar uma reação",
+    "reactWith": "Reagir {{emoji}}",
+    "switchView": "Mudar para o tabuleiro {{mode}}",
+    "info3d_one": "{{count}} jogador / mesa 3D",
+    "info3d_many": "{{count}} de jogadores / mesa 3D",
+    "info3d_other": "{{count}} jogadores / mesa 3D",
+    "infoClassic_one": "{{count}} jogador / mesa clássica",
+    "infoClassic_many": "{{count}} de jogadores / mesa clássica",
+    "infoClassic_other": "{{count}} jogadores / mesa clássica"
+  },
+  "dice": {
+    "rollA11y": "{{name}}: jogar o dado",
+    "yourTurnHint": "Sua vez. Toque para jogar.",
+    "waitHint": "Espere a sua vez.",
+    "label": "Dado",
+    "showing": "Dado mostrando {{value}}",
+    "readyToRoll": "Dado pronto para jogar",
+    "rolling": "Dado rolando",
+    "ready": "Pronto para jogar"
+  },
+  "panel": {
+    "out": "FORA",
+    "livesA11y": "{{left}} de {{total}} vidas restantes",
+    "secondsLeft_one": "{{count}} segundo restante",
+    "secondsLeft_many": "{{count}} de segundos restantes",
+    "secondsLeft_other": "{{count}} segundos restantes",
+    "secondsShort": "{{seconds}}s"
+  },
+  "victory": {
+    "title": "RESULTADO DA PARTIDA",
+    "ended": "PARTIDA ENCERRADA",
+    "completed": "PARTIDA CONCLUÍDA",
+    "rewards": "Recompensas",
+    "level": "Nível {{level}}",
+    "levelUp": "SUBIU DE NÍVEL!",
+    "toNext": "{{percent}}% para o próximo",
+    "performance": "DESEMPENHO NA BATALHA",
+    "sixes": "Seis tirados",
+    "captured": "Peões capturados",
+    "home": "Peões em casa",
+    "saving": "SALVANDO…",
+    "share": "Compartilhar",
+    "place": {
+      "winner": "VENCEDOR",
+      "silver": "PRATA",
+      "bronze": "BRONZE"
+    },
+    "you": "{{name}} (Você)",
+    "homeCount": "{{home}}/{{goal}} em casa",
+    "minutesSeconds": "{{minutes}}min {{seconds}}s",
+    "seconds": "{{seconds}}s"
+  },
+  "result": {
+    "playerWins": "{{name}} venceu!",
+    "teamVictory": "VITÓRIA DA EQUIPE!",
+    "victory": "VITÓRIA!",
+    "goodGame": "BOA PARTIDA",
+    "soClose": "Foi por pouco · {{mode}}",
+    "subtitle": "{{mode}} · {{how}}",
+    "guestWonNote_one": "+{{count}} moeda está no seu cofre — entre na sua conta quando quiser para resgatar tudo o que está nele.",
+    "guestWonNote_many": "+{{count}} de moedas estão no seu cofre — entre na sua conta quando quiser para resgatar tudo o que está nele.",
+    "guestWonNote_other": "+{{count}} moedas estão no seu cofre — entre na sua conta quando quiser para resgatar tudo o que está nele.",
+    "guestLostNote_one": "Vença para adicionar {{count}} moeda ao seu cofre, ou {{online}} online.",
+    "guestLostNote_many": "Vença para adicionar {{count}} de moedas ao seu cofre, ou {{online}} online.",
+    "guestLostNote_other": "Vença para adicionar {{count}} moedas ao seu cofre, ou {{online}} online.",
+    "loadingAd": "Carregando anúncio…",
+    "watchAdRematch": "Ver anúncio · Revanche",
+    "playAgain": "Jogar de novo",
+    "goHome": "Ir ao início",
+    "lobby": "Lobby",
+    "sharePlayer": "{{name}} acabou de vencer uma partida {{mode}} de Ludo Rumble! 🎲🏆",
+    "shareMine": "Acabei de vencer uma partida {{mode}} de Ludo Rumble! 🎲🏆",
+    "saveFailed": "Não foi possível salvar seu resultado. Toque de novo para tentar.",
+    "adIncomplete": "O anúncio não terminou. Tente de novo ou volte ao início."
+  },
+  "winLine": {
+    "allEight": "Os oito peões em casa",
+    "partners": "Os dois parceiros com {{goal}} em casa",
+    "first": "Primeiro peão em casa",
+    "two": "Dois peões em casa",
+    "allFour": "Os quatro peões em casa"
+  },
+  "piece": {
+    "label": "Peão {{color}}",
+    "numbered": "Peão {{color}} {{number}}",
+    "tapToMove": "{{label}}, toque para mover",
+    "hint": "Mova este peão com o valor tirado no dado"
+  },
+  "zoom": {
+    "resetA11y": "Redefinir zoom",
+    "zoomA11y": "Aproximar o tabuleiro",
+    "reset": "Redefinir",
+    "pinch": "Use dois dedos para dar zoom"
+  },
+  "board": {
+    "home": "CASA"
+  },
+  "turnBanner": {
+    "youWon": "Você venceu!",
+    "wins": "{{color}} venceu",
+    "yourTurn": "Sua vez",
+    "turn": "Vez do {{color}}"
+  }
+}

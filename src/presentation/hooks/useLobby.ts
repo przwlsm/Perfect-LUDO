@@ -10,11 +10,12 @@ import {
   type LobbySnapshot,
 } from '@/domain';
 import { useSocial } from '../state/SocialProvider';
+import { i18n } from '../i18n';
 
 const TICK_MS = 250;
 
 function messageFor(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
+  return error instanceof Error ? error.message : i18n.t('common:errors.generic');
 }
 
 /**

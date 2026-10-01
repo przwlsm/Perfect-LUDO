@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useAnimatedStyle,
@@ -32,6 +33,7 @@ function mix(hex: string, amount: number): string {
 
 /** Six orthographically projected cube faces, rendered on the native UI thread. */
 export function Dice({ value, finish = 'ivory', size = 56, spin, tilt }: DiceProps) {
+  const { t } = useTranslation('game');
   const still = useSharedValue(0);
   const angled = useSharedValue(1);
   const colors = DICE_FINISHES[finish] ?? DICE_FINISHES.ivory!;
@@ -39,7 +41,7 @@ export function Dice({ value, finish = 'ivory', size = 56, spin, tilt }: DicePro
     <View
       pointerEvents="none"
       accessible
-      accessibilityLabel={value ? `Dice showing ${value}` : 'Dice ready to roll'}
+      accessibilityLabel={value ? t('dice.showing', { value }) : t('dice.readyToRoll')}
       style={{ width: size, height: size }}
     >
       <View

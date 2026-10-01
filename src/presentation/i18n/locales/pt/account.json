@@ -1,0 +1,280 @@
+{
+  "shared": {
+    "backToSignIn": "Voltar para entrar",
+    "backToGame": "Voltar ao jogo",
+    "retrySync": "Tentar sincronizar de novo",
+    "guestLabel": "JOGANDO COMO CONVIDADO",
+    "continueGuest": "Continuar como convidado",
+    "passwordMismatch": "As senhas não coincidem."
+  },
+  "username": {
+    "checking": "Verificando…",
+    "available": "✓ Nome de usuário disponível",
+    "unavailable": "✕ {{reason}}",
+    "fallback": "Esse nome de usuário não pode ser usado."
+  },
+  "profile": {
+    "title": "Seu cantinho no clube.",
+    "subtitle": "PERFIL DO JOGADOR",
+    "rank": {
+      "champion": "CAMPEÃO DO CLUBE",
+      "regular": "FREQUENTADOR DA MESA",
+      "welcome": "BOAS-VINDAS AO CLUBE"
+    },
+    "level": "Nível {{level}}",
+    "xpToNext": "{{into}} / {{need}} XP para o nível {{next}}",
+    "edit": "Editar perfil",
+    "stats": {
+      "played": "Partidas",
+      "wins": "Vitórias",
+      "winRate": "Taxa de vitórias",
+      "winStreak": "Sequência de vitórias",
+      "bestStreak": "Melhor sequência"
+    },
+    "recordMember": "Partidas concluídas na sua conta. No passa e joga, as vitórias contam para o lugar vermelho.",
+    "recordDevice": "Partidas concluídas neste aparelho. No passa e joga, as vitórias contam para o lugar vermelho.",
+    "balance": {
+      "label": "SEU SALDO",
+      "openStore": "Abrir loja",
+      "loadFailed": "Não foi possível carregar suas moedas da sua conta. Os gastos ficam pausados até que elas carreguem.",
+      "reload": "Recarregar moedas",
+      "pending_one": "{{count}} partida terminada ainda aguarda pagamento. Ela será somada na próxima vez que sua conta responder.",
+      "pending_many": "{{count}} de partidas terminadas ainda aguardam pagamento. Elas serão somadas na próxima vez que sua conta responder.",
+      "pending_other": "{{count}} partidas terminadas ainda aguardam pagamento. Elas serão somadas na próxima vez que sua conta responder.",
+      "kept": "Guardadas na sua conta, então acompanham você em qualquer aparelho."
+    },
+    "account": {
+      "label": "CONTA",
+      "memberBody": "Suas moedas, coleção e estatísticas ficam guardadas na sua conta.",
+      "signedOutBody": "Entre para jogar com amigos e para ganhar, guardar e gastar moedas. As moedas e os visuais desbloqueados ficam na sua conta, não neste aparelho.",
+      "manage": "Gerenciar conta",
+      "signIn": "Entrar ou criar uma conta"
+    },
+    "look": {
+      "label": "SEU VISUAL EXCLUSIVO",
+      "view3d": "{{dice}} · visão 3D",
+      "view2d": "{{dice}} · visão 2D",
+      "explore": "Explore sua coleção · {{items}} itens"
+    },
+    "tips": {
+      "label": "PEQUENAS VITÓRIAS SOMAM",
+      "title": "Jogue. Colecione. Deixe com a sua cara.",
+      "body": "Resgate o calendário diário, gire a roleta, complete missões e vença online para os grandes prêmios. Moedas compram os visuais; gemas desbloqueiam os lendários."
+    },
+    "feedback": {
+      "label": "ESTAMOS OUVINDO",
+      "title": "Achou um bug? Tem uma ideia?",
+      "body": "Conte o que está funcionando, o que não está e o que você gostaria de ver a seguir.",
+      "button": "Enviar sugestão"
+    }
+  },
+  "login": {
+    "title": {
+      "account": "Sua conta",
+      "keepProgress": "Guarde seu progresso",
+      "join": "Entre para o clube",
+      "forgot": "Redefinir sua senha",
+      "confirm": "Confira seu e-mail",
+      "welcome": "Que bom ver você de novo"
+    },
+    "notConfigured": "Os serviços de conta não estão configurados nesta versão. Você ainda pode jogar offline.",
+    "playOffline": "Jogar offline",
+    "signedIn": "CONECTADO",
+    "connectedAccount": "Conta conectada",
+    "summary": "{{name}} / {{coins}} moedas / {{wins}} vitórias",
+    "changePassword": "Alterar senha",
+    "signOut": "Sair",
+    "backOnline": "Voltar ao jogo online",
+    "backStore": "Voltar à loja",
+    "deleteAccount": "Excluir conta",
+    "guestSignUp": "Seus jogos, moedas e lugar na mesa continuam exatamente como estão.",
+    "guestSignIn": "Entrar em outra conta encerra esta sessão de convidado.",
+    "pitch": "Salve seu progresso e continue de onde parou.",
+    "orEmail": "OU USE O E-MAIL",
+    "confirmRecovery": "Abra o link de redefinição de senha que enviamos por e-mail para continuar.",
+    "confirmSignup": "Abra o link de confirmação que enviamos por e-mail. Sua conta fica pronta assim que você fizer isso.",
+    "name": {
+      "label": "Nome do jogador",
+      "placeholder": "Seu nome na mesa"
+    },
+    "username": {
+      "label": "Nome de usuário",
+      "placeholder": "3–16 letras, números ou _ (opcional)"
+    },
+    "email": {
+      "label": "Endereço de e-mail",
+      "placeholder": "voce@exemplo.com"
+    },
+    "password": {
+      "label": "Senha",
+      "newPlaceholder": "Pelo menos 8 caracteres",
+      "placeholder": "Sua senha",
+      "confirm": "Confirmar senha"
+    },
+    "submit": {
+      "wait": "Aguarde...",
+      "create": "Criar conta",
+      "sendReset": "Enviar e-mail de redefinição",
+      "signIn": "Entrar"
+    },
+    "forgotPassword": "Esqueceu a senha?",
+    "resendVerification": "Reenviar e-mail de verificação",
+    "resendIn": "Reenvio disponível em {{seconds}}s",
+    "resendEmail": "Reenviar e-mail",
+    "createAccount": "Criar uma conta",
+    "signInExisting": "Entrar em uma conta existente",
+    "playOfflineInstead": "Jogar offline",
+    "nameSaveFailed": "Não foi possível salvar seu nome de jogador. Tente de novo.",
+    "delete": {
+      "title": "Excluir sua conta?",
+      "body": "Isso exclui sua conta permanentemente: suas moedas, visuais desbloqueados, estatísticas e amigos. Não pode ser desfeito.",
+      "noRestore": "Seu aparelho não guarda nada para restaurar depois, e isso não pode ser revertido.",
+      "deleting": "Excluindo…",
+      "confirm": "Sim, excluir minha conta permanentemente"
+    }
+  },
+  "reset": {
+    "titleDone": "Senha atualizada",
+    "title": "Escolha uma nova senha",
+    "doneBody": "Sua nova senha está pronta. Você está conectado.",
+    "checking": "Verificando sua sessão...",
+    "openEmail": "Abra seu e-mail de redefinição de senha ou verifique o código dele para continuar.",
+    "rules": "Use pelo menos 8 caracteres. Escolha uma senha que você não use em outro lugar.",
+    "newPassword": "Nova senha",
+    "confirmNew": "Confirmar nova senha",
+    "updating": "Atualizando...",
+    "save": "Salvar nova senha",
+    "backToAccount": "Voltar à conta"
+  },
+  "callback": {
+    "title": "Conectando sua conta",
+    "finishing": "Finalizando seu login seguro...",
+    "failed": "Não foi possível concluir o login. Tente de novo."
+  },
+  "field": {
+    "show": "Mostrar",
+    "hide": "Ocultar",
+    "showPassword": "Mostrar senha",
+    "hidePassword": "Ocultar senha"
+  },
+  "social": {
+    "google": "Continuar com o Google",
+    "facebook": "Continuar com o Facebook"
+  },
+  "identity": {
+    "saved": "Salvo.",
+    "saveFailed": "Não foi possível salvar.",
+    "copied": "ID de usuário copiado.",
+    "copyFailed": "Não foi possível copiar. Seu ID é {{id}}.",
+    "share": "Me adicione no Ludo Rumble: @{{username}} (ID de usuário {{id}})",
+    "shareNoId": "Me adicione no Ludo Rumble: @{{username}}",
+    "guest": {
+      "temporary": "Temporário · ainda sem ID de usuário permanente",
+      "played_one": "Você jogou {{count}} partida como convidado.",
+      "played_many": "Você jogou {{count}} de partidas como convidado.",
+      "played_other": "Você jogou {{count}} partidas como convidado.",
+      "empty": "Faça deste lugar o seu.",
+      "body": "Crie uma conta para salvar seu histórico de partidas e continuar seu progresso, escolher um nome de usuário, ganhar um ID de usuário que os amigos podem buscar e desbloquear amigos e desafios.",
+      "signUp": "Criar conta",
+      "login": "Entrar"
+    },
+    "label": "COMO OS AMIGOS ENCONTRAM VOCÊ",
+    "idA11y": "ID de usuário {{id}}",
+    "idA11yPending": "ID de usuário pendente",
+    "idLine": "ID de usuário: {{id}}",
+    "hint": "Os amigos podem buscar qualquer um dos dois. O ID nunca muda.",
+    "copyId": "Copiar ID",
+    "shareProfile": "Compartilhar perfil",
+    "newUsername": "NOVO NOME DE USUÁRIO",
+    "newUsernameA11y": "Novo nome de usuário",
+    "usernamePlaceholder": "3–16 letras, números ou _",
+    "keepHint": "Seus amigos, histórico e ID de usuário continuam com você quando seu nome de usuário muda.",
+    "saving": "Salvando…",
+    "saveUsername": "Salvar nome de usuário",
+    "changeUsername": "Alterar nome de usuário",
+    "pickAvatar": "ESCOLHA UM AVATAR",
+    "avatarA11y": "Usar {{emoji}} como seu avatar"
+  },
+  "gate": {
+    "label": "RECURSO DA CONTA",
+    "title": "Crie uma conta para desbloquear {{feature}}",
+    "body": "Entre para salvar seu progresso, adicionar amigos, ver seu histórico de partidas e muito mais. Tudo o que você jogou como convidado vem junto.",
+    "cta": "Entrar / Criar conta",
+    "guest": "Continuar como Convidado",
+    "sheetTitle": "Desbloqueie com uma conta",
+    "thisFeature": "este recurso"
+  },
+  "auth": {
+    "errors": {
+      "invalidCredentials": "E-mail ou senha incorretos.",
+      "emailNotConfirmed": "Confirme seu e-mail primeiro. Você pode reenviar a confirmação abaixo.",
+      "rateLimited": "Muitas tentativas. Espere um minuto e tente de novo.",
+      "guestDisabled": "O modo convidado ainda não está ativado neste servidor. Entre ou crie uma conta.",
+      "emailExists": "Já existe uma conta com este e-mail. Entre nela.",
+      "providerUnavailable": "Esta opção de login está indisponível. Use o e-mail ou tente de novo mais tarde.",
+      "unavailable": "Os serviços de conta estão indisponíveis nesta versão.",
+      "restoreFailed": "Entre de novo. Não foi possível restaurar sua sessão.",
+      "socialExpoGo": "O login social exige o app instalado ou uma build de desenvolvimento. Use o e-mail no Expo Go."
+    },
+    "notices": {
+      "confirm": "Confira seu e-mail e abra o link de confirmação para terminar de criar sua conta.",
+      "socialCancelled": "O login foi cancelado ou está continuando no seu navegador.",
+      "resetSent": "Se existir uma conta com este e-mail, um e-mail de redefinição de senha está a caminho.",
+      "resendSent": "Se a confirmação for necessária, um novo e-mail está a caminho. Confira também sua pasta de spam.",
+      "passwordUpdated": "Sua senha foi atualizada."
+    }
+  },
+  "profileState": {
+    "loadFailed": "Não foi possível carregar seu perfil.",
+    "accountLoadFailed": "Não foi possível carregar o perfil desta conta. Abra o app de novo para tentar outra vez.",
+    "restoreFailed": "Não foi possível restaurar seu login. Entre de novo.",
+    "cloudSyncUnavailable": "A sincronização na nuvem está indisponível. Seu progresso está salvo neste aparelho; tente de novo pelo seu perfil.",
+    "cloudSyncSignedIn": "Conectado. A sincronização na nuvem está indisponível; seu progresso está salvo neste aparelho.",
+    "walletStale": "Conectado, mas não foi possível carregar suas moedas. Reconecte e tente de novo pelo seu perfil.",
+    "stillLoading": "Seu perfil ainda está carregando.",
+    "storeUnavailable": "A loja não está disponível nesta versão."
+  },
+  "feedback": {
+    "title": "Diga o que você acha.",
+    "subtitle": "OPINIÕES E SUGESTÕES",
+    "intro": "Achou um bug ou tem uma ideia para melhorar o clube? Lemos todas as mensagens.",
+    "topicLabel": "SOBRE O QUE É?",
+    "categories": {
+      "bug": "Algo quebrou",
+      "suggestion": "Uma ideia",
+      "other": "Outra coisa"
+    },
+    "messageLabel": "SUA MENSAGEM",
+    "messageA11y": "Sua mensagem",
+    "placeholders": {
+      "bug": "O que aconteceu e o que você esperava? Em qual tela você estava?",
+      "suggestion": "O que deixaria isso melhor?",
+      "other": "O que você está pensando?"
+    },
+    "emailLabel": "SEU E-MAIL (OPCIONAL)",
+    "emailA11y": "Seu e-mail, opcional",
+    "emailPlaceholder": "Só se quiser uma resposta",
+    "sent": "Obrigado — sua mensagem está a caminho.",
+    "sending": "Enviando…",
+    "send": "Enviar para o clube",
+    "offline": "Esta versão não está conectada ao nosso servidor, mas você ainda pode falar com a gente por e-mail.",
+    "emailUs": "Enviar por e-mail",
+    "preferEmail": "Prefere e-mail? Envie para {{email}}",
+    "sendFailed": "Não foi possível enviar sua mensagem. Tente de novo.",
+    "problems": {
+      "category": "Escolha uma categoria.",
+      "empty": "Escreva uma mensagem antes de enviar.",
+      "tooLong": "Sua mensagem deve ter menos de {{max}} caracteres.",
+      "email": "Isso não parece um endereço de e-mail válido."
+    },
+    "mail": {
+      "subject": {
+        "bug": "Ludo Rumble: relato de bug",
+        "suggestion": "Ludo Rumble: sugestão",
+        "other": "Ludo Rumble: opinião"
+      },
+      "bodyPlaceholder": "(descreva aqui o que aconteceu)",
+      "replyTo": "Responder para: {{email}}"
+    }
+  }
+}

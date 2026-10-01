@@ -1,8 +1,9 @@
 // Learn more: https://docs.expo.dev/guides/customizing-metro/
 const path = require('path');
-const { getDefaultConfig } = require('expo/metro-config');
+const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 
-const config = getDefaultConfig(__dirname);
+// Expo's default config plus debug IDs, so crash reports map to source lines.
+const config = getSentryExpoConfig(__dirname);
 
 /**
  * three.js ships two builds. Its CommonJS entry (`three.cjs`, which the

@@ -7,6 +7,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import type { DieValue } from '@/domain';
 import { Dice } from './Dice';
 
@@ -31,6 +32,7 @@ export function AnimatedDice({
   motionEnabled: boolean;
   size?: number;
 }) {
+  const { t } = useTranslation('game');
   const spin = useSharedValue(0),
     lift = useSharedValue(0);
   const tilt = useSharedValue(value === null ? 1 : REST_TILT);
@@ -78,7 +80,7 @@ export function AnimatedDice({
     <Animated.View
       accessible
       accessibilityLabel={
-        rolling ? 'Dice rolling' : value ? `Dice showing ${value}` : 'Ready to roll'
+        rolling ? t('dice.rolling') : value ? t('dice.showing', { value }) : t('dice.ready')
       }
       style={style}
     >

@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { ui } from '../theme/themes';
 
@@ -24,6 +25,7 @@ const TAP_ZOOM = 1.8;
  * which is the form the React Compiler accepts inside these closures.
  */
 export function ZoomableBoard({ size, children }: { size: number; children: ReactNode }) {
+  const { t } = useTranslation('game');
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const tx = useSharedValue(0);
@@ -88,13 +90,15 @@ export function ZoomableBoard({ size, children }: { size: number; children: Reac
       </GestureDetector>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={zoomed ? 'Reset zoom' : 'Zoom in on the board'}
+        accessibilityLabel={zoomed ? t('zoom.resetA11y') : t('zoom.zoomA11y')}
         onPress={toggle}
         android_ripple={{ color: '#ffffff20' }}
+        // A slim overlay so the board stays visible; the slop lifts its touch area to 48 high.
+        hitSlop={{ top: 9, bottom: 9 }}
         style={s.badge}
       >
         <Ionicons name={zoomed ? 'contract' : 'expand'} size={14} color={ui.text} />
-        <Text style={s.badgeText}>{zoomed ? 'Reset' : 'Pinch to zoom'}</Text>
+        <Text style={s.badgeText}>{zoomed ? t('zoom.reset') : t('zoom.pinch')}</Text>
       </Pressable>
     </View>
   );

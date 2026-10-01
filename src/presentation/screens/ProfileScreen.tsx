@@ -1,9 +1,12 @@
 import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { levelInfo } from '@/domain';
 import { getCosmetic } from '@/domain/cosmetics/catalog';
+import { INITIAL_PROFILE } from '@/application/store/ProfileService';
+import { useCatalogText } from '../i18n/useCatalogText';
 import { useAuthSession } from '../state/useAuthSession';
 import { Text } from '../components/AppText';
 import { Body, Button, Card, Label, Screen, shared } from '../components/Kit';
@@ -13,14 +16,17 @@ import { ProgressBar } from '../components/Progress';
 import { useProfile } from '../state/ProfileProvider';
 import { SocialIdentityCard } from '../social/SocialIdentityCard';
 import { ui } from '../theme/themes';
+import { numberLocale } from '../i18n/format';
 
 export default function ProfileScreen() {
   const { profile, theme, syncWarning, reload, member, wallet, refreshWallet } = useProfile();
+  const { t } = useTranslation(['account', 'common']);
+  const { cosmeticName } = useCatalogText();
   const auth = useAuthSession();
   const level = levelInfo(profile.xp);
   const winRate = profile.games ? Math.round((profile.wins / profile.games) * 100) : 0;
   return (
-    <Screen title="Your corner of the club." subtitle="PLAYER PROFILE">
+    <Screen title={t('profile.title')} subtitle={t('profile.subtitle')}>
       {/* ---- Who you are ---- */}
       <View style={[s.hero, { borderColor: `${theme.accent}55` }]}>
         <LinearGradient
@@ -45,14 +51,16 @@ export default function ProfileScreen() {
             </View>
             <View style={{ gap: 6, flex: 1 }}>
               <Text style={{ fontSize: 26, fontWeight: '900', color: ui.text }}>
-                {profile.name}
+                {profile.name === INITIAL_PROFILE.name
+                  ? t('common:defaultPlayerName')
+                  : profile.name}
               </Text>
               <Label color={theme.accent}>
                 {profile.wins >= 25
-                  ? 'CLUB CHAMPION'
+                  ? t('profile.rank.champion')
                   : profile.wins >= 5
-                    ? 'TABLE REGULAR'
-                    : 'WELCOME TO THE CLUB'}
+                    ? t('profile.rank.regular')
+                    : t('profile.rank.welcome')}
               </Label>
             </View>
           </View>
@@ -60,15 +68,19 @@ export default function ProfileScreen() {
             <View style={{ gap: 6 }}>
               <ProgressBar value={level.into / level.need} height={9} />
               <View style={shared.between}>
-                <Text style={shared.small}>Level {level.level}</Text>
+                <Text style={shared.small}>{t('profile.level', { level: level.level })}</Text>
                 <Text style={shared.small}>
-                  {level.into} / {level.need} XP to level {level.level + 1}
+                  {t('profile.xpToNext', {
+                    into: level.into,
+                    need: level.need,
+                    next: level.level + 1,
+                  })}
                 </Text>
               </View>
             </View>
           )}
           <Button secondary compact onPress={() => router.push('/settings')}>
-            Edit profile
+            {t('profile.edit')}
           </Button>
         </LinearGradient>
       </View>
@@ -77,62 +89,76 @@ export default function ProfileScreen() {
 
       {/* ---- The record ---- */}
       <View style={shared.row}>
-        <Stat icon="game-controller" label="Played" value={profile.games} accent={theme.accent} />
-        <Stat icon="trophy" label="Wins" value={profile.wins} accent={ui.gold} />
-        <Stat icon="stats-chart" label="Win rate" value={`${winRate}%`} accent={ui.green} />
+        <Stat
+          icon="game-controller"
+          label={t('profile.stats.played')}
+          value={profile.games}
+          accent={theme.accent}
+        />
+        <Stat icon="trophy" label={t('profile.stats.wins')} value={profile.wins} accent={ui.gold} />
+        <Stat
+          icon="stats-chart"
+          label={t('profile.stats.winRate')}
+          value={`${winRate}%`}
+          accent={ui.green}
+        />
       </View>
       <View style={shared.row}>
-        <Stat icon="flame" label="Win streak" value={profile.streak} accent="#ff8c5a" />
-        <Stat icon="star" label="Best streak" value={profile.bestStreak} accent={ui.blueSoft} />
+        <Stat
+          icon="flame"
+          label={t('profile.stats.winStreak')}
+          value={profile.streak}
+          accent="#ff8c5a"
+        />
+        <Stat
+          icon="star"
+          label={t('profile.stats.bestStreak')}
+          value={profile.bestStreak}
+          accent={ui.blueSoft}
+        />
       </View>
       <Text style={shared.small}>
-        {member
-          ? 'Completed matches on your account. In pass & play, wins track the red seat.'
-          : 'Completed matches on this device. In pass & play, wins track the red seat.'}
+        {member ? t('profile.recordMember') : t('profile.recordDevice')}
       </Text>
 
       {/* ---- The wallet ---- */}
       {member && (
         <Card>
           <View style={shared.between}>
-            <Label color={theme.accent}>YOUR BALANCE</Label>
+            <Label color={theme.accent}>{t('profile.balance.label')}</Label>
             <Button secondary compact onPress={() => router.push('/store')}>
-              Open store
+              {t('profile.balance.openStore')}
             </Button>
           </View>
           <View style={[shared.row, { gap: 18 }]}>
             <View style={s.balance}>
               <CoinIcon size={24} />
               <Text style={s.balanceText}>
-                {wallet === 'ready' ? profile.coins.toLocaleString() : '—'}
+                {wallet === 'ready' ? profile.coins.toLocaleString(numberLocale()) : '—'}
               </Text>
             </View>
             <View style={s.balance}>
               <GemIcon size={22} />
               <Text style={s.balanceText}>
-                {wallet === 'ready' ? profile.gems.toLocaleString() : '—'}
+                {wallet === 'ready' ? profile.gems.toLocaleString(numberLocale()) : '—'}
               </Text>
             </View>
           </View>
           {wallet !== 'ready' ? (
             <>
               <Text accessibilityLiveRegion="polite" style={shared.error}>
-                Your coins could not be loaded from your account. Spending is paused until they are.
+                {t('profile.balance.loadFailed')}
               </Text>
               <Button secondary compact onPress={() => void refreshWallet()}>
-                Reload coins
+                {t('profile.balance.reload')}
               </Button>
             </>
           ) : profile.pendingRewards.length > 0 ? (
             <Text style={shared.small}>
-              {profile.pendingRewards.length} finished game
-              {profile.pendingRewards.length === 1 ? '' : 's'} still waiting to be paid. They will
-              be added the next time your account answers.
+              {t('profile.balance.pending', { count: profile.pendingRewards.length })}
             </Text>
           ) : (
-            <Text style={shared.small}>
-              Kept on your account, so they follow you to any device.
-            </Text>
+            <Text style={shared.small}>{t('profile.balance.kept')}</Text>
           )}
         </Card>
       )}
@@ -140,36 +166,36 @@ export default function ProfileScreen() {
       {/* Guests get their offer in the identity card above; this one is for accounts. */}
       {!auth.user?.isGuest && (
         <Card>
-          <Label color={theme.accent}>ACCOUNT</Label>
+          <Label color={theme.accent}>{t('profile.account.label')}</Label>
           {syncWarning && (
             <>
               <Text accessibilityLiveRegion="polite" style={shared.error}>
                 {syncWarning}
               </Text>
               <Button secondary compact onPress={() => void reload()}>
-                Retry cloud sync
+                {t('shared.retrySync')}
               </Button>
             </>
           )}
           <Body>
-            {auth.user
-              ? 'Your coins, collection and statistics are kept on your account.'
-              : 'Sign in to play with friends and to earn, keep and spend coins. Coins and unlocked looks live on your account, not on this device.'}
+            {auth.user ? t('profile.account.memberBody') : t('profile.account.signedOutBody')}
           </Body>
           <Button secondary compact onPress={() => router.push('/login')}>
-            {auth.user ? 'Manage account' : 'Sign in or create an account'}
+            {auth.user ? t('profile.account.manage') : t('profile.account.signIn')}
           </Button>
         </Card>
       )}
 
       {/* ---- The look ---- */}
       <Card>
-        <Label color={theme.accent}>YOUR SIGNATURE LOOK</Label>
+        <Label color={theme.accent}>{t('profile.look.label')}</Label>
         <View style={shared.between}>
           <View style={{ gap: 9, flex: 1 }}>
-            <Text style={shared.sectionTitle}>{getCosmetic(profile.board).name}</Text>
+            <Text style={shared.sectionTitle}>{cosmeticName(getCosmetic(profile.board))}</Text>
             <Text style={shared.small}>
-              {getCosmetic(profile.dice).name} · {profile.board3d ? '3D' : '2D'} view
+              {t(profile.board3d ? 'profile.look.view3d' : 'profile.look.view2d', {
+                dice: cosmeticName(getCosmetic(profile.dice)),
+              })}
             </Text>
             <View style={[shared.row, { flexWrap: 'wrap' }]}>
               {Object.values(theme.colors).map((color) => (
@@ -183,24 +209,21 @@ export default function ProfileScreen() {
           <Dice value={5} finish={profile.dice} />
         </View>
         <Button secondary compact onPress={() => router.push('/store')}>
-          Explore your collection · {profile.owned.length} items
+          {t('profile.look.explore', { items: profile.owned.length })}
         </Button>
       </Card>
 
       <Card>
-        <Label color={theme.accent}>SMALL WINS ADD UP</Label>
-        <Text style={shared.sectionTitle}>Play. Collect. Make it yours.</Text>
-        <Body>
-          Claim the daily calendar, spin the wheel, finish missions, and win online for the big
-          payouts. Coins buy the looks; gems unlock the legendary ones.
-        </Body>
+        <Label color={theme.accent}>{t('profile.tips.label')}</Label>
+        <Text style={shared.sectionTitle}>{t('profile.tips.title')}</Text>
+        <Body>{t('profile.tips.body')}</Body>
       </Card>
       <Card>
-        <Label color={theme.accent}>WE’RE LISTENING</Label>
-        <Text style={shared.sectionTitle}>Found a bug? Have an idea?</Text>
-        <Body>Tell us what’s working, what isn’t, and what you’d like to see next.</Body>
+        <Label color={theme.accent}>{t('profile.feedback.label')}</Label>
+        <Text style={shared.sectionTitle}>{t('profile.feedback.title')}</Text>
+        <Body>{t('profile.feedback.body')}</Body>
         <Button secondary compact onPress={() => router.push('/feedback')}>
-          Send feedback
+          {t('profile.feedback.button')}
         </Button>
       </Card>
     </Screen>

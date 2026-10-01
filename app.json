@@ -1,7 +1,6 @@
 {
   "react-native-google-mobile-ads": {
-    "android_app_id": "ca-app-pub-3940256099942544~3347511713",
-    "ios_app_id": "ca-app-pub-3940256099942544~1458002511"
+    "android_sdk": "classic"
   },
   "expo": {
     "name": "Ludo Rumble",
@@ -19,8 +18,14 @@
       "package": "com.devmindslabs.ludoRumble",
       "adaptiveIcon": {
         "backgroundColor": "#0e1322",
-        "foregroundImage": "./assets/brand/icon.png"
+        "foregroundImage": "./assets/brand/icon.png",
+        "monochromeImage": "./assets/brand/icon-monochrome.png"
       },
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -35,6 +40,7 @@
         {
           "androidAppId": "ca-app-pub-3940256099942544~3347511713",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "delayAppMeasurementInit": true,
           "userTrackingUsageDescription": "This lets us show ads that are more relevant to you."
         }
       ],
@@ -48,6 +54,16 @@
         }
       ],
       "expo-web-browser",
+      [
+        "expo-localization",
+        {
+          "supportsRTL": true,
+          "supportedLocales": {
+            "ios": ["en", "hi", "bn", "mr", "te", "ta", "gu", "kn", "es", "pt", "ar"],
+            "android": ["en", "hi", "bn", "mr", "te", "ta", "gu", "kn", "es", "pt", "ar"]
+          }
+        }
+      ],
       [
         "expo-splash-screen",
         {

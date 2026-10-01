@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { PLAYER_COLORS } from '@/domain';
 import type { BoardTheme } from '../theme/themes';
 import { GRID_SIZE, HOME_COLUMN_CELLS, YARD_BLOCKS, YARD_BLOCK_SIZE } from './boardLayout';
+import { keepLtr } from '../i18n/rtl';
 
 /**
  * A still picture of the classic board for store cards: the four yards with
@@ -24,6 +25,7 @@ export const BoardThumbnail = memo(function BoardThumbnail({
   return (
     <View
       style={{
+        ...keepLtr,
         width: size,
         height: size,
         backgroundColor: theme.tile,

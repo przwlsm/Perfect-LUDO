@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, Share, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text, TextInput } from '../components/AppText';
 import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
@@ -14,20 +15,37 @@ import { UserAvatar } from './UserAvatar';
 
 const AVATARS = ['🎲', '♟', '🦊', '🐼', '🐙', '🚀', '⭐', '🍀', '🔥', '🎯'];
 
+/**
+ * Held as a key, so a message already on screen follows a language change;
+ * `text` is the server's own message, shown as written.
+ */
+type Message =
+  | { readonly key: 'saved' | 'saveFailed' | 'copied' }
+  | { readonly key: 'copyFailed'; readonly id: string }
+  | { readonly text: string };
+
 /** The handle and ID friends search for, kept separate from the private profile. */
 export function SocialIdentityCard() {
   const { theme, profile } = useProfile();
   const { enabled, signedIn, account, identity, setIdentity } = useSocial();
+  const { t } = useTranslation(['account', 'common']);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<Message | null>(null);
+  const [notice, setNotice] = useState<Message | null>(null);
   const availability = useUsernameAvailability(
     editing && draft !== identity?.username ? draft : '',
   );
 
   if (!enabled || !signedIn || !identity) return null;
+
+  const text = (message: Message) =>
+    'text' in message
+      ? message.text
+      : message.key === 'copyFailed'
+        ? t('identity.copyFailed', { id: message.id })
+        : t(`identity.${message.key}`);
 
   async function save(changes: { username?: string; avatar?: string }) {
     if (!socialIdentityRepository) return;
@@ -37,9 +55,9 @@ export function SocialIdentityCard() {
     try {
       setIdentity(await socialIdentityRepository.update(changes));
       setEditing(false);
-      setNotice('Saved.');
+      setNotice({ key: 'saved' });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'That could not be saved.');
+      setError(e instanceof Error ? { text: e.message } : { key: 'saveFailed' });
     } finally {
       setBusy(false);
     }
@@ -49,17 +67,17 @@ export function SocialIdentityCard() {
     if (!identity?.publicId) return;
     try {
       await Clipboard.setStringAsync(identity.publicId);
-      setNotice('User ID copied.');
+      setNotice({ key: 'copied' });
     } catch {
-      setError('Could not copy. Your ID is ' + identity.publicId + '.');
+      setError({ key: 'copyFailed', id: identity.publicId });
     }
   }
 
   async function shareProfile() {
     if (!identity) return;
-    const line = `Add me on Ludo Rumble: @${identity.username}${
-      identity.publicId ? ` (User ID ${identity.publicId})` : ''
-    }`;
+    const line = identity.publicId
+      ? t('identity.share', { username: identity.username, id: identity.publicId })
+      : t('identity.shareNoId', { username: identity.username });
     try {
       await Share.share({ message: line });
     } catch {
@@ -70,30 +88,27 @@ export function SocialIdentityCard() {
   if (account === 'guest') {
     return (
       <Card style={{ borderColor: `${theme.accent}40` }}>
-        <Label color={theme.accent}>PLAYING AS A GUEST</Label>
+        <Label color={theme.accent}>{t('shared.guestLabel')}</Label>
         <View style={shared.row}>
           <UserAvatar id={identity.id} name={identity.username} emoji={identity.avatar} size={54} />
           <View style={{ flex: 1, gap: 4 }}>
             <Text style={s.handle}>@{identity.username}</Text>
-            <Text style={shared.small}>Temporary · no permanent User ID yet</Text>
+            <Text style={shared.small}>{t('identity.guest.temporary')}</Text>
           </View>
         </View>
         <Text style={shared.sectionTitle}>
           {profile.games > 0
-            ? `You’ve played ${profile.games} ${profile.games === 1 ? 'game' : 'games'} as a guest.`
-            : 'Make this seat yours.'}
+            ? t('identity.guest.played', { count: profile.games })
+            : t('identity.guest.empty')}
         </Text>
-        <Body>
-          Create an account to save your game history and continue your progress, choose a username,
-          get a User ID friends can search for, and unlock friends and challenges.
-        </Body>
-        <Button onPress={() => router.push(SIGN_UP_HREF)}>Sign Up</Button>
+        <Body>{t('identity.guest.body')}</Body>
+        <Button onPress={() => router.push(SIGN_UP_HREF)}>{t('identity.guest.signUp')}</Button>
         <Button
           secondary
           compact
           onPress={() => router.push({ pathname: '/login', params: { intent: 'online' } })}
         >
-          Login
+          {t('identity.guest.login')}
         </Button>
       </Card>
     );
@@ -101,7 +116,7 @@ export function SocialIdentityCard() {
 
   return (
     <Card>
-      <Label color={theme.accent}>HOW FRIENDS FIND YOU</Label>
+      <Label color={theme.accent}>{t('identity.label')}</Label>
       <View style={shared.row}>
         <UserAvatar
           id={identity.id}
@@ -111,39 +126,46 @@ export function SocialIdentityCard() {
         />
         <View style={{ flex: 1, gap: 4 }}>
           <Text style={s.handle}>@{identity.username}</Text>
-          <Text style={s.id} accessibilityLabel={`User ID ${identity.publicId ?? 'pending'}`}>
-            User ID: {identity.publicId ?? '—'}
+          <Text
+            style={s.id}
+            accessibilityLabel={
+              identity.publicId
+                ? t('identity.idA11y', { id: identity.publicId })
+                : t('identity.idA11yPending')
+            }
+          >
+            {t('identity.idLine', { id: identity.publicId ?? '—' })}
           </Text>
-          <Text style={shared.small}>Friends can search either one. The ID never changes.</Text>
+          <Text style={shared.small}>{t('identity.hint')}</Text>
         </View>
       </View>
 
       <View style={shared.row}>
         <View style={{ flex: 1 }}>
           <Button secondary compact disabled={!identity.publicId} onPress={() => void copyId()}>
-            Copy ID
+            {t('identity.copyId')}
           </Button>
         </View>
         <View style={{ flex: 1 }}>
           <Button secondary compact onPress={() => void shareProfile()}>
-            Share profile
+            {t('identity.shareProfile')}
           </Button>
         </View>
       </View>
 
       {editing ? (
         <>
-          <Label>NEW USERNAME</Label>
+          <Label>{t('identity.newUsername')}</Label>
           <View style={[s.field, { borderColor: `${theme.accent}55` }]}>
             <Text style={s.at}>@</Text>
             <TextInput
-              accessibilityLabel="New username"
+              accessibilityLabel={t('identity.newUsernameA11y')}
               value={draft}
               onChangeText={(text) => setDraft(text.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
               maxLength={16}
               autoCapitalize="none"
               autoCorrect={false}
-              placeholder="3–16 letters, numbers or _"
+              placeholder={t('identity.usernamePlaceholder')}
               placeholderTextColor={ui.subtle}
               style={s.input}
             />
@@ -158,15 +180,15 @@ export function SocialIdentityCard() {
               ]}
             >
               {availability.status === 'checking'
-                ? 'Checking…'
+                ? t('username.checking')
                 : availability.status === 'available'
-                  ? '✓ Username available'
-                  : `✕ ${availability.reason}`}
+                  ? t('username.available')
+                  : t('username.unavailable', {
+                      reason: availability.reason ?? t('username.fallback'),
+                    })}
             </Text>
           )}
-          <Text style={shared.small}>
-            Your friends, history and User ID stay attached to you when your username changes.
-          </Text>
+          <Text style={shared.small}>{t('identity.keepHint')}</Text>
           <Button
             disabled={
               busy ||
@@ -177,10 +199,10 @@ export function SocialIdentityCard() {
             }
             onPress={() => void save({ username: draft })}
           >
-            {busy ? 'Saving…' : 'Save username'}
+            {busy ? t('identity.saving') : t('identity.saveUsername')}
           </Button>
           <Button secondary compact onPress={() => setEditing(false)}>
-            Cancel
+            {t('common:actions.cancel')}
           </Button>
         </>
       ) : (
@@ -192,17 +214,17 @@ export function SocialIdentityCard() {
             setEditing(true);
           }}
         >
-          Change username
+          {t('identity.changeUsername')}
         </Button>
       )}
 
-      <Label>PICK AN AVATAR</Label>
+      <Label>{t('identity.pickAvatar')}</Label>
       <View style={s.avatars}>
         {AVATARS.map((emoji) => (
           <Pressable
             key={emoji}
             accessibilityRole="button"
-            accessibilityLabel={`Use ${emoji} as your avatar`}
+            accessibilityLabel={t('identity.avatarA11y', { emoji })}
             accessibilityState={{ selected: identity.avatar === emoji }}
             disabled={busy}
             onPress={() => void save({ avatar: emoji })}
@@ -223,12 +245,12 @@ export function SocialIdentityCard() {
 
       {error && (
         <Text accessibilityLiveRegion="polite" style={shared.error}>
-          {error}
+          {text(error)}
         </Text>
       )}
       {notice && !error && (
         <Body>
-          <Text style={{ color: ui.green }}>{notice}</Text>
+          <Text style={{ color: ui.green }}>{text(notice)}</Text>
         </Body>
       )}
     </Card>
@@ -257,8 +279,8 @@ const s = StyleSheet.create({
   },
   avatars: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   avatar: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: 13,
     borderWidth: 1.5,
     borderColor: ui.line,

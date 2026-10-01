@@ -14,6 +14,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import * as SplashScreen from 'expo-splash-screen';
+import { useTranslation } from 'react-i18next';
 import { Text } from './AppText';
 import { ui } from '../theme/themes';
 
@@ -30,6 +31,7 @@ const LOGO = 288;
  * shorter still with reduce motion on.
  */
 export function AppIntro({ onDone }: { onDone(): void }) {
+  const { t } = useTranslation();
   const [reduced, setReduced] = useState<boolean | null>(null);
   const logo = useSharedValue(1);
   const title = useSharedValue(0);
@@ -112,7 +114,7 @@ export function AppIntro({ onDone }: { onDone(): void }) {
         <Text style={s.title}>
           LUDO<Text style={{ color: ui.gold }}> CLUB</Text>
         </Text>
-        <Text style={s.tagline}>GOOD TIMES. GREAT MOVES.</Text>
+        <Text style={s.tagline}>{t('brand.tagline')}</Text>
         <View style={s.coins}>
           {COINS.map((color, i) => (
             <Coin key={color} color={color} index={i} t={coins} />

@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import {
   isGameVariant,
   mayEnterHome,
-  VARIANT_INFO,
   coinsHome,
   coinsToWin,
   standings,
   variantOf,
-  winLine,
   type GameVariant,
   controlledColor,
   distinctMoves,
@@ -28,6 +27,7 @@ import { useBotReactions, useReactionBubbles } from '../hooks/useReactions';
 import { useMotionEnabled } from '../hooks/useMotionEnabled';
 import { useProfile } from '../state/ProfileProvider';
 import { useAtBoardPresence } from '../state/SocialProvider';
+import { useCatalogText } from '../i18n/useCatalogText';
 import OnlineMatchScreen from './OnlineMatchScreen';
 
 export default function GameScreen() {
@@ -80,12 +80,14 @@ function MatchScreen({
   resume: boolean;
 }) {
   const { profile, theme, recordMatch, member, ready } = useProfile();
+  const { t } = useTranslation('game');
+  const catalog = useCatalogText();
   useAtBoardPresence();
   const { width, height } = useWindowDimensions();
   const [menu, setMenu] = useState(false);
   const [rules, setRules] = useState(false);
   const [tableArea, setTableArea] = useState({ width: 0, height: 0 });
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<'saveFailed' | 'adIncomplete' | null>(null);
   const [saving, setSaving] = useState(false);
   const [adBusy, setAdBusy] = useState(false);
   const focused = useIsFocused();
@@ -136,8 +138,7 @@ function MatchScreen({
     if (matchState === 'FINISHED' && startedAt.current !== null)
       setDurationMs(Date.now() - startedAt.current);
   }, [matchState]);
-  const seatName = (color: PlayerColor) =>
-    match?.options.names?.[color] ?? color.charAt(0) + color.slice(1).toLowerCase();
+  const seatName = (color: PlayerColor) => match?.options.names?.[color] ?? t(`colors.${color}`);
   const reactionBubbles = useReactionBubbles();
   const againstBots = (match?.options.mode ?? options.mode) === 'ai';
   const isBot = useCallback((color: PlayerColor) => color !== 'RED', []);
@@ -169,72 +170,96 @@ function MatchScreen({
         });
       else router.replace('/');
     } catch {
-      setNotice('Could not save your result. Tap again to retry.');
+      setNotice('saveFailed');
     } finally {
       setSaving(false);
     }
   }
 
+  const playable = distinctMoves(game.moves).length;
+  const localTurn = (match?.options.mode ?? options.mode) === 'local' && current;
   const statusLine = !match
     ? ''
     : match.state.status === 'FINISHED'
-      ? 'A good game, well played.'
+      ? t('status.finished')
       : busy
         ? game.activity === 'rolling'
-          ? 'Rolling the dice...'
-          : 'Moving the coins...'
+          ? t('status.rolling')
+          : t('status.moving')
         : match.state.lastRoll !== null
-          ? distinctMoves(game.moves).length > 1
-            ? `${distinctMoves(game.moves).length} playable coins - tap a bouncing coin`
-            : distinctMoves(game.moves).length === 1
-              ? 'Only one move - playing it for you...'
+          ? playable > 1
+            ? t('status.playableCoins', { count: playable })
+            : playable === 1
+              ? t('status.onlyOne')
               : humanTurn
                 ? match.state.consecutiveSixes === 3
-                  ? 'Three sixes! Your turn passes.'
-                  : 'No moves this time. Passing the dice…'
-                : 'Computer is choosing a move…'
+                  ? t('status.threeSixes')
+                  : t('status.noMoves')
+                : t('status.computerChoosing')
           : humanTurn &&
               teamGame &&
               current &&
               match &&
               controlledColor(match.state) !== current.color
-            ? 'Your coins are home - roll for your partner!'
+            ? t('status.rollForPartner')
             : humanTurn &&
                 current &&
                 match &&
                 match.state.lastRoll === null &&
                 !mayEnterHome(match.state, controlledColor(match.state))
-              ? `${match.options.mode === 'local' ? `${seatName(current.color)}, ` : ''}roll - capture a coin to open your home path`
+              ? match.options.mode === 'local'
+                ? t('status.killFirstNamed', { name: seatName(current.color) })
+                : t('status.killFirst')
               : humanTurn
-                ? `${(match?.options.mode ?? options.mode) === 'local' && current ? (match?.options.names?.[current.color] ?? current.color.toLowerCase() + ' player') + ', ' : ''}tap the dice to roll`
-                : 'Computer is getting ready…';
+                ? localTurn
+                  ? t('status.tapToRollNamed', {
+                      name:
+                        match?.options.names?.[localTurn.color] ??
+                        t(`colorPlayer.${localTurn.color}`),
+                    })
+                  : t('status.tapToRoll')
+                : t('status.computerReady');
 
+  const localGame = (match?.options.mode ?? options.mode) === 'local';
+  /** The seat shown as "You": the human's red seat against the computer. */
+  const isYou = (color: PlayerColor) => !localGame && color === 'RED';
   function labelFor(color: PlayerColor): string {
-    if ((match?.options.mode ?? options.mode) === 'local')
-      return match?.options.names?.[color] ?? color.charAt(0) + color.slice(1).toLowerCase();
-    if (color === 'RED') return 'You';
-    if (teamGame) return color === 'YELLOW' ? 'Partner' : color === 'GREEN' ? 'Rival 1' : 'Rival 2';
+    if (localGame) return match?.options.names?.[color] ?? t(`colors.${color}`);
+    if (color === 'RED') return t('seat.you');
+    if (teamGame)
+      return color === 'YELLOW'
+        ? t('seat.partner')
+        : color === 'GREEN'
+          ? t('seat.rival1')
+          : t('seat.rival2');
     const index = match?.state.players.findIndex((p) => p.color === color) ?? -1;
     // One opponent is just "Computer"; several are numbered in turn order.
-    return (match?.state.players.length ?? 0) > 2 && index > 0 ? `Computer ${index}` : 'Computer';
+    return (match?.state.players.length ?? 0) > 2 && index > 0
+      ? t('seat.computerNumbered', { index })
+      : t('seat.computer');
+  }
+
+  /** How the board was won, e.g. "All four coins home" (the domain's winLine, translated). */
+  function winLineText(state: Parameters<typeof coinsToWin>[0] & { teams?: boolean }): string {
+    const goal = coinsToWin(state);
+    if (state.teams) return goal === 4 ? t('winLine.allEight') : t('winLine.partners', { goal });
+    return goal === 1 ? t('winLine.first') : goal === 2 ? t('winLine.two') : t('winLine.allFour');
   }
 
   const finished = match?.state.status === 'FINISHED';
-  const variantName = match ? VARIANT_INFO[variantOf(match.state)] : null;
+  const tableVariant = match ? variantOf(match.state) : null;
 
   return (
     <GameTable
       game={game}
-      label={
-        (match && variantOf(match.state) !== 'classic'
-          ? `${VARIANT_INFO[variantOf(match.state)].short} · `
-          : '') +
-        (teamGame ? '2 V 2 · ' : '') +
-        ((match?.options.mode ?? options.mode) === 'local' ? 'PASS & PLAY' : 'SOLO TABLE')
-      }
+      label={[
+        ...(tableVariant && tableVariant !== 'classic' ? [catalog.variantShort(tableVariant)] : []),
+        ...(teamGame ? [t('label.teams')] : []),
+        localGame ? t('label.passAndPlay') : t('label.solo'),
+      ].join(' · ')}
       prize={
         (match?.options.mode ?? options.mode) === 'ai'
-          ? `Win: +${REWARDS.bot.win.coins} coins`
+          ? t('prize.win', { count: REWARDS.bot.win.coins })
           : undefined
       }
       statusLine={statusLine}
@@ -250,8 +275,8 @@ function MatchScreen({
       setMenu={setMenu}
       rules={rules}
       setRules={setRules}
-      pauseBody="Your game is paused and saved on this device. Your table will be here when you get back."
-      exitLabel="Save & return to lobby"
+      pauseBody={t('pause.body')}
+      exitLabel={t('pause.exit')}
       onExit={() => router.replace('/')}
       reactions={againstBots ? { bubbles: reactionBubbles.bubbles, send: sendReaction } : undefined}
       resultSheet={
@@ -261,20 +286,25 @@ function MatchScreen({
             outcome={match.options.mode === 'local' || redWon ? 'win' : 'loss'}
             banner={
               match.options.mode === 'local'
-                ? `${seatName(match.state.winnerColor ?? 'RED')} wins!`.toUpperCase()
+                ? t('result.playerWins', {
+                    name: seatName(match.state.winnerColor ?? 'RED'),
+                  }).toUpperCase()
                 : redWon
                   ? teamGame
-                    ? 'TEAM VICTORY!'
-                    : 'VICTORY!'
-                  : 'GOOD GAME'
+                    ? t('result.teamVictory')
+                    : t('result.victory')
+                  : t('result.goodGame')
             }
             subtitle={(match.options.mode === 'ai' && !redWon
-              ? `So close · ${variantName?.title ?? ''}`
-              : `${variantName?.short ?? ''} · ${winLine(match.state)}`
+              ? t('result.soClose', { mode: catalog.variantTitle(variantOf(match.state)) })
+              : t('result.subtitle', {
+                  mode: catalog.variantShort(variantOf(match.state)),
+                  how: winLineText(match.state),
+                })
             ).toUpperCase()}
             standings={standings(match.state).map((color) => ({
               key: color,
-              name: labelFor(color) === 'You' ? profile.name : labelFor(color),
+              name: isYou(color) ? profile.name : labelFor(color),
               color: theme.colors[color],
               you: match.options.mode === 'ai' && color === 'RED',
               coinsHome: coinsHome(match.state, color),
@@ -289,8 +319,11 @@ function MatchScreen({
             note={
               match.options.mode === 'ai' && !member
                 ? redWon
-                  ? `+${REWARDS.bot.win.coins} coins are in your vault — sign in any time to claim everything in it.`
-                  : `Win to add ${REWARDS.bot.win.coins} coins to your vault, or ${REWARDS.online.win.coins} online.`
+                  ? t('result.guestWonNote', { count: REWARDS.bot.win.coins })
+                  : t('result.guestLostNote', {
+                      count: REWARDS.bot.win.coins,
+                      online: REWARDS.online.win.coins,
+                    })
                 : undefined
             }
             stats={match.options.mode === 'ai' ? game.getStats() : null}
@@ -301,7 +334,7 @@ function MatchScreen({
               // watching an ad; going home is always free.
               !member && match.options.mode === 'ai' && !redWon && rewardedAds.supported()
                 ? {
-                    label: adBusy ? 'Loading ad…' : 'Watch an ad · Rematch',
+                    label: adBusy ? t('result.loadingAd') : t('result.watchAdRematch'),
                     busy: saving || adBusy,
                     onPress: () => {
                       if (adBusy) return;
@@ -310,23 +343,31 @@ function MatchScreen({
                         .show()
                         .then((earned) => {
                           if (earned) void finish(true);
-                          else setNotice('The ad did not finish. Try again, or head home.');
+                          else setNotice('adIncomplete');
                         })
                         .finally(() => setAdBusy(false));
                     },
                   }
-                : { label: 'Play again', busy: saving, onPress: () => void finish(true) }
+                : { label: t('result.playAgain'), busy: saving, onPress: () => void finish(true) }
             }
             secondary={{
-              label: !member && match.options.mode === 'ai' && !redWon ? 'Go home' : 'Lobby',
+              label:
+                !member && match.options.mode === 'ai' && !redWon
+                  ? t('result.goHome')
+                  : t('result.lobby'),
               onPress: () => void finish(false),
             }}
             shareMessage={
               redWon || match.options.mode === 'local'
-                ? `${match.options.mode === 'local' ? `${seatName(match.state.winnerColor ?? 'RED')} just won` : 'I just won'} a ${variantName?.title ?? 'Classic'} game of Ludo Rumble! 🎲🏆`
+                ? match.options.mode === 'local'
+                  ? t('result.sharePlayer', {
+                      name: seatName(match.state.winnerColor ?? 'RED'),
+                      mode: catalog.variantTitle(variantOf(match.state)),
+                    })
+                  : t('result.shareMine', { mode: catalog.variantTitle(variantOf(match.state)) })
                 : undefined
             }
-            error={notice}
+            error={notice && t(`result.${notice}`)}
             motionEnabled={motionEnabled}
           />
         )

@@ -5,7 +5,8 @@ export type UsernameCheck =
   | { readonly status: 'idle' }
   | { readonly status: 'checking' }
   | { readonly status: 'available' }
-  | { readonly status: 'unavailable'; readonly reason: string };
+  /** `reason` is the server's own explanation; `null` when it gave none (show a generic one). */
+  | { readonly status: 'unavailable'; readonly reason: string | null };
 
 const DEBOUNCE_MS = 400;
 
@@ -31,10 +32,7 @@ export function useUsernameAvailability(username: string): UsernameCheck {
             for: candidate,
             check: verdict.available
               ? { status: 'available' }
-              : {
-                  status: 'unavailable',
-                  reason: verdict.reason ?? 'That username cannot be used.',
-                },
+              : { status: 'unavailable', reason: verdict.reason ?? null },
           });
         })
         .catch(() => {

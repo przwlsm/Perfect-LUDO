@@ -1,6 +1,7 @@
 import { AccountProfiles } from '@/application/auth/AccountProfiles';
 import type {
   IAccountAuthProvider,
+  IAppVersionRepository,
   IChallengeRepository,
   IConnectivityService,
   IFeedbackRepository,
@@ -44,6 +45,7 @@ import { SupabaseMatchSyncRepository } from '@/infrastructure/supabase/SupabaseM
 import { SupabaseNotificationRepository } from '@/infrastructure/supabase/SupabaseNotificationRepository';
 import { SupabasePresenceService } from '@/infrastructure/supabase/SupabasePresenceService';
 import { SupabaseSocialIdentityRepository } from '@/infrastructure/supabase/SupabaseSocialIdentityRepository';
+import { SupabaseAppVersionRepository } from '@/infrastructure/supabase/SupabaseAppVersionRepository';
 import { ProfileService, type IProfileService } from '@/application/store/ProfileService';
 import { MatchRepository, type IMatchRepository } from '@/application/session/MatchRepository';
 
@@ -98,6 +100,10 @@ export const reactionChannel: IReactionChannel | null = supabase
   : null;
 export const feedbackRepository: IFeedbackRepository | null = supabase
   ? new SupabaseFeedbackRepository(supabase)
+  : null;
+/** Minimum and newest store versions; null in an offline build, which never forces updates. */
+export const appVersionRepository: IAppVersionRepository | null = supabase
+  ? new SupabaseAppVersionRepository(supabase)
   : null;
 
 /**

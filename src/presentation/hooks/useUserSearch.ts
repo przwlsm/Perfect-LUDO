@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { friendsRepository } from '@/config/container';
 import type { UserSearchResult } from '@/domain';
+import { i18n } from '../i18n';
 
 const DEBOUNCE_MS = 300;
 /** The server refuses anything shorter, so don't spend a round trip on it. */
@@ -30,7 +31,8 @@ export function useUserSearch(enabled: boolean): UserSearch {
     rows: NONE,
   });
   const [pending, setPending] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // The server's message, or {} when the fallback applies (translated at render).
+  const [error, setError] = useState<{ message?: string } | null>(null);
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -61,7 +63,7 @@ export function useUserSearch(enabled: boolean): UserSearch {
         .catch((e: unknown) => {
           if (mounted.current && activeRequest) {
             setHit({ query: trimmed, rows: NONE });
-            setError(e instanceof Error ? e.message : 'Search is unavailable right now.');
+            setError(e instanceof Error ? { message: e.message } : {});
           }
         })
         .finally(() => {
@@ -80,6 +82,6 @@ export function useUserSearch(enabled: boolean): UserSearch {
     results: active && hit.query === trimmed ? hit.rows : NONE,
     searching: active && (pending === trimmed || hit.query !== trimmed),
     active,
-    error,
+    error: error ? (error.message ?? i18n.t('social:search.unavailable')) : null,
   };
 }

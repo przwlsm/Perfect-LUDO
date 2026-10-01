@@ -62,6 +62,46 @@ a separate command. The fingerprint runtime policy prevents updates reaching a
 native build with incompatible dependencies. A native configuration/dependency change
 requires a new build. Test updates in preview before publishing to production.
 
+OTA needs the app linked to an EAS project: run `npx eas-cli@latest init` once (it
+writes `extra.eas.projectId`), or set `EAS_PROJECT_ID`, then make a new build. Until
+then no build has an update URL and published updates reach nobody.
+
+Players get an update in the background at launch or when returning to the app (at most
+every 30 minutes). Once it has downloaded, an "Update ready — Restart" toast appears,
+except during a match, and the update applies on its own at the next launch anyway.
+Settings → App version shows the running update and can check on demand.
+
+## Ads and crash reporting
+
+Set these as EAS environment variables for the production profile (see `.env.example`):
+
+- `ADMOB_ANDROID_APP_ID`, `ADMOB_IOS_APP_ID`, `EXPO_PUBLIC_ADMOB_REWARDED_ID` from
+  AdMob. A production build fails while the app IDs are Google's test IDs, and a release
+  build without a rewarded unit hides the ad buttons instead of showing test ads.
+- In AdMob → Privacy & messaging, create and publish a GDPR message (and a US states
+  message if you serve the US). The app shows it at launch where it is required, and
+  Settings shows "Ad privacy choices" for players who must be able to change it.
+- `EXPO_PUBLIC_SENTRY_DSN` turns crash reporting on. `SENTRY_ORG`, `SENTRY_PROJECT`
+  and the secret `SENTRY_AUTH_TOKEN` add source-map upload for readable stack traces.
+
+## Store version policy
+
+`0029_app_version_policy.sql` adds `app_versions`, one row per platform, which you edit in
+the Supabase table editor:
+
+- `latest_version`: players below it see a dismissible "New version available" dialog.
+  Set it after each store release is live.
+- `min_version`: players below it see a blocking "Update required" screen. Raise it only
+  when old builds can no longer work, for example after a breaking migration like `0005`.
+  Deploy the new store build first and wait for review to finish before raising it.
+- `store_url`: leave empty on Android (the Play listing is derived from the package).
+  On iOS, set it to the App Store link once the app has an App Store id.
+- `message`: optional short note shown on the update screen.
+
+Versions are compared against the installed binary's version name (`version` in
+`app.json`), so bump it for every store release. If the policy cannot be fetched, nobody
+is blocked.
+
 ## Web
 
 `npm run export:web` produces `dist/`. Deploy those files to a static HTTPS host with

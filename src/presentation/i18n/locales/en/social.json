@@ -1,0 +1,108 @@
+{
+  "friends": {
+    "title": "Friends",
+    "subtitle": "PLAY WITH PEOPLE YOU KNOW",
+    "count_one": "{{count}} friend",
+    "count_other": "{{count}} friends",
+    "you": "You are @{{username}}",
+    "youWithId": "You are @{{username}} · ID {{id}}",
+    "online": "{{online}} ONLINE",
+    "createChallenge": "Create a challenge →",
+    "createFailed": "The game could not be created.",
+    "empty": {
+      "title": "No friends yet",
+      "body": "Search for a username above and send a request to start playing together."
+    },
+    "remove": "Remove {{name}}"
+  },
+  "tabs": {
+    "friends": "Friends",
+    "requests": "Requests",
+    "sent": "Sent"
+  },
+  "requests": {
+    "incomingEmpty": "No friend requests right now.",
+    "sentEmpty": "You haven’t sent any requests.",
+    "accept": "Accept",
+    "decline": "Decline"
+  },
+  "notice": {
+    "requestSent": "Friend request sent.",
+    "nowFriends": "You are friends!",
+    "requestCancelled": "Request cancelled.",
+    "friendRemoved": "Friend removed."
+  },
+  "search": {
+    "a11y": "Search username or user ID",
+    "placeholder": "Search username or user ID…",
+    "clear": "Clear search",
+    "noResults": "No players found. Try the full handle, or their user ID.",
+    "unavailable": "Search is unavailable right now.",
+    "self": "That’s you",
+    "challenge": "Challenge",
+    "requestSent": "Request sent",
+    "addFriend": "Add friend"
+  },
+  "player": {
+    "id": "ID {{id}}",
+    "idA11y": "User ID {{id}}"
+  },
+  "presence": {
+    "ONLINE": "Online",
+    "AWAY": "Away",
+    "IN_GAME": "In a game",
+    "OFFLINE": "Offline"
+  },
+  "noBackend": {
+    "body": "Playing with friends needs an account, and this build has no account service configured. Everything else still works offline.",
+    "back": "Back to the game"
+  },
+  "guest": {
+    "hint": "As a guest you can still play online right now: Quick Play seats you with the next players looking for a game."
+  },
+  "signedOut": {
+    "label": "ONE ACCOUNT, EVERY GAME NIGHT",
+    "title": "Sign in to add friends",
+    "body": "Your friends list, challenges and invitations live with your account, so they follow you to every device.",
+    "signIn": "Sign in or create an account",
+    "offline": "Keep playing offline"
+  },
+  "challenge": {
+    "title": "Create challenge",
+    "howMany": "HOW MANY PLAYERS?",
+    "playersA11y_one": "{{count}} player",
+    "playersA11y_other": "{{count}} players",
+    "players": "PLAYERS",
+    "selectFriends_one": "SELECT {{count}} FRIEND",
+    "selectFriends_other": "SELECT {{count}} FRIENDS",
+    "selected": "Selected: {{picked}} / {{required}}",
+    "noFriends": "Add a friend first — challenges are private games between friends.",
+    "selectA11y": "Select {{name}}",
+    "creating": "Creating…",
+    "start_one": "Start challenge · {{count}} player",
+    "start_other": "Start challenge · {{count}} players",
+    "footnote": "Invited friends get a notification right away. It expires if nobody answers."
+  },
+  "invite": {
+    "dismiss": "Dismiss invitation",
+    "join": "Join game",
+    "decline": "Decline",
+    "unavailable": "That invitation is no longer available.",
+    "share": "Join my Ludo Rumble game! Tap {{link}} to take a seat, or open Ludo Rumble → Online → Private Game and enter {{code}}."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "a11y": "Notifications",
+    "unreadA11y_one": "Notifications, {{count}} unread",
+    "unreadA11y_other": "Notifications, {{count}} unread",
+    "close": "Close notifications",
+    "empty": "Nothing yet. Friend requests and challenges land here.",
+    "justNow": "just now",
+    "minutesAgo_one": "{{count}}m ago",
+    "minutesAgo_other": "{{count}}m ago",
+    "hoursAgo_one": "{{count}}h ago",
+    "hoursAgo_other": "{{count}}h ago",
+    "daysAgo_one": "{{count}}d ago",
+    "daysAgo_other": "{{count}}d ago"
+  }
+}

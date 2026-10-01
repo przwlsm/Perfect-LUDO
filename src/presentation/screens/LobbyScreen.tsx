@@ -2,6 +2,7 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../components/AppText';
 import { router, useFocusEffect, useIsFocused } from 'expo-router';
+import { Trans, useTranslation } from 'react-i18next';
 import {
   levelInfo,
   REWARDS,
@@ -32,6 +33,9 @@ import { Body, Button, Card, Label, Screen, shared, Sheet } from '../components/
 import { useConnectivity } from '../state/ConnectivityProvider';
 import { useProfile } from '../state/ProfileProvider';
 import { ui } from '../theme/themes';
+import { useCatalogText } from '../i18n/useCatalogText';
+import { numberLocale } from '../i18n/format';
+import { mirrorInRtl } from '../i18n/rtl';
 
 export default function LobbyScreen() {
   const { profile, theme, member } = useProfile();
@@ -44,7 +48,10 @@ export default function LobbyScreen() {
   // Pass & play names, kept while the sheet is reopened so nobody retypes them.
   const [names, setNames] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState<SavedMatch | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const { t } = useTranslation('home');
+  const { variantTitle } = useCatalogText();
+  // A server message as written, or a key for the hard-coded fallback.
+  const [message, setMessage] = useState<{ text: string } | { key: 'restoreFailed' } | null>(null);
   useFocusEffect(
     useCallback(() => {
       let active = true;
@@ -54,7 +61,8 @@ export default function LobbyScreen() {
           if (active) setSaved(m);
         })
         .catch((e: unknown) => {
-          if (active) setMessage(e instanceof Error ? e.message : 'Could not restore your match.');
+          if (active)
+            setMessage(e instanceof Error ? { text: e.message } : { key: 'restoreFailed' });
         });
       return () => {
         active = false;
@@ -105,13 +113,13 @@ export default function LobbyScreen() {
           {member ? (
             <>
               <View style={shared.row}>
-                <Text style={s.levelTag}>LV.{level.level}</Text>
-                <Text style={s.levelTitle}>{levelTitle(level.level)}</Text>
+                <Text style={s.levelTag}>{t('profile.levelTag', { level: level.level })}</Text>
+                <Text style={s.levelTitle}>{t(`profile.titles.${levelTitle(level.level)}`)}</Text>
               </View>
               <ProgressBar value={level.into / level.need} height={6} />
             </>
           ) : (
-            <Text style={shared.small}>Guest · sign in to level up</Text>
+            <Text style={shared.small}>{t('profile.guest')}</Text>
           )}
         </View>
         <ConnectionPill />
@@ -120,7 +128,7 @@ export default function LobbyScreen() {
       {/* Daily lucky spin */}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={freeSpin ? 'Daily lucky spin, free spin ready' : 'Daily lucky spin'}
+        accessibilityLabel={freeSpin ? t('spin.a11yReady') : t('spin.a11y')}
         onPress={() => (member ? router.push('/rewards') : needAccount())}
         android_ripple={{ color: '#ffffff14' }}
       >
@@ -135,16 +143,16 @@ export default function LobbyScreen() {
             <Spin active={motion} seconds={freeSpin ? 5 : 14}>
               <Text style={{ fontSize: 34 }}>🎡</Text>
             </Spin>
-            {freeSpin && <Text style={s.freeBadge}>FREE</Text>}
+            {freeSpin && <Text style={s.freeBadge}>{t('spin.free')}</Text>}
           </View>
           <View style={{ flex: 1, gap: 5 }}>
-            <Text style={s.cardTitle}>Daily Lucky Spin</Text>
+            <Text style={s.cardTitle}>{t('spin.title')}</Text>
             <Text style={shared.small}>
               {member
                 ? freeSpin
-                  ? `Spin to win up to ${MAX_SPIN.toLocaleString()} coins!`
-                  : `Next free spin in ${timeLeft(nextUtcMidnight())}`
-                : 'Sign in to spin every day'}
+                  ? t('spin.winUpTo', { amount: MAX_SPIN.toLocaleString(numberLocale()) })
+                  : t('spin.nextIn', { time: timeLeft(nextUtcMidnight()) })
+                : t('spin.signIn')}
             </Text>
             {member && (
               <View style={[shared.row, { gap: 5 }]}>
@@ -157,14 +165,20 @@ export default function LobbyScreen() {
                     ]}
                   />
                 ))}
-                <Text style={s.streakText}>DAY {Math.min(profile.spinStreak, 7)}/7</Text>
+                <Text style={s.streakText}>
+                  {t('spin.streak', { day: Math.min(profile.spinStreak, 7) })}
+                </Text>
               </View>
             )}
           </View>
           <Pulse active={motion && Boolean(freeSpin)}>
             <View style={[s.spinButton, !freeSpin && { backgroundColor: '#ffffff14' }]}>
               <Text style={[s.spinButtonText, !freeSpin && { color: ui.muted }]}>
-                {freeSpin ? 'SPIN' : member ? 'OPEN' : 'SIGN IN'}
+                {freeSpin
+                  ? t('spin.spinButton')
+                  : member
+                    ? t('spin.openButton')
+                    : t('spin.signInButton')}
               </Text>
             </View>
           </Pulse>
@@ -178,16 +192,17 @@ export default function LobbyScreen() {
               <View style={{ flex: 1, gap: 5 }}>
                 <Text style={shared.sectionTitle}>
                   {saved.state.status === 'FINISHED'
-                    ? 'Your result is ready'
-                    : 'Your table is waiting'}
+                    ? t('resume.resultReady')
+                    : t('resume.tableWaiting')}
                 </Text>
                 <Text style={shared.small}>
-                  {saved.options.players} players ·{' '}
-                  {saved.options.mode === 'ai' ? 'Against the computer' : 'Pass & play'}
+                  {saved.options.mode === 'ai'
+                    ? t('resume.ai', { count: saved.options.players })
+                    : t('resume.local', { count: saved.options.players })}
                 </Text>
               </View>
               <Button compact onPress={() => router.push('/game?resume=1')}>
-                {saved.state.status === 'FINISHED' ? 'View result' : 'Resume →'}
+                {saved.state.status === 'FINISHED' ? t('resume.viewResult') : t('resume.resume')}
               </Button>
             </View>
           </Card>
@@ -197,13 +212,13 @@ export default function LobbyScreen() {
       <SectionHeader
         icon="globe"
         color={ui.green}
-        title="Play Online"
-        subtitle="Real players · biggest rewards"
+        title={t('online.title')}
+        subtitle={t('online.subtitle')}
         right={
           <View style={[shared.row, { gap: 6, alignItems: 'center' }]}>
             <LiveDot color={online ? ui.green : ui.subtle} active={motion && online} />
             <Text style={[s.liveText, { color: online ? ui.green : ui.subtle }]}>
-              {online ? 'LIVE' : 'OFFLINE'}
+              {online ? t('online.live') : t('online.offline')}
             </Text>
           </View>
         }
@@ -219,20 +234,23 @@ export default function LobbyScreen() {
           <View style={shared.between}>
             <View style={s.heroBadge}>
               <Ionicons name="flash" size={12} color={ui.gold} />
-              <Text style={s.heroBadgeText}>MOST PLAYED</Text>
+              <Text style={s.heroBadgeText}>{t('online.mostPlayed')}</Text>
             </View>
             <Bob active={motion}>
               <Text style={{ fontSize: 34 }}>🎲</Text>
             </Bob>
           </View>
-          <Text style={s.heroTitle}>QUICK MATCH</Text>
+          <Text style={s.heroTitle}>{t('online.quickMatch')}</Text>
           <Text style={s.heroBody}>
-            Real players, instant table. Every win pays{' '}
-            <Text style={{ color: ui.gold, fontWeight: '800' }}>
-              +{REWARDS.online.win.coins} coins
-            </Text>{' '}
-            and{' '}
-            <Text style={{ color: ui.green, fontWeight: '800' }}>+{REWARDS.online.win.xp} XP</Text>.
+            <Trans
+              t={t}
+              i18nKey="online.body"
+              values={{ coins: REWARDS.online.win.coins, xp: REWARDS.online.win.xp }}
+              components={{
+                coins: <Text style={{ color: ui.gold, fontWeight: '800' }} />,
+                xp: <Text style={{ color: ui.green, fontWeight: '800' }} />,
+              }}
+            />
           </Text>
           <View style={s.heroActions}>
             <View style={s.segment}>
@@ -240,19 +258,22 @@ export default function LobbyScreen() {
                 <Pressable
                   key={n}
                   accessibilityRole="button"
-                  accessibilityLabel={n === 'teams' ? 'Random 2 v 2 match' : `${n} player match`}
+                  accessibilityLabel={
+                    n === 'teams' ? t('online.teamsA11y') : t('online.seatsA11y', { seats: n })
+                  }
                   accessibilityState={{ selected: arenaSeats === n }}
                   onPress={() => setArenaSeats(n)}
                   style={[s.segmentItem, arenaSeats === n && s.segmentOn]}
                 >
                   <Text style={[s.segmentText, arenaSeats === n && { color: '#1f1500' }]}>
-                    {n === 'teams' ? '2v2' : `${n}P`}
+                    {n === 'teams' ? t('online.teamsShort') : t('online.seatsShort', { seats: n })}
                   </Text>
                 </Pressable>
               ))}
             </View>
             <Pulse active={motion && online} style={{ flex: 1 }}>
               <Button
+                fit
                 disabled={!online}
                 onPress={() =>
                   router.push({
@@ -264,7 +285,7 @@ export default function LobbyScreen() {
                   })
                 }
               >
-                {online ? '⚡ Play now' : 'Offline'}
+                {online ? t('online.playNow') : t('online.offlineButton')}
               </Button>
             </Pulse>
           </View>
@@ -274,7 +295,7 @@ export default function LobbyScreen() {
       {/* Weekly tournament */}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Weekly tournament"
+        accessibilityLabel={t('tournament.a11y')}
         onPress={() => router.push('/tournament')}
         android_ripple={{ color: '#ffffff14' }}
       >
@@ -291,18 +312,18 @@ export default function LobbyScreen() {
             </Bob>
             <View style={s.liveBadge}>
               <LiveDot color="#fff" size={5} active={motion} />
-              <Text style={s.liveBadgeText}>LIVE</Text>
+              <Text style={s.liveBadgeText}>{t('tournament.live')}</Text>
             </View>
           </View>
           <View style={{ flex: 1, gap: 4 }}>
             <View style={shared.between}>
-              <Text style={s.cardTitle}>Weekly Tournament</Text>
+              <Text style={s.cardTitle}>{t('tournament.title')}</Text>
               {tournament.data?.me.rank ? (
                 <Text style={s.rankChip}>#{tournament.data.me.rank}</Text>
               ) : null}
             </View>
             <Text style={shared.small}>
-              Top prize 3,000 coins + 60 gems · ends in {timeLeft(nextWeekStart())}
+              {t('tournament.prize', { time: timeLeft(nextWeekStart()) })}
             </Text>
             {member && tournament.data && (
               <>
@@ -312,13 +333,14 @@ export default function LobbyScreen() {
                   colors={[ui.gold, '#f59e0b']}
                 />
                 <Text style={s.tinyText}>
-                  {myPoints} pts
-                  {topTen > 0 ? ` · ${topTen} to reach the top 10` : ' · be the first to score'}
+                  {topTen > 0
+                    ? t('tournament.toTopTen', { points: myPoints, need: topTen })
+                    : t('tournament.firstToScore', { points: myPoints })}
                 </Text>
               </>
             )}
           </View>
-          <Ionicons name="chevron-forward" size={20} color={ui.gold} />
+          <Ionicons name="chevron-forward" style={mirrorInRtl} size={20} color={ui.gold} />
         </LinearGradient>
       </Pressable>
 
@@ -326,17 +348,17 @@ export default function LobbyScreen() {
       <SectionHeader
         icon="people"
         color={ui.gem}
-        title="Play with Friends"
-        subtitle="Private room, one phone, or your friends list"
+        title={t('friends.title')}
+        subtitle={t('friends.subtitle')}
       />
       <View style={s.grid}>
         <ModeCard
           icon="key"
           colors={['#123b2c', '#16222a']}
           accent={ui.green}
-          title="Party Room"
-          subtitle="Private room with a code for friends."
-          pill="Host"
+          title={t('friends.party.title')}
+          subtitle={t('friends.party.subtitle')}
+          pill={t('friends.party.pill')}
           disabled={!online}
           onPress={() => router.push({ pathname: '/online', params: { private: '1' } })}
         />
@@ -344,18 +366,18 @@ export default function LobbyScreen() {
           icon="phone-portrait"
           colors={['#3a2a4f', '#1f1b2e']}
           accent={ui.gem}
-          title="Pass & Play"
-          subtitle="One phone, up to eight friends."
-          pill="2–8"
+          title={t('friends.pass.title')}
+          subtitle={t('friends.pass.subtitle')}
+          pill={t('friends.pass.pill')}
           onPress={() => setMode('local')}
         />
         <ModeCard
           icon="person-add"
           colors={['#3b2a10', '#221c16']}
           accent={ui.gold}
-          title="Challenge Friends"
-          subtitle="Invite someone from your friends list."
-          pill={member ? 'Friends' : 'Account'}
+          title={t('friends.challenge.title')}
+          subtitle={t('friends.challenge.subtitle')}
+          pill={member ? t('friends.challenge.pillMember') : t('friends.challenge.pillGuest')}
           disabled={!online}
           onPress={() => router.push('/friends')}
         />
@@ -363,9 +385,9 @@ export default function LobbyScreen() {
           icon="people-circle"
           colors={['#2a1f4a', '#1c1a2e']}
           accent={ui.gem}
-          title="2 v 2 with a friend"
-          subtitle="Team up, then take on another team of friends."
-          pill="Team up"
+          title={t('friends.teamUp.title')}
+          subtitle={t('friends.teamUp.subtitle')}
+          pill={t('friends.teamUp.pill')}
           disabled={!online}
           onPress={() => router.push({ pathname: '/online', params: { teamup: '1' } })}
         />
@@ -375,44 +397,44 @@ export default function LobbyScreen() {
       <SectionHeader
         icon="hardware-chip"
         color="#f87171"
-        title="Play vs Computer"
-        subtitle="Offline, any time · pick a mode"
+        title={t('computer.title')}
+        subtitle={t('computer.subtitle')}
       />
       <View style={s.grid}>
         <ModeCard
           icon="grid"
           colors={['#4a1d1d', '#221a26']}
           accent="#f87171"
-          title="Classic Ludo"
-          subtitle="Original rules, all four coins home."
-          pill={`+${REWARDS.bot.win.coins} / win`}
+          title={t('computer.classic.title')}
+          subtitle={t('computer.classic.subtitle')}
+          pill={t('computer.classic.pill', { coins: REWARDS.bot.win.coins })}
           onPress={() => openAi()}
         />
         <ModeCard
           icon="flash"
           colors={['#4a3510', '#241d14']}
           accent={ui.gold}
-          title="Quick · 1 coin"
-          subtitle="First coin home wins. Minutes."
-          pill="Fast"
+          title={variantTitle('quick1')}
+          subtitle={t('computer.quick.subtitle')}
+          pill={t('computer.quick.pill')}
           onPress={() => openAi({ variant: 'quick1' })}
         />
         <ModeCard
           icon="skull"
           colors={['#3d1530', '#211726']}
           accent="#f472b6"
-          title="Kill & Go"
-          subtitle="Capture first, then head home."
-          pill="Hard"
+          title={variantTitle('kill')}
+          subtitle={t('computer.kill.subtitle')}
+          pill={t('computer.kill.pill')}
           onPress={() => openAi({ variant: 'kill' })}
         />
         <ModeCard
           icon="people"
           colors={['#1d2b52', '#191f33']}
           accent={ui.blueSoft}
-          title="Team 2v2"
-          subtitle="You and a partner against two."
-          pill="Pair up"
+          title={t('computer.teams.title')}
+          subtitle={t('computer.teams.subtitle')}
+          pill={t('computer.teams.pill')}
           onPress={() => openAi({ teams: true })}
         />
       </View>
@@ -421,14 +443,14 @@ export default function LobbyScreen() {
       <SectionHeader
         icon="trending-up"
         color={ui.blueSoft}
-        title="Your Progress"
-        subtitle="Season pass, missions and style"
+        title={t('progress.title')}
+        subtitle={t('progress.subtitle')}
       />
       {/* Season pass */}
       {member && season && (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Season pass"
+          accessibilityLabel={t('progress.seasonA11y')}
           onPress={() => router.push('/rewards')}
           android_ripple={{ color: '#ffffff14' }}
         >
@@ -441,12 +463,16 @@ export default function LobbyScreen() {
               </View>
               <View style={{ flex: 1, gap: 3 }}>
                 <View style={shared.row}>
-                  <Text style={s.cardTitle}>Season {season.number} Pass</Text>
-                  {season.premium && <Text style={s.proChip}>PRO</Text>}
+                  <Text style={s.cardTitle}>
+                    {t('progress.seasonTitle', { number: season.number })}
+                  </Text>
+                  {season.premium && <Text style={s.proChip}>{t('progress.pro')}</Text>}
                 </View>
                 <Text style={shared.small}>
-                  {SEASON_TIER_XP - (season.xp % SEASON_TIER_XP)} XP to the next tier · ends in{' '}
-                  {timeLeft(season.endsAt)}
+                  {t('progress.seasonNext', {
+                    xp: SEASON_TIER_XP - (season.xp % SEASON_TIER_XP),
+                    time: timeLeft(season.endsAt),
+                  })}
                 </Text>
               </View>
             </View>
@@ -459,11 +485,11 @@ export default function LobbyScreen() {
       {member && missions.length > 0 && (
         <View style={{ gap: 10 }}>
           <View style={shared.between}>
-            <Text style={s.section}>TODAY’S MISSIONS</Text>
+            <Text style={s.section}>{t('missions.title')}</Text>
             <Text style={[s.liveText, { color: missionsReady ? ui.green : ui.subtle }]}>
               {missionsReady
-                ? `${missionsReady} READY TO CLAIM`
-                : `RESETS IN ${timeLeft(nextUtcMidnight()).toUpperCase()}`}
+                ? t('missions.ready', { count: missionsReady })
+                : t('missions.resetsIn', { time: timeLeft(nextUtcMidnight()).toUpperCase() })}
             </Text>
           </View>
           {missions.map((m) => {
@@ -494,17 +520,17 @@ export default function LobbyScreen() {
                   </Text>
                 </View>
                 {m.claimed ? (
-                  <Text style={[s.tinyText, { color: ui.green }]}>CLAIMED</Text>
+                  <Text style={[s.tinyText, { color: ui.green }]}>{t('missions.claimed')}</Text>
                 ) : done ? (
                   <Pulse active={motion}>
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={`Claim ${m.title}`}
+                      accessibilityLabel={t('missions.claimA11y', { title: m.title })}
                       disabled={rewards.busy !== null}
                       onPress={() => void rewards.claimMission(m.id)}
                       style={s.claim}
                     >
-                      <Text style={s.claimText}>CLAIM</Text>
+                      <Text style={s.claimText}>{t('missions.claim')}</Text>
                     </Pressable>
                   </Pulse>
                 ) : (
@@ -524,33 +550,29 @@ export default function LobbyScreen() {
         <View style={s.storeRow}>
           <Text style={{ fontSize: 26 }}>🎨</Text>
           <View style={{ flex: 1, gap: 2 }}>
-            <Text style={s.cardTitle}>Make it your own</Text>
-            <Text style={shared.small}>Boards, dice and table styles in the store.</Text>
+            <Text style={s.cardTitle}>{t('store.title')}</Text>
+            <Text style={shared.small}>{t('store.subtitle')}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#c5a5ff" />
+          <Ionicons name="chevron-forward" style={mirrorInRtl} size={20} color="#c5a5ff" />
         </View>
       </Pressable>
       {message && (
         <Text accessibilityLiveRegion="polite" style={shared.small}>
-          {message}
+          {'text' in message ? message.text : t(message.key)}
         </Text>
       )}
       <Sheet
         visible={mode !== null}
         onClose={() => setMode(null)}
-        title={mode === 'ai' ? 'Set your table' : 'Bring your people'}
+        title={mode === 'ai' ? t('setup.aiTitle') : t('setup.localTitle')}
       >
-        <Body>
-          {mode === 'ai'
-            ? 'You play red. Choose your opponents and make your move.'
-            : 'Pass the device when the turn changes. Every seat is controlled by a person.'}
-        </Body>
-        <Label>PLAYERS</Label>
+        <Body>{mode === 'ai' ? t('setup.aiBody') : t('setup.localBody')}</Body>
+        <Label>{t('setup.players')}</Label>
         <View style={shared.row}>
           {([2, 3, 4, 5, 6, 7, 8] as const).map((n) => (
             <Pressable
               key={n}
-              accessibilityLabel={`${n} players`}
+              accessibilityLabel={t('setup.playersA11y', { count: n })}
               accessibilityRole="button"
               accessibilityState={{ selected: n === players }}
               onPress={() => setPlayers(n)}
@@ -562,15 +584,15 @@ export default function LobbyScreen() {
               ]}
             >
               <Text style={s.choiceText}>{n}</Text>
-              <Text style={{ color: ui.muted, fontSize: 9 }}>players</Text>
+              <Text style={{ color: ui.muted, fontSize: 9 }}>{t('setup.playersUnit')}</Text>
             </Pressable>
           ))}
         </View>
-        <Label>GAME MODE</Label>
+        <Label>{t('setup.gameMode')}</Label>
         <VariantPicker value={variant} onChange={setVariant} />
         {players === 4 && (
           <>
-            <Label>TEAMS</Label>
+            <Label>{t('setup.teams')}</Label>
             <View style={shared.row}>
               {([false, true] as const).map((team) => (
                 <Pressable
@@ -585,28 +607,24 @@ export default function LobbyScreen() {
                     team === teams && { borderColor: theme.accent },
                   ]}
                 >
-                  <Text style={s.choiceText}>{team ? '2 v 2 teams' : 'Every player'}</Text>
+                  <Text style={s.choiceText}>{team ? t('teams.on') : t('teams.off')}</Text>
                   <Text style={{ color: ui.muted, fontSize: 9 }}>
-                    {team ? 'partners sit opposite' : 'for themselves'}
+                    {team ? t('setup.teamsOnHint') : t('setup.teamsOffHint')}
                   </Text>
                 </Pressable>
               ))}
             </View>
             {teams && (
               <Text style={shared.small}>
-                {mode === 'ai'
-                  ? 'You and yellow (a computer partner) against green and blue. Partners never capture each other, and once your coins are home you roll for your partner.'
-                  : 'Red and yellow against green and blue. Partners never capture each other, and once your coins are home you roll for your partner.'}
+                {mode === 'ai' ? t('setup.teamsAi') : t('setup.teamsLocal')}
               </Text>
             )}
           </>
         )}
         {mode === 'local' && (
           <>
-            <Label>WHO’S PLAYING?</Label>
-            <Text style={shared.small}>
-              Names appear beside each home on the board. Leave one blank to use the colour.
-            </Text>
+            <Label>{t('setup.whoIsPlaying')}</Label>
+            <Text style={shared.small}>{t('setup.namesHint')}</Text>
             <View style={{ gap: 8 }}>
               {seatColors(players).map((color) => (
                 <View key={color} style={[shared.row, { alignItems: 'center' }]}>
@@ -621,10 +639,10 @@ export default function LobbyScreen() {
                     }}
                   />
                   <TextInput
-                    accessibilityLabel={`Name for the ${color.toLowerCase()} player`}
+                    accessibilityLabel={t(`setup.seatNameA11y.${color}`)}
                     value={names[color] ?? ''}
                     onChangeText={(text) => setNames((n) => ({ ...n, [color]: text }))}
-                    placeholder={`${color.charAt(0)}${color.slice(1).toLowerCase()} player`}
+                    placeholder={t(`setup.seatPlaceholder.${color}`)}
                     placeholderTextColor={ui.muted}
                     maxLength={SEAT_NAME_MAX}
                     autoCorrect={false}
@@ -638,7 +656,7 @@ export default function LobbyScreen() {
         )}
         {mode === 'ai' && (
           <>
-            <Label>COMPUTER DIFFICULTY</Label>
+            <Label>{t('setup.difficulty')}</Label>
             <View style={shared.row}>
               {(['easy', 'smart'] as const).map((d) => (
                 <Pressable
@@ -653,19 +671,17 @@ export default function LobbyScreen() {
                     d === difficulty && { borderColor: theme.accent },
                   ]}
                 >
-                  <Text style={s.choiceText}>{d === 'easy' ? 'Easy going' : 'Play smart'}</Text>
+                  <Text style={s.choiceText}>
+                    {d === 'easy' ? t('setup.easy') : t('setup.smart')}
+                  </Text>
                 </Pressable>
               ))}
             </View>
-            <Body>
-              {difficulty === 'smart'
-                ? 'Looks for captures, finishes, and chances to leave the yard.'
-                : 'Picks a random legal move. Perfect for a relaxed game.'}
-            </Body>
+            <Body>{difficulty === 'smart' ? t('setup.smartHint') : t('setup.easyHint')}</Body>
           </>
         )}
         {saved?.state.status === 'IN_PROGRESS' && (
-          <Text style={shared.small}>Starting a new game replaces your saved match.</Text>
+          <Text style={shared.small}>{t('setup.replacesSaved')}</Text>
         )}
         <Button
           onPress={() => {
@@ -687,11 +703,9 @@ export default function LobbyScreen() {
             });
           }}
         >
-          Let’s play →
+          {t('setup.start')}
         </Button>
-        <Text style={[shared.small, { textAlign: 'center' }]}>
-          Free to play · No connection needed
-        </Text>
+        <Text style={[shared.small, { textAlign: 'center' }]}>{t('setup.footer')}</Text>
       </Sheet>
     </Screen>
   );
@@ -700,13 +714,13 @@ const MAX_SPIN = Math.max(
   ...SPIN_SLOTS.filter((slot) => slot.kind === 'coins').map((s) => s.amount),
 );
 
-/** A name for the level band, shown under the player's name. */
-function levelTitle(level: number): string {
-  if (level >= 30) return 'GRANDMASTER';
-  if (level >= 20) return 'MASTER';
-  if (level >= 10) return 'PRO ROLLER';
-  if (level >= 5) return 'ROLLER';
-  return 'ROOKIE';
+/** The level band shown under the player's name (text: home:profile.titles.<band>). */
+function levelTitle(level: number): 'grandmaster' | 'master' | 'proRoller' | 'roller' | 'rookie' {
+  if (level >= 30) return 'grandmaster';
+  if (level >= 20) return 'master';
+  if (level >= 10) return 'proRoller';
+  if (level >= 5) return 'roller';
+  return 'rookie';
 }
 
 /** Monday 00:00 UTC after now: when the weekly tournament closes. */
@@ -904,7 +918,15 @@ const s = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: '#00000045',
   },
-  segmentItem: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 11 },
+  segmentItem: {
+    minWidth: 48,
+    minHeight: 48,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   segmentOn: { backgroundColor: ui.gold },
   segmentText: { color: ui.muted, fontWeight: '900', fontSize: 13 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
@@ -1008,7 +1030,14 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   missionTitle: { color: ui.text, fontWeight: '700', fontSize: 14 },
-  claim: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 11, backgroundColor: ui.green },
+  claim: {
+    minHeight: 48,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 11,
+    backgroundColor: ui.green,
+    justifyContent: 'center',
+  },
   claimText: { color: '#04261a', fontWeight: '900', fontSize: 12 },
   storeRow: {
     flexDirection: 'row',
@@ -1022,7 +1051,7 @@ const s = StyleSheet.create({
   },
   nameInput: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 48,
     borderWidth: 1,
     borderColor: '#ffffff28',
     borderRadius: 12,

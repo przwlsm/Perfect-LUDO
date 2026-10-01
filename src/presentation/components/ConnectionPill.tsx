@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from './AppText';
 import { describeConnection } from '@/domain';
 import { useConnectivity } from '../state/ConnectivityProvider';
@@ -9,14 +10,15 @@ const TONE = { good: ui.green, warn: ui.gold, bad: ui.danger } as const;
 /** The 🟢 / 🟡 / 🔴 status the spec asks for, in the app's own colours. */
 export function ConnectionPill({ large = false }: { large?: boolean }) {
   const { available, state } = useConnectivity();
+  const { t } = useTranslation();
   const shown = available
-    ? describeConnection(state)
-    : { label: 'Offline build', tone: 'bad' as const };
+    ? { label: t(`connection.${state}`), tone: describeConnection(state).tone }
+    : { label: t('connection.offlineBuild'), tone: 'bad' as const };
   const color = TONE[shown.tone];
   return (
     <View
       accessibilityRole="text"
-      accessibilityLabel={`Connection: ${shown.label}`}
+      accessibilityLabel={t('connection.a11y', { label: shown.label })}
       accessibilityLiveRegion="polite"
       style={[s.pill, large && { borderColor: `${color}40`, backgroundColor: `${color}12` }]}
     >

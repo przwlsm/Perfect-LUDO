@@ -269,6 +269,30 @@ check(
   probeStakes.error ? probeStakes.error.code : `returned ${probeStakes.data?.length ?? 0} rows`,
 );
 
+// --- Store-version policy (0029) -----------------------------------------------
+// Readable by anyone through the function, writable by no client.
+const versionPolicy = await client.rpc('get_app_version_policy', { p_platform: 'android' });
+check(
+  'anonymous can read the version policy',
+  !versionPolicy.error && versionPolicy.data !== null,
+  versionPolicy.error?.code,
+);
+const forceVersion = await client
+  .from('app_versions')
+  .update({ min_version: '99.0.0' }, { count: 'exact' })
+  .eq('platform', 'android');
+check(
+  'anonymous cannot change the minimum version',
+  Boolean(forceVersion.error) || forceVersion.count === 0,
+  forceVersion.error?.code ?? `${forceVersion.count} rows affected`,
+);
+const touchCall = await client.rpc('touch_app_versions', {});
+check(
+  'touch_app_versions is not exposed to clients',
+  Boolean(touchCall.error),
+  touchCall.error?.code,
+);
+
 const failed = results.filter((r) => !r.passed);
 if (failed.length > 0) {
   console.error(`\n${failed.length} security check(s) FAILED. Do not ship this.`);

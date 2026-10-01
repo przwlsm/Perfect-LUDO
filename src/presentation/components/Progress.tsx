@@ -1,8 +1,10 @@
 import { View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { i18n } from '../i18n';
 import { Text } from './AppText';
 import { CoinIcon, GemIcon } from './Currency';
 import { ui } from '../theme/themes';
+import { numberLocale } from '../i18n/format';
 
 /** A rounded track with a glossy gradient fill, 0..1. */
 export function ProgressBar({
@@ -60,7 +62,7 @@ export function RewardChips({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <CoinIcon size={icon} />
           <Text style={{ color: ui.gold, fontWeight: '800', fontSize: font }}>
-            +{coins.toLocaleString()}
+            +{coins.toLocaleString(numberLocale())}
           </Text>
         </View>
       )}
@@ -80,11 +82,12 @@ export function RewardChips({
 /** "3d 4h", "5h 12m", "9m": time until an ISO instant, or "now" once passed. */
 export function timeLeft(iso: string, now = Date.now()): string {
   const ms = Date.parse(iso) - now;
-  if (!Number.isFinite(ms) || ms <= 0) return 'now';
+  // Translated at call time, so every caller follows the current language.
+  if (!Number.isFinite(ms) || ms <= 0) return i18n.t('rewards:time.now');
   const minutes = Math.floor(ms / 60000);
   const days = Math.floor(minutes / 1440);
   const hours = Math.floor((minutes % 1440) / 60);
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes % 60}m`;
-  return `${Math.max(1, minutes)}m`;
+  if (days > 0) return i18n.t('rewards:time.daysHours', { days, hours });
+  if (hours > 0) return i18n.t('rewards:time.hoursMinutes', { hours, minutes: minutes % 60 });
+  return i18n.t('rewards:time.minutes', { minutes: Math.max(1, minutes) });
 }
