@@ -3,7 +3,8 @@
 # Dumps roles, schema and data with the Supabase CLI, encrypts the bundle
 # with a passphrase (this repo is public, so artifacts must never be
 # readable as-is), and keeps it as a workflow artifact for 30 days.
-# Restore steps: docs/BACKUPS.md.
+# Backs up the Ludo app's Supabase project (apps/ludo). Restore steps:
+# apps/ludo/docs/BACKUPS.md.
 #
 # Required repository secrets:
 #   SUPABASE_DB_URL    Session pooler connection string (port 5432).

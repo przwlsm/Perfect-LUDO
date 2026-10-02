@@ -15,7 +15,12 @@ const config = getSentryExpoConfig(__dirname);
  * so every platform is pointed at it here. react-three-fiber's own
  * `require('three')` goes through this resolver too, keeping one copy.
  */
-const threeModule = path.join(__dirname, 'node_modules/three/build/three.module.js');
+// Found wherever npm put three (in a monorepo it is hoisted to the root).
+// (`three` resolves to build/three.cjs; the ES build sits beside it.)
+const threeModule = path.join(
+  path.dirname(require.resolve('three', { paths: [__dirname] })),
+  'three.module.js',
+);
 const upstreamResolve = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName === 'three') return { type: 'sourceFile', filePath: threeModule };

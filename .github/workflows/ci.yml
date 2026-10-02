@@ -19,20 +19,15 @@ jobs:
 
       - run: npm ci
 
-      - name: Lint
-        run: npm run lint
+      # Every app and package: Turborepo skips the ones whose files did not change.
+      - name: Lint, typecheck and test
+        run: npx turbo run lint typecheck test
 
-      - name: Typecheck
-        run: npm run typecheck
+      - name: Ludo database rules and RPC integrity
+        run: npm run test:online --workspace ludo
 
-      - name: Test
-        run: npm run test:coverage
-
-      - name: Database rules and RPC integrity
-        run: npm run test:online
-
-      - name: Export all platforms
-        run: npm run export:all
+      - name: Export Ludo for all platforms
+        run: npm run export:all --workspace ludo
 
       - name: Audit dependencies
         run: npm audit --audit-level=high

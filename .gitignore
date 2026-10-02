@@ -42,6 +42,11 @@ coverage/
 # typescript
 *.tsbuildinfo
 
-# generated native folders
+# generated native folders (one pair per app)
 /ios
 /android
+apps/*/ios
+apps/*/android
+
+# turborepo
+.turbo/

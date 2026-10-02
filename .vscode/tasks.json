@@ -1,12 +1,14 @@
 {
   // VS Code's answer to Android Studio's Build menu: Terminal > Run Task…
-  // (Ctrl+Shift+B runs the default one). Each task is just a terminal command.
+  // (Ctrl+Shift+B runs the default one). Each task is just a terminal command,
+  // run inside the Ludo app (apps/ludo).
   "version": "2.0.0",
   "tasks": [
     {
       "label": "Android: Build APK (local, test devices)",
       "detail": "Release APK signed with the debug key. Output: android/app/build/outputs/apk/release/app-release.apk",
       "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/apps/ludo" },
       "command": "npm run apk",
       "group": { "kind": "build", "isDefault": true },
       "problemMatcher": []
@@ -15,6 +17,7 @@
       "label": "Android: Build APK and install on USB phone",
       "detail": "Same build, then adb install on the connected, USB-debugging-enabled phone",
       "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/apps/ludo" },
       "command": "npm run apk -- -Install",
       "group": "build",
       "problemMatcher": []
@@ -23,6 +26,7 @@
       "label": "Android: Run on phone with live reload (dev)",
       "detail": "Debug build + Metro. Code changes reload without rebuilding.",
       "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/apps/ludo" },
       "command": "npx expo run:android",
       "isBackground": true,
       "problemMatcher": []
@@ -31,6 +35,7 @@
       "label": "EAS: Build signed APK in the cloud (preview)",
       "detail": "Needs an Expo account (npx eas-cli@latest login once). Prints a download link.",
       "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/apps/ludo" },
       "command": "npx eas-cli@latest build --profile preview --platform android",
       "problemMatcher": []
     },
@@ -38,18 +43,21 @@
       "label": "EAS: Build signed bundle for Play Store (production)",
       "detail": "Store-ready AAB, signed with a keystore EAS creates and keeps for you.",
       "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/apps/ludo" },
       "command": "npx eas-cli@latest build --profile production --platform android",
       "problemMatcher": []
     },
     {
       "label": "EAS: Submit latest build to Play Store",
       "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/apps/ludo" },
       "command": "npx eas-cli@latest submit --platform android --latest",
       "problemMatcher": []
     },
     {
       "label": "Start dev server (Expo Go / web)",
       "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/apps/ludo" },
       "command": "npx expo start",
       "isBackground": true,
       "problemMatcher": []
@@ -57,6 +65,7 @@
     {
       "label": "Check: lint + typecheck + tests",
       "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/apps/ludo" },
       "command": "npm run lint; if ($?) { npm run typecheck }; if ($?) { npx jest }",
       "group": "test",
       "problemMatcher": []

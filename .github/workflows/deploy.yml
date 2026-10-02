@@ -1,4 +1,4 @@
-# Continuous deployment with EAS.
+# Continuous deployment of the Ludo app (apps/ludo) with EAS.
 #
 # Every push is checked first (types, lint, tests, database rules). Then:
 #   * JavaScript-only changes ship as an over-the-air update: players get an
@@ -11,13 +11,15 @@
 #   main          -> profile/channel "production" (store players)
 #   app-dev*      -> profile/channel "preview" (internal testers)
 #
-# Setup (once): docs/DEPLOY.md. Until the EXPO_TOKEN secret exists, the
+# Setup (once): apps/ludo/docs/DEPLOY.md. Until the EXPO_TOKEN secret exists, the
 # checks still run and the deploy step is skipped with a notice.
 name: Deploy
 
 on:
   push:
     branches: [main, 'app-dev*']
+    # Only Ludo's own files (and shared packages) can change the Ludo app.
+    paths: ['apps/ludo/**', 'packages/**', 'package-lock.json', '.github/workflows/deploy.yml']
   workflow_dispatch:
 
 permissions:
@@ -38,14 +40,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Typecheck
-        run: npx tsc --noEmit
-      - name: Lint
-        run: npx expo lint
-      - name: Tests
-        run: npx jest --ci
+      - name: Typecheck, lint and tests
+        run: npx turbo run typecheck lint test --filter=ludo
       - name: Database rules
-        run: npm run test:online
+        run: npm run test:online --workspace ludo
 
   deploy:
     needs: check
@@ -58,7 +56,7 @@ jobs:
     steps:
       - name: Skip until EAS is set up
         if: env.EXPO_TOKEN == ''
-        run: echo "::notice::EXPO_TOKEN secret is not set, so nothing was deployed. See docs/DEPLOY.md."
+        run: echo "::notice::EXPO_TOKEN secret is not set, so nothing was deployed. See apps/ludo/docs/DEPLOY.md."
       - uses: actions/checkout@v7
         if: env.EXPO_TOKEN != ''
       - uses: actions/setup-node@v7
@@ -84,3 +82,4 @@ jobs:
           branch: ${{ env.TARGET }}
           environment: ${{ env.TARGET }}
           platform: android
+          working-directory: apps/ludo
