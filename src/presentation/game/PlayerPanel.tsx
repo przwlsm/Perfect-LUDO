@@ -12,7 +12,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { TURN_SECONDS, type DieValue } from '@/domain';
 import { AnimatedDice } from '../components/AnimatedDice';
-import { ui } from '../theme/themes';
+import { useUi } from '../theme/AppearanceProvider';
+import { liftByDay } from '../theme/surfaces';
 
 /**
  * One seat's corner of the table: the player's token and name beside a
@@ -62,6 +63,8 @@ export function PlayerPanel({
   onRoll(): void;
 }) {
   const { t } = useTranslation('game');
+  const ui = useUi();
+  const day = ui.scheme === 'light';
   const tile = height - 12;
   const token = Math.max(20, Math.round(height * 0.38));
   const nudge = useSharedValue(0);
@@ -131,10 +134,7 @@ export function PlayerPanel({
             style={{ flexDirection: 'row', gap: 2 }}
           >
             {Array.from({ length: lives.total }, (_, i) => (
-              <Text
-                key={i}
-                style={{ fontSize: 8, color: i < lives.left ? '#f43f5e' : '#ffffff30' }}
-              >
+              <Text key={i} style={{ fontSize: 8, color: i < lives.left ? '#f43f5e' : ui.border }}>
                 ♥
               </Text>
             ))}
@@ -151,10 +151,10 @@ export function PlayerPanel({
         borderRadius: 14,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: active ? `${color}26` : '#00000030',
+        backgroundColor: active ? `${color}26` : ui.fill,
         borderWidth: 1.5,
-        borderColor: active ? `${color}aa` : '#ffffff1f',
-        borderTopColor: active ? color : '#ffffff35',
+        borderColor: active ? `${color}aa` : ui.line,
+        borderTopColor: active ? color : ui.border,
       }}
     >
       <AnimatedDice
@@ -198,8 +198,10 @@ export function PlayerPanel({
         gap: 4,
         backgroundColor: surface,
         borderWidth: 2,
-        borderColor: active ? color : `${color}40`,
-        boxShadow: active ? `0 0 16px ${color}90` : '0 4px 10px #00000055',
+        // By day an idle seat is a white card lifted off the ivory page (the
+        // 60%); the active seat keeps its colour border and glow in both modes.
+        borderColor: active ? color : day ? ui.line : `${color}40`,
+        boxShadow: active ? `0 0 16px ${color}90` : day ? liftByDay(ui) : `0 4px 10px ${ui.shadow}`,
         opacity: lives?.out ? 0.45 : active ? 1 : 0.82,
         transform: [{ rotate: rotated ? '180deg' : '0deg' }],
       }}
@@ -215,7 +217,7 @@ export function PlayerPanel({
               bottom: 3,
               height: 3,
               borderRadius: 2,
-              backgroundColor: '#ffffff18',
+              backgroundColor: ui.fillStrong,
               overflow: 'hidden',
             }}
           >
@@ -237,12 +239,19 @@ export function PlayerPanel({
               paddingHorizontal: 6,
               paddingVertical: 1,
               borderRadius: 8,
-              backgroundColor: secondsLeft <= 5 ? ui.danger : '#0e1322',
+              // By day the clock is a navy pill (the 30%), red in the last seconds.
+              backgroundColor: secondsLeft <= 5 ? ui.danger : day ? ui.navy : ui.background,
               borderWidth: 1,
-              borderColor: secondsLeft <= 5 ? ui.danger : color,
+              borderColor: secondsLeft <= 5 ? ui.danger : day ? ui.navy : color,
             }}
           >
-            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>
+            <Text
+              style={{
+                color: day && secondsLeft > 5 ? ui.secondaryText : ui.onColor,
+                fontSize: 10,
+                fontWeight: '900',
+              }}
+            >
               {t('panel.secondsShort', { seconds: secondsLeft })}
             </Text>
           </View>

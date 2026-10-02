@@ -8,7 +8,8 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LanguageProvider } from '@/presentation/i18n/LanguageProvider';
 import { ConnectivityProvider } from '@/presentation/state/ConnectivityProvider';
-import { ProfileProvider } from '@/presentation/state/ProfileProvider';
+import { ProfileProvider, useProfile } from '@/presentation/state/ProfileProvider';
+import { AppearanceProvider, useAppearance } from '@/presentation/theme/AppearanceProvider';
 import { SocialProvider } from '@/presentation/state/SocialProvider';
 import { ChallengeBanner } from '@/presentation/social/ChallengeBanner';
 import { AppIntro } from '@/presentation/components/AppIntro';
@@ -41,48 +42,61 @@ function RootLayout() {
     rewardedAds.prepare();
   }, []);
   return (
-    // Language and its fonts first: nothing draws until both are ready, and a
-    // font that fails to load falls back rather than holding the splash.
-    <LanguageProvider>
-      {/* Pinch-to-zoom on the big round tables needs the gesture root above everything. */}
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaProvider>
-          {/* Lets every screen and dialog keep the field being typed in above the keyboard. */}
-          <KeyboardProvider>
-            <ConnectivityProvider>
-              <ProfileProvider>
-                <SocialProvider>
-                  <AppUpdateProvider>
-                    <StatusBar style="light" />
-                    {/* The banner sits above the navigator so a challenge reaches the
+    // Day/night and language first: nothing draws until both are known, so
+    // the first frame is already in the right colours, language and fonts.
+    <AppearanceProvider>
+      <LanguageProvider>
+        {/* Pinch-to-zoom on the big round tables needs the gesture root above everything. */}
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <SafeAreaProvider>
+            {/* Lets every screen and dialog keep the field being typed in above the keyboard. */}
+            <KeyboardProvider>
+              <ConnectivityProvider>
+                <ProfileProvider>
+                  <SocialProvider>
+                    <AppUpdateProvider>
+                      {/* The banner sits above the navigator so a challenge reaches the
                   player on any screen, including mid-game. */}
-                    <View style={{ flex: 1 }}>
-                      <Stack
-                        screenOptions={{
-                          headerShown: false,
-                          contentStyle: { backgroundColor: '#0e1322' },
-                        }}
-                      >
-                        {/* Bottom-bar screens swap instantly at the native level (the
-                        native replace animation can leave the new screen hidden on
-                        Android); Screen eases their content in from the tapped side. */}
-                        {TAB_ROUTES.map((name) => (
-                          <Stack.Screen key={name} name={name} options={{ animation: 'none' }} />
-                        ))}
-                      </Stack>
-                      <ChallengeBanner />
-                      {/* After the intro, so a blocking update screen is never hidden behind it. */}
-                      {!intro && <FirstRunWalkthrough />}
-                      {!intro && <AppUpdateGate />}
-                      {intro && <AppIntro onDone={endIntro} />}
-                    </View>
-                  </AppUpdateProvider>
-                </SocialProvider>
-              </ProfileProvider>
-            </ConnectivityProvider>
-          </KeyboardProvider>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-    </LanguageProvider>
+                      <View style={{ flex: 1 }}>
+                        <ThemedStack />
+                        <ChallengeBanner />
+                        {/* After the intro, so a blocking update screen is never hidden behind it. */}
+                        {!intro && <FirstRunWalkthrough />}
+                        {!intro && <AppUpdateGate />}
+                        {intro && <AppIntro onDone={endIntro} />}
+                      </View>
+                    </AppUpdateProvider>
+                  </SocialProvider>
+                </ProfileProvider>
+              </ConnectivityProvider>
+            </KeyboardProvider>
+          </SafeAreaProvider>
+        </GestureHandlerRootView>
+      </LanguageProvider>
+    </AppearanceProvider>
+  );
+}
+
+/** The navigator and status bar, in the current day/night colours. */
+function ThemedStack() {
+  const { theme } = useProfile();
+  const { scheme } = useAppearance();
+  return (
+    <>
+      <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: theme.background },
+        }}
+      >
+        {/* Bottom-bar screens swap instantly at the native level (the
+            native replace animation can leave the new screen hidden on
+            Android); Screen eases their content in from the tapped side. */}
+        {TAB_ROUTES.map((name) => (
+          <Stack.Screen key={name} name={name} options={{ animation: 'none' }} />
+        ))}
+      </Stack>
+    </>
   );
 }

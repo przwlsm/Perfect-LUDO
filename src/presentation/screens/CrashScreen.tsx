@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, useColorScheme } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import type { ErrorBoundaryProps } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -10,18 +10,25 @@ import { currentLanguage } from '../i18n';
 import { LANGUAGES } from '../i18n/languages';
 import { ScriptContext } from '../i18n/ScriptContext';
 import { familyForWeight } from '../theme/typography';
-import { ui } from '../theme/themes';
+import { PALETTES, type Palette, type Scheme } from '../theme/palette';
 
+/** Fixed gold, as in the classic theme: the same in day and night. */
 const ACCENT = '#ffb95f';
+/** The gold's darker rim, and the dark ink that reads on gold. */
+const ACCENT_RIM = '#7a4f17';
+const ON_ACCENT = '#2b1d0b';
 
 /**
  * Shown instead of the whole app when rendering fails. Rendered outside every
  * provider (they may be what failed), so it uses only plain components and
- * the static palette. The error is reported, and "Try again" re-mounts the app.
+ * the static palette for the phone's day/night setting (the saved appearance
+ * choice lives in a provider). The error is reported, and "Try again" re-mounts the app.
  */
 export function CrashScreen({ error, retry }: ErrorBoundaryProps) {
   const { t } = useTranslation('system');
   const [retrying, setRetrying] = useState(false);
+  const scheme: Scheme = useColorScheme() === 'light' ? 'light' : 'dark';
+  const s = STYLES[scheme];
   useEffect(() => {
     crashReporter.captureException(error);
   }, [error]);
@@ -67,44 +74,51 @@ export function CrashScreen({ error, retry }: ErrorBoundaryProps) {
   );
 }
 
-const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0e1322', padding: 24 },
-  body: {
-    flex: 1,
-    width: '100%',
-    maxWidth: 440,
-    alignSelf: 'center',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  badge: {
-    width: 88,
-    height: 92,
-    borderRadius: 26,
-    backgroundColor: ACCENT,
-    borderBottomWidth: 6,
-    borderBottomColor: '#7a4f17',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  badgeText: { fontSize: 54, color: '#29213a', lineHeight: 62 },
-  title: { color: ui.text, fontSize: 28, fontWeight: '800', textAlign: 'center', lineHeight: 34 },
-  text: { color: ui.muted, fontSize: 15, lineHeight: 22, textAlign: 'center' },
-  detail: { color: ui.danger, fontSize: 12, lineHeight: 18, textAlign: 'center' },
-  button: {
-    width: '100%',
-    maxWidth: 440,
-    alignSelf: 'center',
-    minHeight: 56,
-    borderRadius: 16,
-    backgroundColor: ACCENT,
-    borderBottomWidth: 4,
-    borderBottomColor: '#7a4f17',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pressed: { transform: [{ translateY: 3 }], borderBottomWidth: 1 },
-  buttonText: { color: '#2b1d0b', fontSize: 15, fontWeight: '800', letterSpacing: 0.9 },
-});
+function styles(ui: Palette) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: ui.background, padding: 24 },
+    body: {
+      flex: 1,
+      width: '100%',
+      maxWidth: 440,
+      alignSelf: 'center',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 16,
+    },
+    badge: {
+      width: 88,
+      height: 92,
+      borderRadius: 26,
+      backgroundColor: ACCENT,
+      borderBottomWidth: 6,
+      borderBottomColor: ACCENT_RIM,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 8,
+    },
+    badgeText: { fontSize: 54, color: '#29213a', lineHeight: 62 },
+    title: { color: ui.text, fontSize: 28, fontWeight: '800', textAlign: 'center', lineHeight: 34 },
+    text: { color: ui.muted, fontSize: 15, lineHeight: 22, textAlign: 'center' },
+    detail: { color: ui.danger, fontSize: 12, lineHeight: 18, textAlign: 'center' },
+    button: {
+      width: '100%',
+      maxWidth: 440,
+      alignSelf: 'center',
+      minHeight: 56,
+      borderRadius: 16,
+      backgroundColor: ACCENT,
+      borderBottomWidth: 4,
+      borderBottomColor: ACCENT_RIM,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    pressed: { transform: [{ translateY: 3 }], borderBottomWidth: 1 },
+    buttonText: { color: ON_ACCENT, fontSize: 15, fontWeight: '800', letterSpacing: 0.9 },
+  });
+}
+
+const STYLES: Record<Scheme, ReturnType<typeof styles>> = {
+  light: styles(PALETTES.light),
+  dark: styles(PALETTES.dark),
+};

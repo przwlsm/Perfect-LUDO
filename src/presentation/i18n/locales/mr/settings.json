@@ -8,6 +8,14 @@
     "systemHint": "सध्या {{language}}",
     "a11y": "{{name}}, {{englishName}}"
   },
+  "appearance": {
+    "label": "थीम",
+    "title": "दिवस की रात्र?",
+    "system": "फोनची सेटिंग",
+    "light": "दिवस",
+    "dark": "रात्र",
+    "a11y": "थीम: {{option}}"
+  },
   "name": {
     "label": "टेबलवर",
     "title": "आम्ही तुम्हाला काय म्हणावे?",

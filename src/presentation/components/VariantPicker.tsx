@@ -1,10 +1,10 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GAME_VARIANTS, type GameVariant } from '@/domain';
 import { Text } from './AppText';
 import { useProfile } from '../state/ProfileProvider';
 import { useCatalogText } from '../i18n/useCatalogText';
-import { ui } from '../theme/themes';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
 
 const ICONS: Record<GameVariant, keyof typeof Ionicons.glyphMap> = {
   classic: 'grid',
@@ -22,6 +22,8 @@ export function VariantPicker({
   onChange(variant: GameVariant): void;
 }) {
   const { theme } = useProfile();
+  const s = useStyles();
+  const ui = useUi();
   const { variantTitle, variantDescription } = useCatalogText();
   return (
     <View style={{ gap: 8 }}>
@@ -46,9 +48,9 @@ export function VariantPicker({
               <Ionicons
                 name={ICONS[variant]}
                 size={16}
-                color={selected ? theme.accent : ui.muted}
+                color={selected ? theme.accentText : ui.muted}
               />
-              <Text style={[s.chipText, selected && { color: theme.accent }]}>
+              <Text style={[s.chipText, selected && { color: theme.accentText }]}>
                 {variantTitle(variant)}
               </Text>
             </Pressable>
@@ -60,7 +62,7 @@ export function VariantPicker({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexBasis: '48%',
@@ -77,4 +79,4 @@ const s = StyleSheet.create({
   },
   chipText: { color: ui.text, fontWeight: '800', fontSize: 13 },
   hint: { color: ui.muted, fontSize: 12, lineHeight: 17 },
-});
+}));

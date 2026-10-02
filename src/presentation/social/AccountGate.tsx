@@ -1,10 +1,10 @@
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { router } from 'expo-router';
-import { Body, Button, Card, Label, Sheet, shared } from '../components/Kit';
+import { Body, Button, Card, Label, Sheet, useShared } from '../components/Kit';
 import { useProfile } from '../state/ProfileProvider';
-import { ui } from '../theme/themes';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
 
 /** Where a guest goes to become a member; they come back to online play after. */
 export const SIGN_UP_HREF = {
@@ -28,14 +28,26 @@ export function AccountGateCard({
 }) {
   const { theme } = useProfile();
   const { t } = useTranslation('account');
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
+  const night = ui.scheme === 'dark';
   return (
-    <Card style={{ borderColor: `${theme.accent}40` }}>
+    // By day: a white card (the 60%) whose lock sits on a navy tile (the 30%).
+    <Card style={{ borderColor: night ? `${theme.accent}40` : ui.line }}>
       <View style={shared.row}>
-        <View style={[s.lock, { backgroundColor: `${theme.accent}18` }]}>
+        <View
+          style={[
+            s.lock,
+            night
+              ? { backgroundColor: `${theme.accent}18` }
+              : { backgroundColor: ui.navy, borderColor: ui.navy },
+          ]}
+        >
           <Text style={{ fontSize: 24 }}>🔒</Text>
         </View>
         <View style={{ flex: 1, gap: 4 }}>
-          <Label color={theme.accent}>{t('gate.label')}</Label>
+          <Label color={theme.accentText}>{t('gate.label')}</Label>
           <Text style={shared.sectionTitle}>{t('gate.title', { feature })}</Text>
         </View>
       </View>
@@ -65,7 +77,7 @@ export function AccountGateSheet({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   lock: {
     width: 52,
     height: 52,
@@ -75,4 +87,4 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: ui.line,
   },
-});
+}));

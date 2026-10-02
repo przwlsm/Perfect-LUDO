@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import type { PresenceStatus } from '@/domain';
-import { shared } from '../components/Kit';
+import { useShared } from '../components/Kit';
 import { useProfile } from '../state/ProfileProvider';
-import { ui } from '../theme/themes';
+import { makeStyles } from '../theme/AppearanceProvider';
+import { liftByDay } from '../theme/surfaces';
 import { PresenceText } from './PresenceDot';
 import { UserAvatar } from './UserAvatar';
 
@@ -30,6 +31,8 @@ export function PlayerRow({
 }) {
   const { theme } = useProfile();
   const { t } = useTranslation('social');
+  const s = useStyles();
+  const shared = useShared();
   return (
     <View style={[s.row, { backgroundColor: theme.surface }]}>
       <UserAvatar id={id} name={name} emoji={emoji} presence={presence} />
@@ -55,7 +58,7 @@ export function PlayerRow({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -64,9 +67,11 @@ const s = StyleSheet.create({
     borderRadius: 17,
     borderWidth: 1,
     borderColor: ui.line,
+    // A white card lifted off the ivory page by day; night is unchanged.
+    boxShadow: liftByDay(ui),
   },
   name: { color: ui.text, fontSize: 15.5, fontWeight: '700' },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   id: { color: ui.subtle, fontSize: 10.5, fontWeight: '700', letterSpacing: 0.4 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-});
+}));

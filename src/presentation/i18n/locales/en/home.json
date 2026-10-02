@@ -193,5 +193,13 @@
     "loading": "Loading your ad…",
     "hangTight": "Hang tight — your reward lands right after.",
     "left": "{{left}} LEFT"
+  },
+  "guestAd": {
+    "title": "Free coins",
+    "reward": "+{{coins}} coins per ad",
+    "caption": "Watch a short ad. Coins wait in your vault until you sign in."
+  },
+  "mode": {
+    "needsInternet": "Needs internet"
   }
 }

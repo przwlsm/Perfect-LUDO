@@ -19,7 +19,8 @@ import {
   type MatchStats,
   type WalletSnapshot,
 } from '@/domain';
-import { getBoardTheme } from '../theme/themes';
+import { getBoardTheme, themeForScheme } from '../theme/themes';
+import { useAppearance } from '../theme/AppearanceProvider';
 import { i18n } from '../i18n';
 import { getCosmetic } from '@/domain/cosmetics/catalog';
 
@@ -382,6 +383,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 export function useProfile() {
   const value = useContext(ProfileContext);
   if (!value) throw new Error('ProfileProvider is required.');
+  const { scheme } = useAppearance();
   // A running ad trial dresses the whole app in the borrowed board.
   const trial =
     value.profile.trialBoard !== null &&
@@ -391,9 +393,12 @@ export function useProfile() {
       ? value.profile.trialBoard
       : null;
   const boardTheme = getBoardTheme(trial ?? value.profile.board);
-  const packTheme = value.profile.pack
-    ? getBoardTheme(getCosmetic(value.profile.pack).contents!.board)
-    : boardTheme;
+  const packTheme = themeForScheme(
+    value.profile.pack
+      ? getBoardTheme(getCosmetic(value.profile.pack).contents!.board)
+      : boardTheme,
+    scheme,
+  );
   return {
     ...value,
     boardTheme,
@@ -402,6 +407,7 @@ export function useProfile() {
       background: packTheme.background,
       surface: packTheme.surface,
       accent: packTheme.accent,
+      accentText: packTheme.accentText,
     },
   };
 }

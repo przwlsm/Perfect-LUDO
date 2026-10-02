@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Text } from '../components/AppText';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
@@ -13,7 +13,7 @@ import {
 } from '@/domain';
 import { useTranslation } from 'react-i18next';
 import { useCatalogText } from '../i18n/useCatalogText';
-import { Body, Button, Card, Label, Screen, shared, Sheet } from '../components/Kit';
+import { Body, Button, Card, Label, Screen, Sheet, useShared } from '../components/Kit';
 import { useLobby } from '../hooks/useLobby';
 import { useProfile } from '../state/ProfileProvider';
 import { useSocial } from '../state/SocialProvider';
@@ -21,8 +21,13 @@ import { UserAvatar } from '../social/UserAvatar';
 import { TeamSeats } from '../social/TeamSeats';
 import { LiveDot } from '../components/Live';
 import { shareInvite } from '../social/inviteLink';
-import { ui } from '../theme/themes';
+import { LinearGradient } from 'expo-linear-gradient';
+import { makeStyles, SchemeScope, useUi } from '../theme/AppearanceProvider';
+import { DARK, type Palette } from '../theme/palette';
+import { readableOn } from '../theme/color';
+import { liftByDay, MARIGOLD, NAVY_HERO } from '../theme/surfaces';
 import { numberLocale } from '../i18n/format';
+import { LudoSpinner } from '../components/LoaderArt';
 
 type SeatState = {
   /** online:lobby.seat.<label> */
@@ -32,7 +37,7 @@ type SeatState = {
   readonly muted: boolean;
 };
 
-function seatState(player: LobbyPlayer): SeatState {
+function seatState(player: LobbyPlayer, ui: Palette): SeatState {
   if (player.invitationStatus === 'EXPIRED') {
     return { label: 'noAnswer', color: ui.subtle, muted: true };
   }
@@ -56,7 +61,6 @@ export default function GameLobbyScreen() {
   const lobbyId = typeof params.id === 'string' ? params.id : null;
   const { theme } = useProfile();
   const { t } = useTranslation(['online', 'common']);
-  const { variantTitle, variantDescription } = useCatalogText();
   const { signedIn, identity, member } = useSocial();
   const lobby = useLobby(signedIn ? lobbyId : null);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -71,6 +75,9 @@ export default function GameLobbyScreen() {
       ? t('lobby.backToFriends')
       : t('backToOnline');
   const [copied, setCopied] = useState(false);
+  const ui = useUi();
+  const s = useStyles();
+  const shared = useShared();
 
   async function leaveAndExit() {
     if (await lobby.leave()) router.replace(home);
@@ -125,7 +132,7 @@ export default function GameLobbyScreen() {
   if (!snapshot) {
     return (
       <Screen nav={false} back title={t('lobby.title')}>
-        <ActivityIndicator color={theme.accent} style={{ marginVertical: 40 }} />
+        <LudoSpinner style={{ marginVertical: 40 }} />
       </Screen>
     );
   }
@@ -148,8 +155,16 @@ export default function GameLobbyScreen() {
     !seatTaken(3);
   const me = players.find((player) => player.userId === identity?.id) ?? null;
   const isHost = identity?.id === room.hostId;
-  const waitingFor = players.filter((player) => player.status === 'INVITED');
-  const colors = seatColors(room.maxPlayers);
+  const day = ui.scheme === 'light';
+  const roomCard = (
+    <RoomCard
+      room={room}
+      players={players}
+      lobby={lobby}
+      myId={identity?.id ?? null}
+      onNavy={day}
+    />
+  );
 
   return (
     <Screen
@@ -202,14 +217,14 @@ export default function GameLobbyScreen() {
       ) : (
         <>
           {link && room.inviteCode && room.status === 'WAITING' && (
-            <Card style={{ borderColor: `${theme.accent}60`, gap: 12 }}>
-              <Label color={theme.accent}>{t('lobby.invite.label')}</Label>
+            <Card style={{ borderColor: day ? ui.line : `${theme.accent}60`, gap: 12 }}>
+              <Label color={theme.accentText}>{t('lobby.invite.label')}</Label>
               <Text
                 accessibilityLabel={t('lobby.invite.codeA11y', {
                   code: room.inviteCode.split('').join(' '),
                 })}
                 selectable
-                style={[s.inviteCode, { color: theme.accent }]}
+                style={[s.inviteCode, { color: theme.accentText }]}
               >
                 {room.inviteCode}
               </Text>
@@ -238,144 +253,25 @@ export default function GameLobbyScreen() {
               </View>
             </Card>
           )}
-          <Card style={{ borderColor: `${theme.accent}40`, gap: 16 }}>
-            <View style={shared.between}>
-              <View style={{ gap: 5 }}>
-                <Label color={theme.accent}>
-                  {room.status === 'STARTED'
-                    ? t('lobby.state.started')
-                    : room.status === 'COUNTDOWN'
-                      ? t('lobby.state.countdown')
-                      : t('lobby.state.waiting')}
-                </Label>
-                <Text style={s.count}>{t('lobby.count', { joined, max: room.maxPlayers })}</Text>
-                {room.teams && (
-                  <Text style={{ color: ui.gem, fontWeight: '800', fontSize: 13 }}>
-                    {t('lobby.teamsNote')}
-                  </Text>
-                )}
-                {room.variant !== 'classic' && (
-                  <Text style={{ color: ui.blueSoft, fontWeight: '800', fontSize: 13 }}>
-                    {t('lobby.modeNote', {
-                      mode: variantTitle(room.variant),
-                      description: variantDescription(room.variant),
-                    })}
-                  </Text>
-                )}
-                {room.stake > 0 && (
-                  <Text style={{ color: ui.gold, fontWeight: '800', fontSize: 13 }}>
-                    {t('lobby.stakeNote', {
-                      stake: room.stake.toLocaleString(numberLocale()),
-                      prize: tablePrize(room.stake, room.maxPlayers).toLocaleString(numberLocale()),
-                    })}
-                  </Text>
-                )}
-              </View>
-              {room.status === 'COUNTDOWN' || room.status === 'STARTED' ? (
-                <View style={[s.countdown, { borderColor: theme.accent }]}>
-                  <Text
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    style={[s.countdownText, { color: theme.accent }]}
-                  >
-                    {room.status === 'STARTED' ? '▶' : lobby.countdown || t('lobby.go')}
-                  </Text>
-                </View>
-              ) : (
-                <ActivityIndicator color={theme.accent} />
-              )}
-            </View>
-
-            {teamRoom && (
-              <TeamSeats
-                players={players}
-                myId={identity?.id ?? null}
-                colors={colors}
-                palette={theme.colors}
-                canMove={room.status === 'WAITING' && !room.seeking && !lobby.busy}
-                onMove={(seat) => void lobby.moveSeat(seat)}
-              />
-            )}
-            {teamRoom && room.seeking && (
-              <View style={s.seeking}>
-                <LiveDot color={ui.green} active />
-                <Text style={{ color: ui.green, fontWeight: '800', flex: 1 }}>
-                  {t('lobby.seeking')}
-                </Text>
-                {isHost && (
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => void lobby.seekOpponents(false)}
-                    disabled={lobby.busy}
-                    style={{
-                      minWidth: 48,
-                      minHeight: 48,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Text style={{ color: ui.muted, fontWeight: '800' }}>{t('lobby.stop')}</Text>
-                  </Pressable>
-                )}
-              </View>
-            )}
-            {!teamRoom && (
-              <View style={{ gap: 10 }}>
-                {players.map((player) => {
-                  const state = seatState(player);
-                  const color = theme.colors[colors[player.seatIndex] ?? 'RED'];
-                  return (
-                    <View
-                      key={player.userId}
-                      style={[s.seat, { opacity: state.muted ? 0.62 : 1, borderLeftColor: color }]}
-                    >
-                      <UserAvatar
-                        id={player.userId}
-                        name={displayNameOf(player)}
-                        emoji={player.avatar}
-                        presence={player.presence}
-                        size={42}
-                      />
-                      <View style={{ flex: 1, gap: 4 }}>
-                        <View style={s.nameRow}>
-                          <Text style={s.name} numberOfLines={1}>
-                            {displayNameOf(player)}
-                          </Text>
-                          {player.isHost && (
-                            <View style={[s.hostTag, { borderColor: `${theme.accent}55` }]}>
-                              <Text style={[s.hostText, { color: theme.accent }]}>
-                                {t('lobby.host')}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                        <Text style={[s.status, { color: state.color }]}>
-                          {t(`lobby.seat.${state.label}`)}
-                        </Text>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-
-            <Text style={shared.small}>
-              {room.status === 'STARTED'
-                ? t('lobby.footer.opening')
-                : room.status === 'COUNTDOWN'
-                  ? t('lobby.footer.starting')
-                  : waitingFor.length > 0
-                    ? t('lobby.footer.waitingFor', {
-                        names: waitingFor.map(displayNameOf).join(t('lobby.nameJoiner')),
-                      })
-                    : t('lobby.footer.waitingReady')}
-            </Text>
-          </Card>
+          {day ? (
+            // The page's navy hero (the 30%): the table itself, in night tokens.
+            <LinearGradient
+              colors={NAVY_HERO}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={s.hero}
+            >
+              <SchemeScope scheme="dark">{roomCard}</SchemeScope>
+            </LinearGradient>
+          ) : (
+            <Card style={{ borderColor: `${theme.accent}40`, gap: 16 }}>{roomCard}</Card>
+          )}
 
           <CountdownBanner
             visible={room.status === 'COUNTDOWN'}
             seconds={lobby.countdown}
             accent={theme.accent}
+            accentText={theme.accentText}
           />
 
           {canSeek && (
@@ -436,24 +332,212 @@ export default function GameLobbyScreen() {
   );
 }
 
+/**
+ * The table: who is seated and what is being played. By day it is drawn
+ * inside the navy hero under `SchemeScope scheme="dark"`, so its hooks read
+ * the night tokens.
+ */
+function RoomCard({
+  room,
+  players,
+  lobby,
+  myId,
+  onNavy,
+}: {
+  room: NonNullable<ReturnType<typeof useLobby>['snapshot']>['lobby'];
+  players: readonly LobbyPlayer[];
+  lobby: ReturnType<typeof useLobby>;
+  myId: string | null;
+  /** Drawn on the day navy hero, whose royal-blue corner is lighter than the night card. */
+  onNavy: boolean;
+}) {
+  const { theme } = useProfile();
+  const { t } = useTranslation(['online', 'common']);
+  const { variantTitle, variantDescription } = useCatalogText();
+  const ui = useUi();
+  const s = useStyles();
+  const shared = useShared();
+  const joined = countJoined(players);
+  const teamRoom = room.teams && room.maxPlayers === 4;
+  const isHost = myId === room.hostId;
+  const waitingFor = players.filter((player) => player.status === 'INVITED');
+  const colors = seatColors(room.maxPlayers);
+  // The notes' accent colours, kept at 4.5:1 across the whole navy gradient by day.
+  const note = (color: string) => (onNavy ? readableOn(color, NAVY_HERO) : color);
+  return (
+    <>
+      <View style={shared.between}>
+        <View style={{ gap: 5 }}>
+          <Label color={theme.accentText}>
+            {room.status === 'STARTED'
+              ? t('lobby.state.started')
+              : room.status === 'COUNTDOWN'
+                ? t('lobby.state.countdown')
+                : t('lobby.state.waiting')}
+          </Label>
+          <Text style={s.count}>{t('lobby.count', { joined, max: room.maxPlayers })}</Text>
+          {room.teams && (
+            <Text style={{ color: note(ui.gem), fontWeight: '800', fontSize: 13 }}>
+              {t('lobby.teamsNote')}
+            </Text>
+          )}
+          {room.variant !== 'classic' && (
+            <Text style={{ color: note(ui.blueSoft), fontWeight: '800', fontSize: 13 }}>
+              {t('lobby.modeNote', {
+                mode: variantTitle(room.variant),
+                description: variantDescription(room.variant),
+              })}
+            </Text>
+          )}
+          {room.stake > 0 && (
+            <Text style={{ color: note(ui.gold), fontWeight: '800', fontSize: 13 }}>
+              {t('lobby.stakeNote', {
+                stake: room.stake.toLocaleString(numberLocale()),
+                prize: tablePrize(room.stake, room.maxPlayers).toLocaleString(numberLocale()),
+              })}
+            </Text>
+          )}
+        </View>
+        {room.status === 'COUNTDOWN' || room.status === 'STARTED' ? (
+          <View style={[s.countdown, { borderColor: theme.accent }]}>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              style={[s.countdownText, { color: theme.accentText }]}
+            >
+              {room.status === 'STARTED' ? '▶' : lobby.countdown || t('lobby.go')}
+            </Text>
+          </View>
+        ) : (
+          <LudoSpinner />
+        )}
+      </View>
+
+      {teamRoom && (
+        <TeamSeats
+          players={players}
+          myId={myId}
+          colors={colors}
+          palette={theme.colors}
+          canMove={room.status === 'WAITING' && !room.seeking && !lobby.busy}
+          onMove={(seat) => void lobby.moveSeat(seat)}
+        />
+      )}
+      {teamRoom && room.seeking && (
+        <View style={s.seeking}>
+          <LiveDot color={ui.green} active />
+          <Text style={{ color: ui.green, fontWeight: '800', flex: 1 }}>{t('lobby.seeking')}</Text>
+          {isHost && (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void lobby.seekOpponents(false)}
+              disabled={lobby.busy}
+              style={{
+                minWidth: 48,
+                minHeight: 48,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ color: ui.muted, fontWeight: '800' }}>{t('lobby.stop')}</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+      {!teamRoom && (
+        <View style={{ gap: 10 }}>
+          {players.map((player) => {
+            const state = seatState(player, ui);
+            const color = theme.colors[colors[player.seatIndex] ?? 'RED'];
+            return (
+              <View
+                key={player.userId}
+                style={[s.seat, { opacity: state.muted ? 0.62 : 1, borderLeftColor: color }]}
+              >
+                <UserAvatar
+                  id={player.userId}
+                  name={displayNameOf(player)}
+                  emoji={player.avatar}
+                  presence={player.presence}
+                  size={42}
+                />
+                <View style={{ flex: 1, gap: 4 }}>
+                  <View style={s.nameRow}>
+                    <Text style={s.name} numberOfLines={1}>
+                      {displayNameOf(player)}
+                    </Text>
+                    {player.isHost && (
+                      <View style={[s.hostTag, { borderColor: `${theme.accent}55` }]}>
+                        <Text style={[s.hostText, { color: theme.accentText }]}>
+                          {t('lobby.host')}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[s.status, { color: state.color }]}>
+                    {t(`lobby.seat.${state.label}`)}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      <Text style={shared.small}>
+        {room.status === 'STARTED'
+          ? t('lobby.footer.opening')
+          : room.status === 'COUNTDOWN'
+            ? t('lobby.footer.starting')
+            : waitingFor.length > 0
+              ? t('lobby.footer.waitingFor', {
+                  names: waitingFor.map(displayNameOf).join(t('lobby.nameJoiner')),
+                })
+              : t('lobby.footer.waitingReady')}
+      </Text>
+    </>
+  );
+}
+
 function CountdownBanner({
   visible,
   seconds,
   accent,
+  accentText,
 }: {
   visible: boolean;
   seconds: number;
   accent: string;
+  /** The accent as readable text on the page. */
+  accentText: string;
 }) {
   const { t } = useTranslation('online');
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
+  const day = ui.scheme === 'light';
   if (!visible) return null;
   return (
     <View
       accessibilityLiveRegion="polite"
       accessibilityLabel={t('lobby.banner.a11y', { seconds })}
-      style={[s.banner, { borderColor: `${accent}55`, backgroundColor: `${accent}12` }]}
+      style={[
+        s.banner,
+        day ? s.bannerDay : { borderColor: `${accent}55`, backgroundColor: `${accent}12` },
+      ]}
     >
-      <Text style={[s.bannerNumber, { color: accent }]}>{seconds || t('lobby.go')}</Text>
+      {/* By day the countdown is the page's one marigold card, with navy text. */}
+      {day && (
+        <LinearGradient
+          colors={MARIGOLD}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.fill}
+        />
+      )}
+      <Text style={[s.bannerNumber, { color: day ? ui.text : accentText }]}>
+        {seconds || t('lobby.go')}
+      </Text>
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={s.bannerTitle}>{t('lobby.banner.title')}</Text>
         <Text style={shared.small}>{t('lobby.banner.body')}</Text>
@@ -462,7 +546,21 @@ function CountdownBanner({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
+  hero: {
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: DARK.border,
+    gap: 16,
+    boxShadow: liftByDay(ui),
+  },
+  fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  bannerDay: {
+    borderColor: `${ui.gold}55`,
+    overflow: 'hidden',
+    boxShadow: liftByDay(ui),
+  },
   inviteCode: { fontSize: 40, fontWeight: '900', letterSpacing: 8, textAlign: 'center' },
   count: { color: ui.text, fontSize: 23, fontWeight: '900', letterSpacing: -0.5 },
   countdown: {
@@ -493,7 +591,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: ui.line,
     borderLeftWidth: 4,
-    backgroundColor: '#00000020',
+    backgroundColor: ui.scheme === 'dark' ? '#00000020' : ui.fill,
   },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   name: { color: ui.text, fontSize: 15.5, fontWeight: '700', flexShrink: 1 },
@@ -510,4 +608,4 @@ const s = StyleSheet.create({
   },
   bannerNumber: { fontSize: 40, fontWeight: '900', minWidth: 46, textAlign: 'center' },
   bannerTitle: { color: ui.text, fontSize: 17, fontWeight: '800' },
-});
+}));

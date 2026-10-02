@@ -1,4 +1,4 @@
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import {
@@ -7,9 +7,9 @@ import {
   type FriendRequest,
   type UserSearchResult,
 } from '@/domain';
-import { Body, Button, Card, shared } from '../components/Kit';
-import { useProfile } from '../state/ProfileProvider';
+import { Body, Button, Card, useShared } from '../components/Kit';
 import { PlayerRow } from './PlayerRow';
+import { LudoSpinner } from '../components/LoaderArt';
 
 /**
  * The server tells us how the caller already relates to each hit, so the row
@@ -34,6 +34,7 @@ function Action({
   onChallenge(id: string): void;
 }) {
   const { t } = useTranslation('social');
+  const shared = useShared();
   switch (relationship) {
     case 'SELF':
       return <Text style={shared.small}>{t('search.self')}</Text>;
@@ -81,10 +82,9 @@ export function SearchResultList({
   onAccept(requestId: string): void;
   onChallenge(id: string): void;
 }) {
-  const { theme } = useProfile();
   const { t } = useTranslation('social');
   if (searching && results.length === 0) {
-    return <ActivityIndicator color={theme.accent} style={{ marginVertical: 30 }} />;
+    return <LudoSpinner style={{ marginVertical: 30 }} />;
   }
   if (results.length === 0) {
     return (

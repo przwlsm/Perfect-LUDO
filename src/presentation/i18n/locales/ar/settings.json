@@ -8,6 +8,14 @@
     "systemHint": "حاليًا {{language}}",
     "a11y": "{{name}}، {{englishName}}"
   },
+  "appearance": {
+    "label": "المظهر",
+    "title": "نهار أم ليل؟",
+    "system": "إعداد الهاتف",
+    "light": "نهار",
+    "dark": "ليل",
+    "a11y": "المظهر: {{option}}"
+  },
   "name": {
     "label": "على الطاولة",
     "title": "بماذا نناديك؟",

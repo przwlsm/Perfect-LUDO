@@ -8,6 +8,14 @@
     "systemHint": "હાલમાં {{language}}",
     "a11y": "{{name}}, {{englishName}}"
   },
+  "appearance": {
+    "label": "થીમ",
+    "title": "દિવસ કે રાત?",
+    "system": "ફોનનું સેટિંગ",
+    "light": "દિવસ",
+    "dark": "રાત",
+    "a11y": "થીમ: {{option}}"
+  },
   "name": {
     "label": "ટેબલ પર",
     "title": "અમે તમને શું કહીને બોલાવીએ?",

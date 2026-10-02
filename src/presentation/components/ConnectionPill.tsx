@@ -3,18 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { Text } from './AppText';
 import { describeConnection } from '@/domain';
 import { useConnectivity } from '../state/ConnectivityProvider';
-import { ui } from '../theme/themes';
-
-const TONE = { good: ui.green, warn: ui.gold, bad: ui.danger } as const;
+import { useUi } from '../theme/AppearanceProvider';
 
 /** The 🟢 / 🟡 / 🔴 status the spec asks for, in the app's own colours. */
 export function ConnectionPill({ large = false }: { large?: boolean }) {
   const { available, state } = useConnectivity();
   const { t } = useTranslation();
+  const ui = useUi();
   const shown = available
     ? { label: t(`connection.${state}`), tone: describeConnection(state).tone }
     : { label: t('connection.offlineBuild'), tone: 'bad' as const };
-  const color = TONE[shown.tone];
+  const color = { good: ui.green, warn: ui.gold, bad: ui.danger }[shown.tone];
   return (
     <View
       accessibilityRole="text"

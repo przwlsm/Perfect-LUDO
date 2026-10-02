@@ -1,0 +1,86 @@
+# Continuous deployment with EAS.
+#
+# Every push is checked first (types, lint, tests, database rules). Then:
+#   * JavaScript-only changes ship as an over-the-air update: players get an
+#     "Update ready" popup the next time they open the game.
+#   * Changes that touch native code (a new library, app.json, SDK upgrade)
+#     change the build's fingerprint and cannot ship over the air, so a new
+#     EAS build is started instead, for the store.
+#
+# Branches:
+#   main          -> profile/channel "production" (store players)
+#   app-dev*      -> profile/channel "preview" (internal testers)
+#
+# Setup (once): docs/DEPLOY.md. Until the EXPO_TOKEN secret exists, the
+# checks still run and the deploy step is skipped with a notice.
+name: Deploy
+
+on:
+  push:
+    branches: [main, 'app-dev*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npx expo lint
+      - name: Tests
+        run: npx jest --ci
+      - name: Database rules
+        run: npm run test:online
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # main is the store; every other deploy branch is internal testing.
+      TARGET: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+    steps:
+      - name: Skip until EAS is set up
+        if: env.EXPO_TOKEN == ''
+        run: echo "::notice::EXPO_TOKEN secret is not set, so nothing was deployed. See docs/DEPLOY.md."
+      - uses: actions/checkout@v7
+        if: env.EXPO_TOKEN != ''
+      - uses: actions/setup-node@v7
+        if: env.EXPO_TOKEN != ''
+        with:
+          node-version: 22
+          cache: npm
+      - if: env.EXPO_TOKEN != ''
+        run: npm ci
+      - uses: expo/expo-github-action@v9
+        if: env.EXPO_TOKEN != ''
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      # Publishes an update when a build with the same native fingerprint
+      # exists; otherwise starts that build first. iOS is added once the app
+      # has an Apple developer account (platform: all).
+      - name: Deploy
+        if: env.EXPO_TOKEN != ''
+        uses: expo/expo-github-action/continuous-deploy-fingerprint@v9
+        with:
+          profile: ${{ env.TARGET }}
+          branch: ${{ env.TARGET }}
+          environment: ${{ env.TARGET }}
+          platform: android

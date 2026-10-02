@@ -12,9 +12,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SPIN_SLOTS } from '@/domain';
 import { Text } from './AppText';
 import { CoinIcon, GemIcon } from './Currency';
-import { ui } from '../theme/themes';
+import { useUi } from '../theme/AppearanceProvider';
+import { DARK } from '../theme/palette';
+import { liftByDay } from '../theme/surfaces';
 
+/**
+ * The wheel itself (disc, slots and their labels) is game art, the same in
+ * both modes; only its rim, glow and pointer follow the appearance.
+ */
 const SLOT_COLORS = ['#232d4b', '#2f2a4a'];
+const DISC = ['#3b2f63', '#1a1f2f'] as const;
 
 /**
  * The lucky wheel: the prizes sit round a ring under a fixed pointer at the
@@ -38,6 +45,8 @@ export function LuckyWheel({
   onLanded(): void;
 }) {
   const { t } = useTranslation('rewards');
+  const ui = useUi();
+  const night = ui.scheme === 'dark';
   const rotation = useSharedValue(0);
   const count = SPIN_SLOTS.length;
   const step = 360 / count;
@@ -70,15 +79,17 @@ export function LuckyWheel({
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <LinearGradient
-        colors={['#3b2f63', '#1a1f2f']}
+        colors={DISC}
         style={{
           position: 'absolute',
           width: size,
           height: size,
           borderRadius: size / 2,
           borderWidth: 6,
-          borderColor: ui.gold,
-          boxShadow: `0 0 28px ${ui.gold}55`,
+          // By day the rim is the bright marigold of the game art (the 10%)
+          // over a soft navy lift; the deep gold text token would read brown.
+          borderColor: night ? ui.gold : DARK.gold,
+          boxShadow: night ? `0 0 28px ${ui.gold}55` : `0 0 22px ${DARK.gold}66, ${liftByDay(ui)}`,
         }}
       />
       <Animated.View style={[{ position: 'absolute', width: size, height: size }, ring]}>
@@ -110,11 +121,11 @@ export function LuckyWheel({
               ) : slot.kind === 'gems' ? (
                 <GemIcon size={tile * 0.4} />
               ) : (
-                <Text style={{ fontSize: tile * 0.26, color: ui.green, fontWeight: '900' }}>
+                <Text style={{ fontSize: tile * 0.26, color: DARK.green, fontWeight: '900' }}>
                   XP
                 </Text>
               )}
-              <Text style={{ color: ui.text, fontWeight: '800', fontSize: tile * 0.2 }}>
+              <Text style={{ color: DARK.text, fontWeight: '800', fontSize: tile * 0.2 }}>
                 {slot.amount >= 1000 ? `${slot.amount / 1000}K` : slot.amount}
               </Text>
             </View>

@@ -3,7 +3,7 @@ import type { PlayerColor } from '@/domain';
 /** Single source of truth for each color's on-screen hex value. */
 export const PLAYER_COLOR_HEX: Record<PlayerColor, string> = {
   PURPLE: '#a77bea',
-  ORANGE: '#ee9147',
+  ORANGE: '#f26b1d',
   PINK: '#f472b6',
   CYAN: '#22d3ee',
   RED: '#ef4444',

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -10,7 +10,8 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
-import { ui } from '../theme/themes';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
+import { liftByDay } from '../theme/surfaces';
 
 const MAX_ZOOM = 2.6;
 const TAP_ZOOM = 1.8;
@@ -21,11 +22,29 @@ const TAP_ZOOM = 1.8;
  * board, and the corner badge zooms in or resets with a tap. Coins keep
  * their own tap targets inside; only a real drag is taken by the pan.
  *
+ * The board is a square sized by the short side, but the zoom window is the
+ * whole table area (`viewport`): at 1x the board sits centred as before, and
+ * zoomed in it spreads into the full height of the screen rather than staying
+ * clipped to its square. Pinching works anywhere in that area.
+ *
  * Shared values are read and written through get/set (never `.value =`),
  * which is the form the React Compiler accepts inside these closures.
  */
-export function ZoomableBoard({ size, children }: { size: number; children: ReactNode }) {
+export function ZoomableBoard({
+  size,
+  viewport,
+  children,
+}: {
+  size: number;
+  /** The space the zoomed board may fill; the board's own square when absent. */
+  viewport?: { width: number; height: number };
+  children: ReactNode;
+}) {
+  const width = Math.max(size, viewport?.width ?? size);
+  const height = Math.max(size, viewport?.height ?? size);
   const { t } = useTranslation('game');
+  const s = useStyles();
+  const ui = useUi();
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const tx = useSharedValue(0);
@@ -41,10 +60,11 @@ export function ZoomableBoard({ size, children }: { size: number; children: Reac
     .onUpdate((e) => {
       const next = Math.min(MAX_ZOOM, Math.max(1, savedScale.get() * e.scale));
       scale.set(next);
-      // Never show the space beyond the board's edge.
-      const limit = (size * (next - 1)) / 2;
-      tx.set(Math.min(limit, Math.max(-limit, tx.get())));
-      ty.set(Math.min(limit, Math.max(-limit, ty.get())));
+      // Never pan past the board's edge, on either axis of the window.
+      const limitX = Math.max(0, (size * next - width) / 2);
+      const limitY = Math.max(0, (size * next - height) / 2);
+      tx.set(Math.min(limitX, Math.max(-limitX, tx.get())));
+      ty.set(Math.min(limitY, Math.max(-limitY, ty.get())));
     })
     .onEnd(() => {
       runOnJS(setZoomed)(scale.get() > 1.02);
@@ -58,9 +78,10 @@ export function ZoomableBoard({ size, children }: { size: number; children: Reac
       savedTy.set(ty.get());
     })
     .onUpdate((e) => {
-      const limit = (size * (scale.get() - 1)) / 2;
-      tx.set(Math.min(limit, Math.max(-limit, savedTx.get() + e.translationX)));
-      ty.set(Math.min(limit, Math.max(-limit, savedTy.get() + e.translationY)));
+      const limitX = Math.max(0, (size * scale.get() - width) / 2);
+      const limitY = Math.max(0, (size * scale.get() - height) / 2);
+      tx.set(Math.min(limitX, Math.max(-limitX, savedTx.get() + e.translationX)));
+      ty.set(Math.min(limitY, Math.max(-limitY, savedTy.get() + e.translationY)));
     });
 
   const gesture = Gesture.Simultaneous(pinch, pan);
@@ -82,17 +103,20 @@ export function ZoomableBoard({ size, children }: { size: number; children: Reac
   }
 
   return (
-    <View style={{ width: size, height: size, overflow: 'hidden' }}>
+    <View style={{ width, height, overflow: 'hidden' }}>
       <GestureDetector gesture={gesture}>
-        <Animated.View style={[{ width: size, height: size }, boardStyle]}>
-          {children}
-        </Animated.View>
+        {/* The whole window takes the gesture; the board sits in its centre. */}
+        <View style={{ width, height, alignItems: 'center', justifyContent: 'center' }}>
+          <Animated.View style={[{ width: size, height: size }, boardStyle]}>
+            {children}
+          </Animated.View>
+        </View>
       </GestureDetector>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={zoomed ? t('zoom.resetA11y') : t('zoom.zoomA11y')}
         onPress={toggle}
-        android_ripple={{ color: '#ffffff20' }}
+        android_ripple={{ color: ui.ripple }}
         // A slim overlay so the board stays visible; the slop lifts its touch area to 48 high.
         hitSlop={{ top: 9, bottom: 9 }}
         style={s.badge}
@@ -104,7 +128,7 @@ export function ZoomableBoard({ size, children }: { size: number; children: Reac
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   badge: {
     position: 'absolute',
     top: 6,
@@ -115,9 +139,10 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: '#0e1322cc',
+    backgroundColor: `${ui.background}cc`,
     borderWidth: 1,
-    borderColor: '#ffffff22',
+    borderColor: ui.border,
+    boxShadow: liftByDay(ui),
   },
   badgeText: { color: ui.text, fontSize: 11, fontWeight: '800' },
-});
+}));

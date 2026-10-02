@@ -1,9 +1,9 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { displayNameOf, type LobbyPlayer, type PlayerColor } from '@/domain';
 import { Text } from '../components/AppText';
 import { UserAvatar } from './UserAvatar';
-import { ui } from '../theme/themes';
+import { makeStyles } from '../theme/AppearanceProvider';
 
 /** Text: online:teamSeats.<id>. */
 const TEAMS: readonly { id: 'redYellow' | 'greenBlue'; seats: readonly [number, number] }[] = [
@@ -32,6 +32,7 @@ export function TeamSeats({
   onMove(seat: number): void;
 }) {
   const { t } = useTranslation('online');
+  const s = useStyles();
   const bySeat = (seat: number) =>
     players.find((p) => p.seatIndex === seat && p.status === 'JOINED') ?? null;
   const mine = players.find((p) => p.userId === myId && p.status === 'JOINED')?.seatIndex;
@@ -90,7 +91,7 @@ export function TeamSeats({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   wrap: { flexDirection: 'row', gap: 10 },
   team: {
     flex: 1,
@@ -99,7 +100,7 @@ const s = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: ui.line,
-    backgroundColor: '#ffffff06',
+    backgroundColor: ui.fill,
   },
   myTeam: { borderColor: `${ui.gem}88`, backgroundColor: `${ui.gem}10` },
   teamLabel: { color: ui.gem, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
@@ -127,4 +128,4 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   sitText: { color: ui.gem, fontWeight: '800', fontSize: 12 },
-});
+}));

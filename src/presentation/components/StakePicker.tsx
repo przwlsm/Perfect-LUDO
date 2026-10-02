@@ -1,11 +1,11 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { levelInfo, STAKES, stakeMinLevel, tablePrize, type Stake } from '@/domain';
 import { Text } from './AppText';
 import { CoinIcon } from './Currency';
 import { formatCount } from './Kit';
 import { useProfile } from '../state/ProfileProvider';
-import { ui } from '../theme/themes';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
 
 /**
  * Entry stake chips for an online table, with what the winner takes.
@@ -26,6 +26,8 @@ export function StakePicker({
 }) {
   const { theme, member, wallet, profile } = useProfile();
   const { t } = useTranslation('home');
+  const s = useStyles();
+  const ui = useUi();
   const level = levelInfo(profile.xp).level;
   const canPay = (stake: Stake) =>
     stake === 0 ||
@@ -57,7 +59,10 @@ export function StakePicker({
               style={[
                 s.chip,
                 { backgroundColor: theme.surface },
-                selected && { borderColor: ui.gold, backgroundColor: '#2a2210' },
+                selected && {
+                  borderColor: ui.gold,
+                  backgroundColor: ui.scheme === 'dark' ? '#2a2210' : `${ui.gold}18`,
+                },
                 !allowed && { opacity: 0.4 },
               ]}
             >
@@ -92,7 +97,7 @@ export function StakePicker({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexGrow: 1,
@@ -108,4 +113,4 @@ const s = StyleSheet.create({
   chipText: { color: ui.text, fontWeight: '900', fontSize: 14 },
   gate: { color: ui.subtle, fontSize: 9, fontWeight: '800' },
   hint: { color: ui.muted, fontSize: 12, lineHeight: 17 },
-});
+}));

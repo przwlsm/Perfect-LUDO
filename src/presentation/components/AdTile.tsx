@@ -1,15 +1,29 @@
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Text } from './AppText';
 import { CoinIcon, GemIcon } from './Currency';
-import { ui } from '../theme/themes';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
+import { DARK } from '../theme/palette';
+import { liftByDay } from '../theme/surfaces';
+import { useProfile } from '../state/ProfileProvider';
+import { LudoSpinner } from './LoaderArt';
+
+/** The play badge is bright gold in both modes, like the accent buttons. */
+const GOLD_FILL = DARK.gold;
+/** The play icon and the badge's rim, part of the gold badge. */
+const ON_GOLD = '#3b2400';
+const GOLD_RIM = '#b77739';
+/** The warm night card, as before. */
+const WARM_NIGHT = ['#3a2d10', '#241d10'] as const;
 
 /**
- * The one look every "watch an ad" offer wears: a gold play badge on a warm
- * gradient, the reward spelled out, and the whole tile tappable. While the
- * ad loads, the badge becomes a spinner so the tap always visibly lands.
+ * The one look every "watch an ad" offer wears: a gold play badge, the reward
+ * spelled out, and the whole tile tappable. By night it sits on a warm
+ * gradient; by day it is a white card lifted off the page, with the bright
+ * gold badge as its one pop (60-30-10). While the ad loads, the badge becomes
+ * a spinner so the tap always visibly lands.
  */
 export function AdTile({
   title,
@@ -37,6 +51,10 @@ export function AdTile({
   onPress(): void;
 }) {
   const { t } = useTranslation('home');
+  const s = useStyles();
+  const ui = useUi();
+  const { theme } = useProfile();
+  const night = ui.scheme === 'dark';
   const off = disabled && !busy;
   return (
     <Pressable
@@ -53,19 +71,19 @@ export function AdTile({
       ]}
     >
       <LinearGradient
-        colors={['#3a2d10', '#241d10']}
+        colors={night ? WARM_NIGHT : [theme.surface, theme.surface]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[s.inner, compact && { padding: 12, gap: 12 }]}
       >
         <View style={[s.play, compact && { width: 44, height: 44, borderRadius: 22 }]}>
           {busy ? (
-            <ActivityIndicator color="#3b2400" />
+            <LudoSpinner size={22} />
           ) : (
             <Ionicons
               name="play"
               size={compact ? 20 : 26}
-              color="#3b2400"
+              color={ON_GOLD}
               style={{ marginLeft: 3 }}
             />
           )}
@@ -100,12 +118,13 @@ export function AdTile({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   tile: {
     borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: `${ui.gold}55`,
+    borderColor: ui.scheme === 'dark' ? `${ui.gold}55` : ui.line,
+    boxShadow: liftByDay(ui),
   },
   inner: {
     flexDirection: 'row',
@@ -117,17 +136,17 @@ const s = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: ui.gold,
+    backgroundColor: GOLD_FILL,
     alignItems: 'center',
     justifyContent: 'center',
     borderBottomWidth: 3,
-    borderBottomColor: '#b77739',
+    borderBottomColor: GOLD_RIM,
   },
   title: { color: ui.text, fontWeight: '900', fontSize: 17 },
   rewardRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   reward: { color: ui.gold, fontWeight: '900', fontSize: 15 },
   caption: { color: ui.subtle, fontSize: 12, lineHeight: 16 },
   dots: { flexDirection: 'row', gap: 5 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#ffffff22' },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: ui.border },
   dotsText: { color: ui.subtle, fontSize: 10, fontWeight: '800' },
-});
+}));

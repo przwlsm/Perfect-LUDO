@@ -1,12 +1,12 @@
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text, TextInput } from '../components/AppText';
 import { router } from 'expo-router';
 import { FEEDBACK_CATEGORIES, FEEDBACK_MESSAGE_MAX } from '@/domain';
-import { Body, Button, Card, Label, Screen, shared } from '../components/Kit';
+import { Body, Button, Card, Label, Screen, useShared } from '../components/Kit';
 import { feedbackMailto, useFeedback } from '../hooks/useFeedback';
 import { useProfile } from '../state/ProfileProvider';
-import { ui } from '../theme/themes';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
 
 /** Replace with an inbox your team actually reads before shipping. */
 export const FEEDBACK_SUPPORT_EMAIL = 'support@ludoclub.app';
@@ -15,6 +15,9 @@ export default function FeedbackScreen() {
   const { theme } = useProfile();
   const { t } = useTranslation(['account', 'common']);
   const feedback = useFeedback();
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
   const { draft } = feedback;
 
   const emailFallback = () => {
@@ -25,7 +28,7 @@ export default function FeedbackScreen() {
     <Screen title={t('feedback.title')} subtitle={t('feedback.subtitle')} back nav={false}>
       <Body>{t('feedback.intro')}</Body>
       <Card>
-        <Label color={theme.accent}>{t('feedback.topicLabel')}</Label>
+        <Label color={theme.accentText}>{t('feedback.topicLabel')}</Label>
         <View style={s.tabs}>
           {FEEDBACK_CATEGORIES.map((id) => (
             <Pressable
@@ -115,7 +118,7 @@ export default function FeedbackScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   tabs: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   tab: {
     minHeight: 48,
@@ -123,15 +126,15 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,
-    backgroundColor: '#ffffff12',
+    backgroundColor: ui.fillStrong,
   },
   tabText: { fontSize: 13, fontWeight: '800', color: ui.text },
   textarea: {
     minHeight: 120,
     borderWidth: 1,
-    borderColor: '#ffffff28',
+    borderColor: ui.border,
     borderRadius: 12,
-    backgroundColor: '#00000020',
+    backgroundColor: ui.inset,
     color: ui.text,
     fontSize: 15,
     padding: 14,
@@ -140,11 +143,11 @@ const s = StyleSheet.create({
   input: {
     minHeight: 50,
     borderWidth: 1,
-    borderColor: '#ffffff28',
+    borderColor: ui.border,
     borderRadius: 12,
-    backgroundColor: '#00000020',
+    backgroundColor: ui.inset,
     color: ui.text,
     fontSize: 15,
     paddingHorizontal: 14,
   },
-});
+}));

@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { router } from 'expo-router';
-import { Body, Button, Card, Screen, shared } from '../components/Kit';
+import { Body, Button, Card, Screen, useShared } from '../components/Kit';
 import { AuthField } from '../auth/AuthField';
 import { useAuthSession } from '../state/useAuthSession';
 
 export default function ResetPasswordScreen() {
   const { t } = useTranslation('account');
   const auth = useAuthSession();
+  const shared = useShared();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [done, setDone] = useState(false);

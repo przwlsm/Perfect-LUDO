@@ -8,6 +8,14 @@
     "systemHint": "ಸದ್ಯ {{language}}",
     "a11y": "{{name}}, {{englishName}}"
   },
+  "appearance": {
+    "label": "ಥೀಮ್",
+    "title": "ಹಗಲೋ ರಾತ್ರಿಯೋ?",
+    "system": "ಫೋನ್ ಸೆಟ್ಟಿಂಗ್",
+    "light": "ಹಗಲು",
+    "dark": "ರಾತ್ರಿ",
+    "a11y": "ಥೀಮ್: {{option}}"
+  },
   "name": {
     "label": "ಟೇಬಲ್‌ನಲ್ಲಿ",
     "title": "ನಿಮ್ಮನ್ನು ಏನೆಂದು ಕರೆಯಲಿ?",

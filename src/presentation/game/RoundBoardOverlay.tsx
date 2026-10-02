@@ -12,7 +12,26 @@ import Animated, {
 } from 'react-native-reanimated';
 import { ALL_PLAYER_COLORS, type DieValue, type PlayerColor } from '@/domain';
 import { AnimatedDice } from '../components/AnimatedDice';
-import { radialGrid, radialPoint, radialShift } from '../board/radialLayout';
+import { radialGrid, radialPoint, radialShift, radialYard } from '../board/radialLayout';
+import { projectRadial } from '../board/radialCamera';
+import { useUi } from '../theme/AppearanceProvider';
+import { liftByDay } from '../theme/surfaces';
+
+/** Height of the 3D table's centre hub, where the shared dice sits. */
+const HUB_TOP = 0.25;
+/** Space kept between a name pill and the edge of the board. */
+const RIM_GAP = 2;
+/** How far a yard's coins reach from its centre, in cells. */
+const YARD_REACH = 1.5;
+
+/** Keeps turned text the right way up (never past a quarter turn). */
+function upright(degrees: number) {
+  return degrees > 90 ? degrees - 180 : degrees < -90 ? degrees + 180 : degrees;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
 
 /**
  * The 5-6 player table's controls, laid over the round board itself: one
@@ -54,6 +73,8 @@ export function RoundBoardOverlay({
   onRoll(): void;
 }) {
   const { t } = useTranslation('game');
+  const ui = useUi();
+  const day = ui.scheme === 'light';
   const cell = size / radialGrid(colors.length);
   const tile = Math.max(48, Math.round(size * 0.12));
   const pulse = useSharedValue(0);
@@ -78,22 +99,22 @@ export function RoundBoardOverlay({
   const accent = current ? palette[current] : '#ffffff';
 
   /**
-   * Flat board point to screen point. On the 3D board the round table is
-   * seen from a fixed camera (Board3D's radial camera): its top surface
-   * appears as an ellipse about 80% as tall as it is wide, a little below
-   * centre, and slightly larger toward the viewer. Measured from that
-   * camera, so it only needs revisiting if the camera moves.
+   * Flat board point to screen point. On the 3D board, the point is found
+   * through the very camera the board is drawn with (radialCamera), so names
+   * and the dice sit exactly where they belong on the tilted table.
    */
-  function place(x: number, y: number) {
+  function place(x: number, y: number, height = 0) {
     if (!tilted) return { x, y, scale: 1 };
-    const r = size / 2;
-    const dx = x - r;
-    const dy = y - r;
-    const near = 1 + 0.07 * (dy / r);
-    return { x: r + dx * 0.977 * near, y: r + 0.06 * r + dy * 0.8, scale: 0.9 * near };
+    const centre = (radialGrid(colors.length) - 1) / 2;
+    return projectRadial(colors.length, size, [
+      x / cell - 0.5 - centre,
+      height,
+      y / cell - 0.5 - centre,
+    ]);
   }
 
-  const middle = place(size / 2, size / 2).y;
+  // The dice sits on the raised hub at the table's centre.
+  const middle = place(size / 2, size / 2, HUB_TOP).y;
 
   return (
     <View pointerEvents="box-none" style={{ position: 'absolute', width: size, height: size }}>
@@ -108,16 +129,44 @@ export function RoundBoardOverlay({
         const at = place((col + 0.5) * cell, (row + 0.5) * cell);
         const angle = -90 + ((seat + 0.5) * 360) / colors.length;
         const active = color === current;
-        const width = cell * 4.4 * at.scale;
+        const name = nameOf(color);
         const height = cell * 1.05 * at.scale;
+        const fontSize = Math.max(9, cell * 0.55 * at.scale);
+        // Sized to the name (roughly), so short names leave the rim clear.
+        const width = Math.min(
+          cell * 4.4 * at.scale,
+          Math.max(cell * 2.4 * at.scale, name.length * fontSize * 0.6 + height),
+        );
+        const fit = (turn: number) => {
+          // The pill as turned, kept wholly inside the board.
+          const rad = (turn * Math.PI) / 180;
+          const halfX = (Math.abs(Math.cos(rad)) * width + Math.abs(Math.sin(rad)) * height) / 2;
+          const halfY = (Math.abs(Math.sin(rad)) * width + Math.abs(Math.cos(rad)) * height) / 2;
+          const x = clamp(at.x, halfX + RIM_GAP, size - halfX - RIM_GAP);
+          const y = clamp(at.y, halfY + RIM_GAP, size - halfY - RIM_GAP);
+          return { turn, x, y, halfX, halfY };
+        };
+        let pill = fit(faceSeats ? angle - 90 : 0);
+        if (!faceSeats) {
+          // A level pill on a side seat of a big table either runs off the
+          // board or, pulled back in, covers the coins in the yard. Those
+          // names follow the rim instead, in the free strip beyond the yard.
+          const [yr, yc] = radialYard(color, colors.length);
+          const yard = place((yc + 0.5) * cell, (yr + 0.5) * cell);
+          const dx = Math.max(Math.abs(pill.x - yard.x) - pill.halfX, 0);
+          const dy = Math.max(Math.abs(pill.y - yard.y) - pill.halfY, 0);
+          const yardReach = YARD_REACH * cell * yard.scale;
+          if (dx * dx + dy * dy < yardReach * yardReach) pill = fit(upright(angle - 90));
+        }
+        const { turn, x, y } = pill;
         return (
           <View
             key={color}
             pointerEvents="none"
             style={{
               position: 'absolute',
-              left: at.x - width / 2,
-              top: at.y - height / 2,
+              left: x - width / 2,
+              top: y - height / 2,
               width,
               height,
               borderRadius: height / 2,
@@ -127,21 +176,23 @@ export function RoundBoardOverlay({
               borderWidth: active ? 2 : 1,
               borderColor: active ? '#ffffff' : '#ffffff80',
               boxShadow: active ? `0 0 10px ${palette[color]}` : undefined,
-              transform: [{ rotate: `${faceSeats ? angle - 90 : 0}deg` }],
+              transform: [{ rotate: `${turn}deg` }],
             }}
           >
             <Text
               numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
               style={{
                 color: '#ffffff',
                 fontWeight: '900',
-                fontSize: Math.max(9, cell * 0.55 * at.scale),
+                fontSize,
                 textShadowColor: '#00000080',
                 textShadowRadius: 2,
                 paddingHorizontal: 4,
               }}
             >
-              {nameOf(color)}
+              {name}
             </Text>
           </View>
         );
@@ -182,8 +233,13 @@ export function RoundBoardOverlay({
           justifyContent: 'center',
           backgroundColor: surface,
           borderWidth: 2.5,
-          borderColor: accent,
-          boxShadow: `0 0 14px ${accent}99`,
+          // By day the tile is white: with nobody to move (the game is over) a
+          // white rim would leave a hole in the board, so it takes a navy
+          // hairline and a soft lift instead; night is unchanged.
+          borderColor: day && !current ? ui.border : accent,
+          boxShadow: day
+            ? [current ? `0 0 14px ${accent}99` : null, liftByDay(ui)].filter(Boolean).join(', ')
+            : `0 0 14px ${accent}99`,
         }}
       >
         <AnimatedDice

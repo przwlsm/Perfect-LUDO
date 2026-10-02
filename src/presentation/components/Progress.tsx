@@ -3,19 +3,25 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { i18n } from '../i18n';
 import { Text } from './AppText';
 import { CoinIcon, GemIcon } from './Currency';
-import { ui } from '../theme/themes';
+import { useUi } from '../theme/AppearanceProvider';
+import { DARK } from '../theme/palette';
 import { numberLocale } from '../i18n/format';
 
 /** A rounded track with a glossy gradient fill, 0..1. */
 export function ProgressBar({
   value,
-  colors = [ui.blueSoft, ui.blue],
+  colors,
   height = 10,
 }: {
   value: number;
   colors?: readonly [string, string];
   height?: number;
 }) {
+  const ui = useUi();
+  // By day the default fill starts from the vivid game blue (the 10% of
+  // 60-30-10) and deepens into the blue token; night as before.
+  const fill: readonly [string, string] =
+    colors ?? (ui.scheme === 'dark' ? [ui.blueSoft, ui.blue] : [DARK.blue, ui.blue]);
   const pct = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
   return (
     <View
@@ -24,15 +30,16 @@ export function ProgressBar({
       style={{
         height,
         borderRadius: height,
-        backgroundColor: '#0a0f1c',
+        // A deep groove by night; a faint ink tint by day.
+        backgroundColor: ui.scheme === 'dark' ? '#0a0f1c' : ui.fillStrong,
         borderWidth: 1,
-        borderColor: '#ffffff12',
+        borderColor: ui.scheme === 'dark' ? '#ffffff12' : ui.line,
         overflow: 'hidden',
       }}
     >
       {pct > 0 && (
         <LinearGradient
-          colors={colors}
+          colors={fill}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={{ width: `${pct * 100}%`, height: '100%', borderRadius: height }}
@@ -54,6 +61,7 @@ export function RewardChips({
   xp?: number;
   size?: 'sm' | 'md';
 }) {
+  const ui = useUi();
   const icon = size === 'sm' ? 14 : 16;
   const font = size === 'sm' ? 11 : 13;
   return (

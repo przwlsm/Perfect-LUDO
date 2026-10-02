@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Pressable, useWindowDimensions, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { router } from 'expo-router';
@@ -27,9 +28,12 @@ import {
 import { Board2D } from '../board/Board2D';
 import { BoardThumbnail } from '../board/BoardThumbnail';
 import { Dice } from '../components/Dice';
-import { Body, Button, Card, Label, Screen, shared, Sheet } from '../components/Kit';
+import { Body, Button, Card, Label, Screen, Sheet, useShared } from '../components/Kit';
 import { useProfile } from '../state/ProfileProvider';
-import { getBoardTheme, getCardDesign, ui } from '../theme/themes';
+import { getBoardTheme, getCardDesign } from '../theme/themes';
+import { makeStyles, SchemeScope, useUi } from '../theme/AppearanceProvider';
+import { DARK, type Palette } from '../theme/palette';
+import { liftByDay, MARIGOLD, NAVY_HERO } from '../theme/surfaces';
 import { useCatalogText } from '../i18n/useCatalogText';
 import { numberLocale } from '../i18n/format';
 const preview = createGame(['RED', 'GREEN', 'YELLOW', 'BLUE']);
@@ -53,6 +57,9 @@ type Notice = { key: NoticeKey; itemId?: string; friend?: string } | { text: str
 const failure = (e: unknown, key: NoticeKey): Notice =>
   e instanceof Error ? { text: e.message } : { key };
 
+/** The "fair play" violet: its night shade as before, the day token on paper. */
+const fairViolet = (ui: Palette) => (ui.scheme === 'dark' ? '#c5a5ff' : ui.violet);
+
 /** Names and blurbs of real-money products, by sku; the domain text for an unknown one. */
 function useProductText() {
   const { t } = useTranslation('store');
@@ -70,6 +77,9 @@ export default function StoreScreen() {
   const { profile, theme, member, wallet, purchase, equip, adoptWallet, giftItem, startTrial } =
     useProfile();
   const { t } = useTranslation(['store', 'common']);
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
   const catalog = useCatalogText();
   const productText = useProductText();
   const noticeText = (notice: Notice) => {
@@ -230,35 +240,22 @@ export default function StoreScreen() {
   return (
     <Screen back title={t('title')} subtitle={t('subtitle')}>
       <Body>{t('intro')}</Body>
-      <Card style={{ backgroundColor: '#382b4822', borderColor: '#c5a5ff25' }}>
+      <Card style={s.fairCard}>
         <View style={shared.between}>
           <View style={{ flex: 1, gap: 8 }}>
-            <Label color="#c5a5ff">{t('fair.label')}</Label>
+            <Label color={fairViolet(ui)}>{t('fair.label')}</Label>
             <Text style={shared.sectionTitle}>{t('fair.title')}</Text>
             <Text style={shared.small}>{t('fair.text')}</Text>
           </View>
-          <Text style={{ fontSize: 36, color: '#c5a5ff' }}>✧</Text>
+          <Text style={{ fontSize: 36, color: fairViolet(ui) }}>✧</Text>
         </View>
       </Card>
       {shopItems.length > 0 && (
-        <Card style={{ borderColor: `${ui.gem}40` }}>
-          <View style={shared.between}>
-            <View style={{ flex: 1, gap: 4 }}>
-              <Label color={ui.gem}>{t('topUp.label')}</Label>
-              <Text style={shared.sectionTitle}>{t('topUp.title')}</Text>
-              <Text style={shared.small}>{t('topUp.text')}</Text>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('topUp.openA11y')}
-              onPress={() => setShopOpen(true)}
-              style={s.shopButton}
-            >
-              <GemIcon size={16} />
-              <Text style={{ color: ui.text, fontWeight: '900' }}>{t('topUp.open')}</Text>
-            </Pressable>
-          </View>
-        </Card>
+        // By day the screen's navy hero (the 30% of 60-30-10): it renders in
+        // the night palette, so its text and button stay as at night.
+        <SchemeScope scheme="dark">
+          <TopUpHero day={ui.scheme === 'light'} onOpen={() => setShopOpen(true)} />
+        </SchemeScope>
       )}
       <View style={{ gap: 8 }}>
         <View style={s.tabs}>
@@ -283,10 +280,10 @@ export default function StoreScreen() {
           accessibilityRole="checkbox"
           accessibilityState={{ checked: ownedOnly }}
           onPress={() => setOwnedOnly(!ownedOnly)}
-          android_ripple={{ color: '#ffffff20' }}
+          android_ripple={{ color: ui.ripple }}
           style={{ minHeight: 48, justifyContent: 'center', alignSelf: 'flex-end' }}
         >
-          <Text style={[shared.small, ownedOnly && { color: theme.accent }]}>
+          <Text style={[shared.small, ownedOnly && { color: theme.accentText }]}>
             {t('ownedFilter', { box: ownedOnly ? '☑' : '☐' })}
           </Text>
         </Pressable>
@@ -329,7 +326,7 @@ export default function StoreScreen() {
                 style={[
                   s.preview,
                   {
-                    backgroundColor: item.kind === 'board' ? boardTheme.background : '#ffffff05',
+                    backgroundColor: item.kind === 'board' ? boardTheme.background : ui.fill,
                     height: cardWidth * (item.kind === 'pack' ? 1.25 : 0.88),
                   },
                 ]}
@@ -371,7 +368,7 @@ export default function StoreScreen() {
                           item.rarity === 'Legendary'
                             ? ui.gold
                             : item.rarity === 'Epic'
-                              ? '#c5a5ff'
+                              ? fairViolet(ui)
                               : ui.muted,
                       },
                     ]}
@@ -395,7 +392,7 @@ export default function StoreScreen() {
                 <View style={shared.between}>
                   <Text
                     style={{
-                      color: equipped ? ui.green : theme.accent,
+                      color: equipped ? ui.green : theme.accentText,
                       fontSize: 12,
                       fontWeight: '800',
                     }}
@@ -467,10 +464,13 @@ export default function StoreScreen() {
           </Card>
         )}
         {piggyItem && (
-          <Card style={{ padding: 14, gap: 8, borderColor: `${ui.gold}55` }}>
+          <PiggyShell night={ui.scheme === 'dark'}>
             <View style={shared.between}>
               <View style={{ flex: 1, gap: 4 }}>
-                <Label color={ui.gold}>{t('shop.piggyLabel')}</Label>
+                {/* Navy on the day marigold: the gold token would not read on it. */}
+                <Label color={ui.scheme === 'dark' ? ui.gold : ui.text}>
+                  {t('shop.piggyLabel')}
+                </Label>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                   <CoinIcon size={15} />
                   <Text style={{ color: ui.text, fontWeight: '800', fontSize: 15 }}>
@@ -501,7 +501,7 @@ export default function StoreScreen() {
               </Pressable>
             </View>
             <ProgressBar value={Math.min(1, profile.piggyCoins / PIGGY_CAP)} height={8} />
-          </Card>
+          </PiggyShell>
         )}
         {bundles.map(({ product, price }) => (
           <Card key={product.sku} style={{ padding: 14, gap: 8 }}>
@@ -594,7 +594,7 @@ export default function StoreScreen() {
                 </View>
               )}
             </View>
-            <Label color={theme.accent}>
+            <Label color={theme.accentText}>
               {t('preview.rarityKind', {
                 rarity: catalog.rarity(selected.rarity),
                 kind: catalog.kind(selected.kind),
@@ -615,7 +615,7 @@ export default function StoreScreen() {
               <Card>
                 <View style={shared.between}>
                   <Text style={shared.small}>{t('preview.unlockPrice')}</Text>
-                  <Text style={{ color: theme.accent, fontWeight: '800' }}>
+                  <Text style={{ color: theme.accentText, fontWeight: '800' }}>
                     {mark(selected)} {selected.price}
                   </Text>
                 </View>
@@ -758,6 +758,64 @@ export default function StoreScreen() {
     </Screen>
   );
 }
+/**
+ * The piggy bank's shell: by night the card as before; by day the screen's
+ * one marigold highlight (the 10% of 60-30-10), with navy text.
+ */
+function PiggyShell({ night, children }: { night: boolean; children: ReactNode }) {
+  const s = useStyles();
+  const ui = useUi();
+  if (night) {
+    return <Card style={{ padding: 14, gap: 8, borderColor: `${ui.gold}55` }}>{children}</Card>;
+  }
+  return (
+    <LinearGradient
+      colors={MARIGOLD}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={s.marigold}
+    >
+      {children}
+    </LinearGradient>
+  );
+}
+
+/**
+ * The top-up offer. Always drawn in the night palette (see SchemeScope at its
+ * call site): by night the card as before, by day a navy hero.
+ */
+function TopUpHero({ day, onOpen }: { day: boolean; onOpen(): void }) {
+  const { t } = useTranslation('store');
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
+  const body = (
+    <View style={shared.between}>
+      <View style={{ flex: 1, gap: 4 }}>
+        {/* The night gem violet is too faint on the hero's royal blue; gold reads at 4.9:1. */}
+        <Label color={day ? ui.gold : ui.gem}>{t('topUp.label')}</Label>
+        <Text style={shared.sectionTitle}>{t('topUp.title')}</Text>
+        <Text style={shared.small}>{t('topUp.text')}</Text>
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('topUp.openA11y')}
+        onPress={onOpen}
+        style={s.shopButton}
+      >
+        <GemIcon size={16} />
+        <Text style={[s.shopButtonText, day && { color: ui.onColor }]}>{t('topUp.open')}</Text>
+      </Pressable>
+    </View>
+  );
+  if (!day) return <Card style={{ borderColor: `${ui.gem}40` }}>{body}</Card>;
+  return (
+    <LinearGradient colors={NAVY_HERO} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.hero}>
+      {body}
+    </LinearGradient>
+  );
+}
+
 function PackPreview({
   item,
   size,
@@ -808,19 +866,46 @@ function PackPreview({
           <Text style={{ color: t.accent, fontSize: 10, fontWeight: '800' }}>
             {tr('packPreview.player')}
           </Text>
-          <Text style={{ color: ui.text, fontSize: 8 }}>{tr('packPreview.yourTurn')}</Text>
+          {/* The pack's own night card, as in game: same text colour in both modes. */}
+          <Text style={{ color: DARK.text, fontSize: 8 }}>{tr('packPreview.yourTurn')}</Text>
         </View>
         <Dice value={5} finish={item.contents!.dice} size={30} />
       </View>
     </View>
   );
 }
-const s = StyleSheet.create({
+/** Fixed fills of the green and purple price buttons: the same art in both modes. */
+const GREEN_BUTTON = DARK.green;
+const useStyles = makeStyles((ui) => ({
+  // Night: the violet glass as before. Day: a plain white card (Card's own surface).
+  fairCard:
+    ui.scheme === 'dark'
+      ? { backgroundColor: '#382b4822', borderColor: '#c5a5ff25' }
+      : { borderColor: ui.line, boxShadow: liftByDay(ui) },
+  // Day only, built from the night tokens inside SchemeScope: the navy top-up hero.
+  hero: {
+    borderRadius: 18,
+    padding: 18,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: `${ui.gem}40`,
+    overflow: 'hidden',
+  },
+  // Day only: the marigold piggy-bank card, laid out like the sheet's Cards.
+  marigold: {
+    borderRadius: 18,
+    padding: 14,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: `${ui.gold}55`,
+    boxShadow: liftByDay(ui),
+    overflow: 'hidden',
+  },
   tabs: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 3,
-    backgroundColor: '#ffffff06',
+    backgroundColor: ui.fill,
     padding: 4,
     borderRadius: 14,
   },
@@ -837,13 +922,14 @@ const s = StyleSheet.create({
   },
   tabText: { color: ui.muted, fontSize: 12, fontWeight: '800' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  product: { borderWidth: 1, borderRadius: 17, overflow: 'hidden' },
+  product: { borderWidth: 1, borderRadius: 17, overflow: 'hidden', boxShadow: liftByDay(ui) },
   preview: { alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  // Night: a dark chip; day: a paper chip, so the rarity text tokens read on it.
   rarity: {
     position: 'absolute',
     left: 10,
     top: 10,
-    backgroundColor: '#101421dd',
+    backgroundColor: ui.scheme === 'dark' ? '#101421dd' : `${ui.background}f2`,
     padding: 5,
     borderRadius: 5,
   },
@@ -880,6 +966,8 @@ const s = StyleSheet.create({
     borderBottomWidth: 3,
     borderBottomColor: '#581c87',
   },
+  // On the purple button: the night text as before, white in day for contrast.
+  shopButtonText: { color: ui.scheme === 'dark' ? ui.text : ui.onColor, fontWeight: '900' },
   priceButton: {
     minWidth: 84,
     minHeight: 48,
@@ -888,8 +976,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: ui.green,
+    backgroundColor: GREEN_BUTTON,
     borderBottomWidth: 3,
     borderBottomColor: '#047857',
   },
-});
+}));

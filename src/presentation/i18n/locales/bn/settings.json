@@ -8,6 +8,14 @@
     "systemHint": "এখন {{language}}",
     "a11y": "{{name}}, {{englishName}}"
   },
+  "appearance": {
+    "label": "থিম",
+    "title": "দিন না রাত?",
+    "system": "ফোনের সেটিং",
+    "light": "দিন",
+    "dark": "রাত",
+    "a11y": "থিম: {{option}}"
+  },
   "name": {
     "label": "টেবিলে আপনার নাম",
     "title": "আপনাকে কী নামে ডাকব?",

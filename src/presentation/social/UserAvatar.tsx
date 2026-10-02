@@ -1,7 +1,9 @@
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { Text } from '../components/AppText';
 import { initialsOf, type PresenceStatus } from '@/domain';
 import { useProfile } from '../state/ProfileProvider';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
+import { mix, readableOn } from '../theme/color';
 import { PresenceDot } from './PresenceDot';
 
 /** Stable per player, so the same friend keeps the same colour everywhere. */
@@ -27,6 +29,12 @@ export function UserAvatar({
   const { theme } = useProfile();
   const palette = Object.values(theme.colors);
   const tint = palette[paletteIndex(id, palette.length)]!;
+  const s = useStyles();
+  const ui = useUi();
+  // The tint is the player's identity colour; by day its initials are
+  // deepened until they read on the tinted circle (0x22 of the tint over the row).
+  const ink =
+    ui.scheme === 'dark' ? tint : readableOn(tint, [mix(theme.surface, tint, 0x22 / 255)]);
   return (
     <View>
       <View
@@ -41,7 +49,7 @@ export function UserAvatar({
           },
         ]}
       >
-        <Text style={[s.text, { color: tint, fontSize: emoji ? size * 0.46 : size * 0.34 }]}>
+        <Text style={[s.text, { color: ink, fontSize: emoji ? size * 0.46 : size * 0.34 }]}>
           {emoji || initialsOf(name)}
         </Text>
       </View>
@@ -54,7 +62,7 @@ export function UserAvatar({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   circle: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
   text: { fontWeight: '900' },
   badge: {
@@ -64,6 +72,6 @@ const s = StyleSheet.create({
     padding: 2,
     borderRadius: 8,
     borderWidth: 2,
-    backgroundColor: '#0e1322',
+    backgroundColor: ui.background,
   },
-});
+}));

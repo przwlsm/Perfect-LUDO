@@ -197,5 +197,13 @@
     "loading": "Cargando tu anuncio…",
     "hangTight": "Espera un momento: tu recompensa llega justo después.",
     "left": "QUEDAN {{left}}"
+  },
+  "guestAd": {
+    "title": "Monedas gratis",
+    "reward": "+{{coins}} monedas por anuncio",
+    "caption": "Mira un anuncio corto. Las monedas esperan en tu bóveda hasta que inicies sesión."
+  },
+  "mode": {
+    "needsInternet": "Requiere internet"
   }
 }

@@ -4,12 +4,14 @@ import { Text } from '../components/AppText';
 import {
   PLAYER_COLORS,
   isSafeSquare,
+  type ClassicColor,
   type GameState,
   type Move,
   type Piece,
   type PlayerColor,
 } from '@/domain';
 import { AnimatedPiece2D } from './AnimatedPiece2D';
+import { TurnGlow, turnColorOf } from './TurnGlow';
 import { getBoardTheme, type BoardTheme } from '../theme/themes';
 import {
   flipTrackSquare,
@@ -41,6 +43,8 @@ export interface Board2DProps {
   readonly flip?: boolean;
   /** 5-6 player tables only: triangle homes (default) or the original round ones. */
   readonly homeStyle?: 'triangle' | 'round';
+  /** At a live table: glow around the home of the player whose turn it is. */
+  readonly showTurn?: boolean;
   onSelectMove(move: Move): void;
 }
 
@@ -64,6 +68,7 @@ export function Board2D({
   motionEnabled = false,
   flip = false,
   homeStyle = 'triangle',
+  showTurn = false,
 }: Board2DProps): React.JSX.Element {
   if (state.players.length > 4)
     return (
@@ -74,10 +79,13 @@ export function Board2D({
         theme={theme}
         motionEnabled={motionEnabled}
         homeStyle={homeStyle}
+        showTurn={showTurn}
         onSelectMove={onSelectMove}
       />
     );
   const cellSize = size / GRID_SIZE;
+  const turnColor = showTurn ? turnColorOf(state) : null;
+  const turnBlock = turnColor ? yardBlock(turnColor as ClassicColor, flip) : null;
   const validMoveByPieceId = new Map((validMoves ?? []).map((move) => [move.pieceId, move]));
 
   const cellOccupancy = new Map<string, number>();
@@ -308,6 +316,18 @@ export function Board2D({
         </Text>
       </View>
 
+      {turnColor && turnBlock && (
+        <TurnGlow
+          color={theme.colors[turnColor]}
+          left={turnBlock.col * cellSize}
+          top={turnBlock.row * cellSize}
+          width={YARD_BLOCK_SIZE * cellSize}
+          height={YARD_BLOCK_SIZE * cellSize}
+          radius={6}
+          ring={Math.max(2, cellSize * 0.14)}
+          motionEnabled={motionEnabled}
+        />
+      )}
       {pieces.map(({ id, piece, yardSlot, color, stackIndex, move }) => (
         <AnimatedPiece2D
           key={id}

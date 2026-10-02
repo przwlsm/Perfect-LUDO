@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -19,7 +19,10 @@ import { useCatalogText } from '../i18n/useCatalogText';
 import { Text } from '../components/AppText';
 import { LiveDot, Shine } from '../components/Live';
 import { UserAvatar } from './UserAvatar';
-import { ui } from '../theme/themes';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
+import { mix } from '../theme/color';
+import { liftByDay, NAVY_HERO } from '../theme/surfaces';
+import { useProfile } from '../state/ProfileProvider';
 import { numberLocale } from '../i18n/format';
 
 /** Faces the opponent slots flick through while the search runs. */
@@ -40,6 +43,12 @@ const ROLL_FACES = [
   '🦉',
 ];
 const SLOT_COLORS = ['#10b981', '#f59e0b', '#3b82f6'];
+/** The arena backdrop by night: deep navy fading into the page. */
+const NIGHT_ARENA = ['#1b2340', '#131a2e', '#0e1322'] as const;
+/** By day the same navy is only a faint wash over the theme's page colour. */
+const ARENA_TINT = '#4d6bd0';
+/** The search pill: royal blue by night; by day the navy hero (the 30%), both with white text. */
+const SEARCH_STOPS = { dark: ['#4d8eff', '#2f62d8'], light: NAVY_HERO } as const;
 
 /**
  * The quick-play search as a head-to-head arena: your card is fixed on one
@@ -76,6 +85,19 @@ export function MatchmakingOverlay({
   const insets = useSafeAreaInsets();
   const { t } = useTranslation('online');
   const { variantTitle } = useCatalogText();
+  const { theme } = useProfile();
+  const ui = useUi();
+  const s = useStyles();
+  // By day the banner and timer are white cards on the ivory arena.
+  const card = ui.scheme === 'light' && { backgroundColor: theme.surface };
+  const arena =
+    ui.scheme === 'dark'
+      ? NIGHT_ARENA
+      : ([
+          mix(theme.background, ARENA_TINT, 0.1),
+          mix(theme.background, ARENA_TINT, 0.04),
+          theme.background,
+        ] as const);
   const [seconds, setSeconds] = useState(0);
   const motion = motionEnabled && visible;
 
@@ -99,7 +121,7 @@ export function MatchmakingOverlay({
       onRequestClose={onCancel}
     >
       <LinearGradient
-        colors={['#1b2340', '#131a2e', '#0e1322']}
+        colors={arena}
         style={[s.screen, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16 }]}
       >
         <View style={s.topRow}>
@@ -111,7 +133,7 @@ export function MatchmakingOverlay({
           >
             <Ionicons name="close" size={22} color={ui.text} />
           </Pressable>
-          <View style={s.banner}>
+          <View style={[s.banner, card]}>
             <LiveDot color={ui.green} active={motion} />
             <Text style={s.bannerText}>
               {matched
@@ -182,7 +204,7 @@ export function MatchmakingOverlay({
           </View>
         </View>
 
-        <View style={s.timer}>
+        <View style={[s.timer, card]}>
           <Ionicons name="stopwatch" size={18} color={ui.green} />
           <Text style={s.timerText}>{clock}</Text>
         </View>
@@ -191,7 +213,12 @@ export function MatchmakingOverlay({
         </Text>
 
         <View style={s.searchWrap}>
-          <LinearGradient colors={['#4d8eff', '#2f62d8']} style={s.search}>
+          <LinearGradient
+            colors={SEARCH_STOPS[ui.scheme]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.search}
+          >
             <Shine active={motion && !matched} width={300} every={900} />
             <Text style={s.searchText}>
               {matched ? t('matchmaking.matchFound') : t('matchmaking.searching')}
@@ -216,18 +243,24 @@ function PlayerCard({
   compact?: boolean;
   children: React.ReactNode;
 }) {
+  const s = useStyles();
+  const ui = useUi();
+  const { theme } = useProfile();
+  // By day the frames and name tags are white cards on the ivory arena.
+  const card = ui.scheme === 'light' && { backgroundColor: theme.surface };
   return (
     <View style={{ alignItems: 'center', gap: compact ? 4 : 8 }}>
       <View
         style={[
           s.frame,
+          card,
           { borderColor: tint, boxShadow: `0 0 14px ${tint}44` },
           compact && s.frameSmall,
         ]}
       >
         {children}
       </View>
-      <View style={[s.nameTag, { borderColor: tint }]}>
+      <View style={[s.nameTag, card, { borderColor: tint }]}>
         <Text numberOfLines={1} style={[s.name, compact && { fontSize: 11 }]}>
           {label}
         </Text>
@@ -248,6 +281,7 @@ function RollingFace({
   size: number;
   found: boolean;
 }) {
+  const ui = useUi();
   const [face, setFace] = useState(offset % ROLL_FACES.length);
   const bump = useSharedValue(0);
   useEffect(() => {
@@ -275,6 +309,7 @@ function RollingFace({
 }
 
 function VsBadge({ active }: { active: boolean }) {
+  const s = useStyles();
   const spin = useSharedValue(0);
   const pulse = useSharedValue(0);
   useEffect(() => {
@@ -307,7 +342,7 @@ function VsBadge({ active }: { active: boolean }) {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   screen: { flex: 1, alignItems: 'center', paddingHorizontal: 16, gap: 14 },
   topRow: {
     alignSelf: 'stretch',
@@ -319,7 +354,7 @@ const s = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: '#ffffff14',
+    backgroundColor: ui.fillStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -333,6 +368,7 @@ const s = StyleSheet.create({
     backgroundColor: ui.surfaceHigh,
     borderWidth: 1,
     borderColor: ui.line,
+    boxShadow: liftByDay(ui),
   },
   bannerText: { color: ui.text, fontWeight: '900', fontSize: 14, letterSpacing: 1.6 },
   tableInfo: { alignItems: 'center', gap: 2 },
@@ -350,7 +386,7 @@ const s = StyleSheet.create({
     padding: 8,
     borderRadius: 18,
     borderWidth: 4,
-    backgroundColor: '#ffffff0d',
+    backgroundColor: ui.fill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -386,7 +422,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#0e1322',
+    borderColor: ui.background,
   },
   vsText: { color: '#4a3010', fontWeight: '900', fontSize: 22 },
   timer: {
@@ -399,6 +435,7 @@ const s = StyleSheet.create({
     backgroundColor: ui.surfaceHigh,
     borderWidth: 1,
     borderColor: ui.line,
+    boxShadow: liftByDay(ui),
   },
   timerText: {
     color: ui.text,
@@ -409,6 +446,7 @@ const s = StyleSheet.create({
   waiting: { color: ui.green, fontWeight: '700', fontSize: 13, lineHeight: 18 },
   searchWrap: { alignSelf: 'stretch', paddingHorizontal: 20 },
   search: {
+    boxShadow: liftByDay(ui),
     minHeight: 52,
     borderRadius: 16,
     alignItems: 'center',
@@ -417,7 +455,12 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${ui.blueSoft}55`,
   },
-  searchText: { color: '#fff', fontWeight: '900', fontSize: 16, letterSpacing: 0.4 },
+  searchText: {
+    color: ui.onColor,
+    fontWeight: '900',
+    fontSize: 16,
+    letterSpacing: 0.4,
+  },
   error: { color: ui.danger, textAlign: 'center', lineHeight: 18 },
   hint: {
     color: ui.subtle,
@@ -426,4 +469,4 @@ const s = StyleSheet.create({
     lineHeight: 17,
     paddingHorizontal: 24,
   },
-});
+}));

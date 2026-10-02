@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,7 @@ import { router } from 'expo-router';
 import { challengeRepository } from '@/config/container';
 import { useProfile } from '../state/ProfileProvider';
 import { useSocial } from '../state/SocialProvider';
-import { ui } from '../theme/themes';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
 
 /**
  * Rendered above the navigator so a challenge reaches the player wherever
@@ -19,6 +19,8 @@ export function ChallengeBanner() {
   const { theme } = useProfile();
   const { t } = useTranslation('social');
   const insets = useSafeAreaInsets();
+  const s = useStyles();
+  const ui = useUi();
   const [busy, setBusy] = useState(false);
   // The server's message, or {} when the translated fallback applies.
   const [error, setError] = useState<{ message?: string } | null>(null);
@@ -42,7 +44,16 @@ export function ChallengeBanner() {
 
   return (
     <View pointerEvents="box-none" style={[s.wrap, { paddingTop: insets.top + 10 }]}>
-      <View style={[s.card, { backgroundColor: theme.surface, borderColor: `${theme.accent}66` }]}>
+      <View
+        style={[
+          s.card,
+          // A white card with a hairline by day (the 60%); night keeps its accent rim.
+          {
+            backgroundColor: theme.surface,
+            borderColor: ui.scheme === 'dark' ? `${theme.accent}66` : ui.line,
+          },
+        ]}
+      >
         <View style={s.header}>
           <Text style={s.emoji}>🎮</Text>
           <View style={{ flex: 1, gap: 3 }}>
@@ -53,7 +64,7 @@ export function ChallengeBanner() {
             accessibilityRole="button"
             accessibilityLabel={t('invite.dismiss')}
             onPress={dismissInvite}
-            android_ripple={{ color: '#ffffff25' }}
+            android_ripple={{ color: ui.ripple }}
             style={s.close}
           >
             <Text style={{ color: ui.subtle, fontSize: 20 }}>×</Text>
@@ -74,10 +85,10 @@ export function ChallengeBanner() {
             accessibilityRole="button"
             disabled={busy}
             onPress={() => void respond(false)}
-            android_ripple={{ color: '#ffffff25' }}
+            android_ripple={{ color: ui.ripple }}
             style={[s.action, s.decline, { opacity: busy ? 0.5 : 1 }]}
           >
-            <Text style={[s.actionText, { color: ui.text }]}>{t('invite.decline')}</Text>
+            <Text style={[s.actionText, { color: ui.secondaryText }]}>{t('invite.decline')}</Text>
           </Pressable>
         </View>
       </View>
@@ -85,7 +96,7 @@ export function ChallengeBanner() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   wrap: {
     position: 'absolute',
     top: 0,
@@ -102,7 +113,8 @@ const s = StyleSheet.create({
     borderWidth: 1.5,
     padding: 16,
     gap: 13,
-    boxShadow: '0 12px 30px #00000070',
+    // It floats over any page: a heavier shadow at night, the soft token by day.
+    boxShadow: `0 12px 30px ${ui.scheme === 'dark' ? '#00000070' : ui.shadow}`,
   },
   header: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   emoji: { fontSize: 26 },
@@ -118,8 +130,12 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderBottomWidth: 3,
-    borderBottomColor: '#00000040',
+    borderBottomColor: ui.shadow,
   },
-  decline: { backgroundColor: '#ffffff12', borderWidth: 1, borderColor: '#ffffff26' },
+  // Night: the faint glass key as before. Day: the navy secondary (the 30%).
+  decline:
+    ui.scheme === 'dark'
+      ? { backgroundColor: ui.fillStrong, borderWidth: 1, borderColor: ui.border }
+      : { backgroundColor: ui.navy, borderBottomColor: ui.navyRim },
   actionText: { fontSize: 14, fontWeight: '800' },
-});
+}));

@@ -9,79 +9,51 @@ import { INITIAL_PROFILE } from '@/application/store/ProfileService';
 import { useCatalogText } from '../i18n/useCatalogText';
 import { useAuthSession } from '../state/useAuthSession';
 import { Text } from '../components/AppText';
-import { Body, Button, Card, Label, Screen, shared } from '../components/Kit';
+import { Body, Button, Card, Label, Screen, useShared } from '../components/Kit';
 import { CoinIcon, GemIcon } from '../components/Currency';
 import { Dice } from '../components/Dice';
 import { ProgressBar } from '../components/Progress';
 import { useProfile } from '../state/ProfileProvider';
 import { SocialIdentityCard } from '../social/SocialIdentityCard';
-import { ui } from '../theme/themes';
+import { makeStyles, SchemeScope, useUi } from '../theme/AppearanceProvider';
+import { DARK } from '../theme/palette';
+import { readableOn } from '../theme/color';
+import { iconTile, liftByDay, MARIGOLD, NAVY_HERO } from '../theme/surfaces';
 import { numberLocale } from '../i18n/format';
+
+/**
+ * The win-streak flame, game art in both modes: a soft tint by night, a solid
+ * coral tile with a navy icon on the marigold card by day.
+ */
+const FLAME = '#ff8c5a';
 
 export default function ProfileScreen() {
   const { profile, theme, syncWarning, reload, member, wallet, refreshWallet } = useProfile();
   const { t } = useTranslation(['account', 'common']);
   const { cosmeticName } = useCatalogText();
   const auth = useAuthSession();
-  const level = levelInfo(profile.xp);
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
+  const night = ui.scheme === 'dark';
   const winRate = profile.games ? Math.round((profile.wins / profile.games) * 100) : 0;
   return (
     <Screen title={t('profile.title')} subtitle={t('profile.subtitle')}>
       {/* ---- Who you are ---- */}
+      {/* By day a navy island (the 30% of 60-30-10): its content renders in the
+          night palette. By night it is the accent-tinted card as before. */}
       <View style={[s.hero, { borderColor: `${theme.accent}55` }]}>
         <LinearGradient
-          colors={[`${theme.accent}26`, `${theme.accent}0d`, '#00000000']}
+          colors={
+            night ? [`${theme.accent}26`, `${theme.accent}0d`, `${theme.accent}00`] : NAVY_HERO
+          }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={s.heroInner}
         >
-          <View style={shared.row}>
-            <View
-              style={[
-                s.avatar,
-                { backgroundColor: `${theme.accent}22`, borderColor: `${theme.accent}66` },
-              ]}
-            >
-              <Text style={{ fontSize: 44, color: theme.accent }}>♙</Text>
-              {member && (
-                <View style={[s.levelBadge, { backgroundColor: theme.accent }]}>
-                  <Text style={s.levelBadgeText}>{level.level}</Text>
-                </View>
-              )}
-            </View>
-            <View style={{ gap: 6, flex: 1 }}>
-              <Text style={{ fontSize: 26, fontWeight: '900', color: ui.text }}>
-                {profile.name === INITIAL_PROFILE.name
-                  ? t('common:defaultPlayerName')
-                  : profile.name}
-              </Text>
-              <Label color={theme.accent}>
-                {profile.wins >= 25
-                  ? t('profile.rank.champion')
-                  : profile.wins >= 5
-                    ? t('profile.rank.regular')
-                    : t('profile.rank.welcome')}
-              </Label>
-            </View>
-          </View>
-          {member && (
-            <View style={{ gap: 6 }}>
-              <ProgressBar value={level.into / level.need} height={9} />
-              <View style={shared.between}>
-                <Text style={shared.small}>{t('profile.level', { level: level.level })}</Text>
-                <Text style={shared.small}>
-                  {t('profile.xpToNext', {
-                    into: level.into,
-                    need: level.need,
-                    next: level.level + 1,
-                  })}
-                </Text>
-              </View>
-            </View>
-          )}
-          <Button secondary compact onPress={() => router.push('/settings')}>
-            {t('profile.edit')}
-          </Button>
+          <SchemeScope scheme="dark">
+            <ProfileHero day={!night} />
+          </SchemeScope>
         </LinearGradient>
       </View>
 
@@ -93,28 +65,35 @@ export default function ProfileScreen() {
           icon="game-controller"
           label={t('profile.stats.played')}
           value={profile.games}
-          accent={theme.accent}
+          accent={night ? theme.accentText : DARK.blue}
         />
-        <Stat icon="trophy" label={t('profile.stats.wins')} value={profile.wins} accent={ui.gold} />
+        <Stat
+          icon="trophy"
+          label={t('profile.stats.wins')}
+          value={profile.wins}
+          accent={night ? ui.gold : DARK.gold}
+        />
         <Stat
           icon="stats-chart"
           label={t('profile.stats.winRate')}
           value={`${winRate}%`}
-          accent={ui.green}
+          accent={night ? ui.green : DARK.green}
         />
       </View>
       <View style={shared.row}>
+        {/* The win streak is the screen's one marigold highlight by day (the 10%). */}
         <Stat
           icon="flame"
           label={t('profile.stats.winStreak')}
           value={profile.streak}
-          accent="#ff8c5a"
+          accent={FLAME}
+          highlight={!night}
         />
         <Stat
           icon="star"
           label={t('profile.stats.bestStreak')}
           value={profile.bestStreak}
-          accent={ui.blueSoft}
+          accent={night ? ui.blueSoft : DARK.gem}
         />
       </View>
       <Text style={shared.small}>
@@ -125,7 +104,7 @@ export default function ProfileScreen() {
       {member && (
         <Card>
           <View style={shared.between}>
-            <Label color={theme.accent}>{t('profile.balance.label')}</Label>
+            <Label color={theme.accentText}>{t('profile.balance.label')}</Label>
             <Button secondary compact onPress={() => router.push('/store')}>
               {t('profile.balance.openStore')}
             </Button>
@@ -166,7 +145,7 @@ export default function ProfileScreen() {
       {/* Guests get their offer in the identity card above; this one is for accounts. */}
       {!auth.user?.isGuest && (
         <Card>
-          <Label color={theme.accent}>{t('profile.account.label')}</Label>
+          <Label color={theme.accentText}>{t('profile.account.label')}</Label>
           {syncWarning && (
             <>
               <Text accessibilityLiveRegion="polite" style={shared.error}>
@@ -188,7 +167,7 @@ export default function ProfileScreen() {
 
       {/* ---- The look ---- */}
       <Card>
-        <Label color={theme.accent}>{t('profile.look.label')}</Label>
+        <Label color={theme.accentText}>{t('profile.look.label')}</Label>
         <View style={shared.between}>
           <View style={{ gap: 9, flex: 1 }}>
             <Text style={shared.sectionTitle}>{cosmeticName(getCosmetic(profile.board))}</Text>
@@ -214,12 +193,12 @@ export default function ProfileScreen() {
       </Card>
 
       <Card>
-        <Label color={theme.accent}>{t('profile.tips.label')}</Label>
+        <Label color={theme.accentText}>{t('profile.tips.label')}</Label>
         <Text style={shared.sectionTitle}>{t('profile.tips.title')}</Text>
         <Body>{t('profile.tips.body')}</Body>
       </Card>
       <Card>
-        <Label color={theme.accent}>{t('profile.feedback.label')}</Label>
+        <Label color={theme.accentText}>{t('profile.feedback.label')}</Label>
         <Text style={shared.sectionTitle}>{t('profile.feedback.title')}</Text>
         <Body>{t('profile.feedback.body')}</Body>
         <Button secondary compact onPress={() => router.push('/feedback')}>
@@ -230,21 +209,112 @@ export default function ProfileScreen() {
   );
 }
 
+/**
+ * Avatar, name, rank, level and the edit button. Rendered inside
+ * `<SchemeScope scheme="dark">`, so its hooks read the night tokens: by night
+ * that is the app's own palette, by day it is the navy hero's.
+ */
+function ProfileHero({ day }: { day: boolean }) {
+  const { profile, theme, member } = useProfile();
+  const { t } = useTranslation(['account', 'common']);
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
+  const level = levelInfo(profile.xp);
+  // The day theme's accentText is tuned for white; on the navy hero the accent
+  // is lifted to 4.5:1 against every stop of the gradient instead.
+  const accentText = day ? readableOn(theme.accent, NAVY_HERO) : theme.accentText;
+  return (
+    <>
+      <View style={shared.row}>
+        <View
+          style={[
+            s.avatar,
+            { backgroundColor: `${theme.accent}22`, borderColor: `${theme.accent}66` },
+          ]}
+        >
+          <Text style={{ fontSize: 44, color: accentText }}>♙</Text>
+          {member && (
+            <View
+              style={[
+                s.levelBadge,
+                {
+                  backgroundColor: theme.accent,
+                  borderColor: day ? NAVY_HERO[0] : theme.background,
+                },
+              ]}
+            >
+              <Text style={s.levelBadgeText}>{level.level}</Text>
+            </View>
+          )}
+        </View>
+        <View style={{ gap: 6, flex: 1 }}>
+          <Text style={{ fontSize: 26, fontWeight: '900', color: ui.text }}>
+            {profile.name === INITIAL_PROFILE.name ? t('common:defaultPlayerName') : profile.name}
+          </Text>
+          <Label color={accentText}>
+            {profile.wins >= 25
+              ? t('profile.rank.champion')
+              : profile.wins >= 5
+                ? t('profile.rank.regular')
+                : t('profile.rank.welcome')}
+          </Label>
+        </View>
+      </View>
+      {member && (
+        <View style={{ gap: 6 }}>
+          <ProgressBar value={level.into / level.need} height={9} />
+          <View style={shared.between}>
+            <Text style={shared.small}>{t('profile.level', { level: level.level })}</Text>
+            <Text style={shared.small}>
+              {t('profile.xpToNext', {
+                into: level.into,
+                need: level.need,
+                next: level.level + 1,
+              })}
+            </Text>
+          </View>
+        </View>
+      )}
+      <Button secondary compact onPress={() => router.push('/settings')}>
+        {t('profile.edit')}
+      </Button>
+    </>
+  );
+}
+
 function Stat({
   icon,
   label,
   value,
   accent,
+  highlight = false,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: number | string;
   accent: string;
+  /** Day only: the marigold celebratory card. */
+  highlight?: boolean;
 }) {
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
+  // Night keeps its soft tint; day gets a solid tile in the vivid game hue.
+  const tile =
+    ui.scheme === 'dark' ? { background: `${accent}1f`, icon: accent } : iconTile(accent, ui);
   return (
-    <Card style={s.stat}>
-      <View style={[s.statIcon, { backgroundColor: `${accent}1f` }]}>
-        <Ionicons name={icon} size={16} color={accent} />
+    <Card style={highlight ? StyleSheet.flatten([s.stat, s.statHot]) : s.stat}>
+      {highlight && (
+        <LinearGradient
+          colors={MARIGOLD}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+      <View style={[s.statIcon, { backgroundColor: tile.background }]}>
+        <Ionicons name={icon} size={16} color={tile.icon} />
       </View>
       <Text style={{ color: ui.text, fontSize: 24, fontWeight: '900' }}>{value}</Text>
       <Text style={shared.small}>{label}</Text>
@@ -252,8 +322,8 @@ function Stat({
   );
 }
 
-const s = StyleSheet.create({
-  hero: { borderRadius: 22, overflow: 'hidden', borderWidth: 1.5 },
+const useStyles = makeStyles((ui) => ({
+  hero: { borderRadius: 22, overflow: 'hidden', borderWidth: 1.5, boxShadow: liftByDay(ui) },
   heroInner: { padding: 16, gap: 14 },
   avatar: {
     width: 76,
@@ -274,10 +344,11 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#0e1322',
   },
   levelBadgeText: { color: '#1d2030', fontWeight: '900', fontSize: 12 },
   stat: { flex: 1, padding: 12, alignItems: 'center', gap: 4 },
+  // Marigold by day: navy text reads on it at 10:1, muted at 5.7:1.
+  statHot: { overflow: 'hidden', borderColor: `${ui.gold}55`, boxShadow: liftByDay(ui) },
   statIcon: {
     width: 30,
     height: 30,
@@ -287,4 +358,4 @@ const s = StyleSheet.create({
   },
   balance: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   balanceText: { color: ui.text, fontSize: 26, fontWeight: '900' },
-});
+}));

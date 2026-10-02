@@ -9,7 +9,7 @@
     "scheme": "perfectludo",
     "orientation": "default",
     "icon": "./assets/brand/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.devmindslabs.ludoRumble"
@@ -67,7 +67,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0e1322",
+          "backgroundColor": "#f6f3ec",
           "image": "./assets/brand/splash-icon.png",
           "imageWidth": 288,
           "resizeMode": "contain",

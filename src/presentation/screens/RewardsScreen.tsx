@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Pressable, ScrollView, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,7 +12,6 @@ import {
   GIFT_STREAK_GEMS,
   giftCalendar,
   GUEST_VAULT_AD_COINS,
-  GUEST_VAULT_ADS_PER_DAY,
   GUEST_VAULT_CAP,
   GUEST_VAULT_WIN,
   RESCUE_COINS,
@@ -29,7 +28,7 @@ import {
 } from '@/domain';
 import { rewardedAds } from '@/config/container';
 import { Text } from '../components/AppText';
-import { Body, Button, Card, Label, Screen, shared, Sheet } from '../components/Kit';
+import { Body, Button, Card, Label, Screen, Sheet, useShared } from '../components/Kit';
 import { CoinIcon, GemIcon } from '../components/Currency';
 import { AdTile } from '../components/AdTile';
 import { LuckyWheel } from '../components/LuckyWheel';
@@ -37,9 +36,12 @@ import { Shine } from '../components/Live';
 import { ProgressBar, RewardChips, timeLeft } from '../components/Progress';
 import { useRewards } from '../hooks/useRewards';
 import { useMotionEnabled } from '../hooks/useMotionEnabled';
+import { useGuestAdReward } from '../hooks/useGuestAdReward';
 import { useProfile } from '../state/ProfileProvider';
 import { i18n } from '../i18n';
-import { ui } from '../theme/themes';
+import { makeStyles, SchemeScope, useUi } from '../theme/AppearanceProvider';
+import { DARK } from '../theme/palette';
+import { liftByDay, MARIGOLD, NAVY_HERO, pillColors } from '../theme/surfaces';
 import { numberLocale } from '../i18n/format';
 
 /**
@@ -58,6 +60,17 @@ function noticeText(notice: Notice): string {
 
 const num = (n: number) => n.toLocaleString(numberLocale());
 
+/**
+ * Fixed fills of the gold and green claim buttons and the vault badge: bright
+ * in both modes, with their dark labels ('#3b2400', '#003824') on top.
+ */
+const GOLD_BUTTON = DARK.gold;
+const GREEN_BUTTON = DARK.green;
+
+/** The guest vault's gold gradient: night as before, a soft gold paper by day. */
+const VAULT_DARK = ['#3d2f0f', '#221a0a', '#1a1408'] as const;
+const VAULT_LIGHT = ['#fff7e3', '#fdeecb', '#fae6b9'] as const;
+
 /** The wheel's prize line, by prize kind. */
 const PRIZE_KEYS = {
   coins: 'spin.prizeCoins',
@@ -68,6 +81,10 @@ const PRIZE_KEYS = {
 export default function RewardsScreen() {
   const { theme, profile, member, claimGift, claimRescue, claimVault } = useProfile();
   const { t } = useTranslation('rewards');
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
+  const night = ui.scheme === 'dark';
   const rewards = useRewards();
   const [busy, setBusy] = useState<string | null>(null);
   const [claimError, setClaimError] = useState<Notice | null>(null);
@@ -139,7 +156,7 @@ export default function RewardsScreen() {
 
       {/* ---- Guest vault carried onto this account ---- */}
       {profile.vaultCoins > 0 && (
-        <Card style={{ borderColor: ui.gold, backgroundColor: '#2a2210' }}>
+        <Card style={s.vaultCarry}>
           <View style={shared.between}>
             <View style={{ flex: 1, gap: 4 }}>
               <Label color={ui.gold}>{t('vaultCarry.label')}</Label>
@@ -163,10 +180,10 @@ export default function RewardsScreen() {
         </Card>
       )}
 
-      {/* ---- Daily reward calendar ---- */}
-      <Card style={{ borderColor: `${ui.green}40` }}>
+      {/* ---- Daily reward calendar: by day the screen's one marigold card ---- */}
+      <GiftShell night={night}>
         <View style={{ gap: 4 }}>
-          <Label color={ui.green}>{t('gift.label')}</Label>
+          <Label color={night ? ui.green : ui.text}>{t('gift.label')}</Label>
           <Text style={shared.sectionTitle}>
             {gift.claimedToday
               ? t('gift.collectedTitle', { day: gift.day })
@@ -183,6 +200,8 @@ export default function RewardsScreen() {
                 key={day}
                 style={[
                   s.giftDay,
+                  // White tiles on the marigold card by day.
+                  !night && { backgroundColor: theme.surface },
                   collected && { opacity: 0.45 },
                   active && { borderColor: ui.green, boxShadow: `0 0 10px ${ui.green}55` },
                 ]}
@@ -200,7 +219,12 @@ export default function RewardsScreen() {
         <Text style={shared.small}>
           {t('gift.hint', { coins: GIFT_CYCLE_COINS[6], gems: GIFT_STREAK_GEMS })}
         </Text>
-        <Button disabled={gift.claimedToday || busy !== null} onPress={() => void claim('gift')}>
+        {/* By day a navy button: the theme's gold accent would melt into marigold. */}
+        <Button
+          secondary={!night}
+          disabled={gift.claimedToday || busy !== null}
+          onPress={() => void claim('gift')}
+        >
           {busy === 'gift'
             ? t('gift.claiming')
             : gift.claimedToday
@@ -213,7 +237,7 @@ export default function RewardsScreen() {
                   })
                 : t('gift.claimDay', { day: gift.day, coins: GIFT_CYCLE_COINS[gift.day - 1] })}
         </Button>
-      </Card>
+      </GiftShell>
 
       {/* ---- Comeback rescue: only while nearly broke ---- */}
       {profile.coins < RESCUE_THRESHOLD &&
@@ -259,44 +283,21 @@ export default function RewardsScreen() {
         })()}
       {claimError && <Text style={shared.error}>{noticeText(claimError)}</Text>}
 
-      {/* ---- Daily lucky spin ---- */}
-      <Card style={{ borderColor: `${ui.gold}40` }}>
-        <View style={shared.between}>
-          <View style={{ flex: 1, gap: 6 }}>
-            <Label color={ui.gold}>{t('spin.label')}</Label>
-            <Text style={shared.sectionTitle}>{t('spin.title')}</Text>
-            <View style={[shared.row, { gap: 6 }]}>
-              {Array.from({ length: 7 }, (_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    s.streakDot,
-                    i < (profile.spinStreak % 7 || (profile.spinStreak && !freeSpin ? 7 : 0)) && {
-                      backgroundColor: ui.gold,
-                    },
-                  ]}
-                />
-              ))}
-              <Text style={shared.small}>{t('spin.streakHint')}</Text>
-            </View>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('spin.openA11y')}
-            onPress={() => setWheelOpen(true)}
-            style={s.wheelThumb}
-          >
-            <Ionicons name="sync-circle" size={46} color={ui.gold} />
-          </Pressable>
-        </View>
-        <Button onPress={() => setWheelOpen(true)}>
-          {freeSpin
-            ? t('spin.freeReady')
-            : spinsToday < SPINS_PER_DAY
-              ? t('spin.extra', { gems: EXTRA_SPIN_GEMS })
-              : t('spin.backTomorrow')}
-        </Button>
-      </Card>
+      {/* ---- Daily lucky spin: by day the screen's navy hero (the 30%) ---- */}
+      <SchemeScope scheme="dark">
+        <SpinHero
+          day={!night}
+          streakLit={profile.spinStreak % 7 || (profile.spinStreak && !freeSpin ? 7 : 0)}
+          cta={
+            freeSpin
+              ? t('spin.freeReady')
+              : spinsToday < SPINS_PER_DAY
+                ? t('spin.extra', { gems: EXTRA_SPIN_GEMS })
+                : t('spin.backTomorrow')
+          }
+          onOpen={() => setWheelOpen(true)}
+        />
+      </SchemeScope>
 
       {/* ---- Free gems for a rewarded ad ---- */}
       {adsOk && (
@@ -374,7 +375,7 @@ export default function RewardsScreen() {
                 style={[s.gemButton, profile.gems < SEASON_PREMIUM_GEMS && { opacity: 0.5 }]}
               >
                 <GemIcon size={18} />
-                <Text style={{ color: ui.text, fontWeight: '800' }}>{SEASON_PREMIUM_GEMS}</Text>
+                <Text style={s.gemButtonText}>{SEASON_PREMIUM_GEMS}</Text>
               </Pressable>
             </View>
           )}
@@ -393,6 +394,7 @@ export default function RewardsScreen() {
                 premiumClaimed={season.premiumClaimed.includes(tier)}
                 busy={rewards.busy}
                 accent={theme.accent}
+                accentText={theme.accentText}
                 onClaim={(premium) => void rewards.claimTier(tier, premium)}
               />
             ))}
@@ -482,44 +484,104 @@ export default function RewardsScreen() {
 }
 
 /**
+ * The daily-gift card's shell: by night the card as before; by day the
+ * screen's one marigold highlight (the 10% of 60-30-10), with navy text.
+ */
+function GiftShell({ night, children }: { night: boolean; children: ReactNode }) {
+  const s = useStyles();
+  const ui = useUi();
+  if (night) return <Card style={{ borderColor: `${ui.green}40` }}>{children}</Card>;
+  return (
+    <LinearGradient
+      colors={MARIGOLD}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={s.marigold}
+    >
+      {children}
+    </LinearGradient>
+  );
+}
+
+/**
+ * The lucky-spin card. Always drawn in the night palette (see SchemeScope at
+ * its call site): by night it is the card as before, by day the screen's navy
+ * hero, so its text, dots and button take the night tokens.
+ */
+function SpinHero({
+  day,
+  streakLit,
+  cta,
+  onOpen,
+}: {
+  day: boolean;
+  /** How many of the seven streak dots are lit. */
+  streakLit: number;
+  cta: string;
+  onOpen(): void;
+}) {
+  const { t } = useTranslation('rewards');
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
+  const body = (
+    <>
+      <View style={shared.between}>
+        <View style={{ flex: 1, gap: 6 }}>
+          <Label color={ui.gold}>{t('spin.label')}</Label>
+          <Text style={shared.sectionTitle}>{t('spin.title')}</Text>
+          <View style={[shared.row, { gap: 6 }]}>
+            {Array.from({ length: 7 }, (_, i) => (
+              <View key={i} style={[s.streakDot, i < streakLit && { backgroundColor: ui.gold }]} />
+            ))}
+            <Text style={shared.small}>{t('spin.streakHint')}</Text>
+          </View>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('spin.openA11y')}
+          onPress={onOpen}
+          style={s.wheelThumb}
+        >
+          <Ionicons name="sync-circle" size={46} color={ui.gold} />
+        </Pressable>
+      </View>
+      <Button onPress={onOpen}>{cta}</Button>
+    </>
+  );
+  if (!day) return <Card style={{ borderColor: `${ui.gold}40` }}>{body}</Card>;
+  return (
+    <LinearGradient
+      colors={NAVY_HERO}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={s.spinHero}
+    >
+      {body}
+    </LinearGradient>
+  );
+}
+
+/**
  * The guest Rewards screen: everything earned goes into a locked vault that
  * signing in pays out. Playing fills it; up to three opt-in ads a day top
  * it up faster. Nothing here ever plays an ad uninvited.
  */
 function GuestRewards() {
-  const { profile, claimGuestAd } = useProfile();
+  const { profile } = useProfile();
   const { t } = useTranslation('rewards');
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<Notice | null>(null);
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
   const motion = useMotionEnabled(profile.reducedMotion, true);
-  const adsOk = rewardedAds.supported();
-  const todayUtc = new Date().toISOString().slice(0, 10);
-  const adsUsed = profile.vaultAdDay === todayUtc ? profile.vaultAdsToday : 0;
-  const adsLeft = Math.max(0, GUEST_VAULT_ADS_PER_DAY - adsUsed);
-  const full = profile.vaultCoins >= GUEST_VAULT_CAP;
-
-  async function watchAd() {
-    setBusy(true);
-    setNotice(null);
-    try {
-      if (!(await rewardedAds.show())) {
-        setNotice({ key: 'adNotFinished' });
-        return;
-      }
-      await claimGuestAd();
-      setNotice({ key: 'adAdded' });
-    } catch (e) {
-      setNotice(e instanceof Error ? { text: e.message } : { key: 'addFailed' });
-    } finally {
-      setBusy(false);
-    }
-  }
+  const ad = useGuestAdReward();
+  const full = ad.full;
 
   return (
     <Screen title={t('title')} subtitle={t('guest.subtitle')}>
       <View style={s.vaultCard}>
         <LinearGradient
-          colors={['#3d2f0f', '#221a0a', '#1a1408']}
+          colors={ui.scheme === 'dark' ? VAULT_DARK : VAULT_LIGHT}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={s.vaultInner}
@@ -561,22 +623,25 @@ function GuestRewards() {
         </LinearGradient>
       </View>
 
-      {adsOk && (
+      {ad.available && (
         <AdTile
           title={t('guest.adTitle')}
-          reward={t('guest.adReward', { coins: GUEST_VAULT_AD_COINS })}
+          reward={t('guest.adReward', { coins: ad.coinsPerAd })}
           icon="coin"
-          caption={full ? t('guest.adFull') : adsLeft > 0 ? t('gemAd.caption') : t('gemAd.done')}
-          busy={busy}
-          disabled={adsLeft <= 0 || full}
-          left={adsLeft}
-          total={GUEST_VAULT_ADS_PER_DAY}
-          onPress={() => void watchAd()}
+          caption={full ? t('guest.adFull') : ad.left > 0 ? t('gemAd.caption') : t('gemAd.done')}
+          busy={ad.busy}
+          disabled={!ad.canWatch && !ad.busy}
+          left={ad.left}
+          total={ad.total}
+          onPress={() => void ad.watch()}
         />
       )}
-      {notice && (
-        <Text accessibilityLiveRegion="polite" style={[shared.small, { color: ui.green }]}>
-          {noticeText(notice)}
+      {ad.noticeText && (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={[shared.small, { color: ad.succeeded ? ui.green : ui.danger }]}
+        >
+          {ad.noticeText}
         </Text>
       )}
 
@@ -598,6 +663,9 @@ function MissionRow({
   onClaim(): void;
 }) {
   const { t } = useTranslation('rewards');
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
   const done = mission.progress >= mission.target;
   return (
     <Card
@@ -640,7 +708,7 @@ function MissionRow({
       {!mission.claimed && (
         <ProgressBar
           value={mission.progress / mission.target}
-          colors={[ui.green, '#10b981']}
+          colors={[DARK.green, '#10b981']}
           height={8}
         />
       )}
@@ -656,6 +724,7 @@ function TierColumn({
   premiumClaimed,
   busy,
   accent,
+  accentText,
   onClaim,
 }: {
   tier: number;
@@ -665,9 +734,13 @@ function TierColumn({
   premiumClaimed: boolean;
   busy: string | null;
   accent: string;
+  /** The accent as text, readable on the page. */
+  accentText: string;
   onClaim(premium: boolean): void;
 }) {
   const { t } = useTranslation('rewards');
+  const s = useStyles();
+  const ui = useUi();
   const free = seasonTierReward(tier, false);
   const paid = seasonTierReward(tier, true);
   const cell = (isPremium: boolean) => {
@@ -685,7 +758,7 @@ function TierColumn({
         onPress={() => onClaim(isPremium)}
         style={[
           s.tierCell,
-          isPremium && { backgroundColor: '#2a2140' },
+          isPremium && s.premiumCell,
           ready && { borderColor: accent, boxShadow: `0 0 10px ${accent}66` },
           (claimed || (!reached && !ready)) && { opacity: claimed ? 0.5 : 0.75 },
         ]}
@@ -703,7 +776,9 @@ function TierColumn({
         ) : locked ? (
           <Ionicons name="lock-closed" size={12} color={ui.subtle} />
         ) : ready ? (
-          <Text style={{ color: accent, fontSize: 9, fontWeight: '900' }}>{t('season.claim')}</Text>
+          <Text style={{ color: accentText, fontSize: 9, fontWeight: '900' }}>
+            {t('season.claim')}
+          </Text>
         ) : null}
       </Pressable>
     );
@@ -719,7 +794,31 @@ function TierColumn({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
+  // Night: the gold-tinted card as before. Day: a white card with a gold rim.
+  vaultCarry:
+    ui.scheme === 'dark'
+      ? { borderColor: ui.gold, backgroundColor: '#2a2210' }
+      : { borderColor: `${ui.gold}55` },
+  // Day only: the marigold gift card, laid out like a Card.
+  marigold: {
+    borderRadius: 18,
+    padding: 18,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: `${ui.gold}55`,
+    boxShadow: liftByDay(ui),
+    overflow: 'hidden',
+  },
+  // Day only, built from the night tokens inside SchemeScope: the navy spin hero.
+  spinHero: {
+    borderRadius: 18,
+    padding: 18,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: `${ui.gold}40`,
+    overflow: 'hidden',
+  },
   giftRow: { flexDirection: 'row', gap: 6 },
   giftDay: {
     flex: 1,
@@ -727,9 +826,10 @@ const s = StyleSheet.create({
     gap: 2,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: ui.navy,
+    // A tile, not a button: navy slate by night, a light surface by day.
+    backgroundColor: ui.scheme === 'dark' ? ui.navy : ui.surfaceLow,
     borderWidth: 1.5,
-    borderColor: '#ffffff1a',
+    borderColor: ui.line,
   },
   giftDayLabel: { color: ui.subtle, fontSize: 10, fontWeight: '800' },
   giftDayAmount: { color: ui.text, fontSize: 11, fontWeight: '800' },
@@ -741,7 +841,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 999,
-    backgroundColor: ui.gold,
+    backgroundColor: GOLD_BUTTON,
     borderBottomWidth: 3,
     borderBottomColor: '#b77739',
   },
@@ -749,7 +849,7 @@ const s = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#ffffff1a',
+    backgroundColor: ui.fillStrong,
   },
   vaultCard: {
     borderRadius: 22,
@@ -763,7 +863,7 @@ const s = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: ui.gold,
+    backgroundColor: GOLD_BUTTON,
     alignItems: 'center',
     justifyContent: 'center',
     borderBottomWidth: 3,
@@ -774,7 +874,7 @@ const s = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 20,
-    backgroundColor: '#ffb95f1a',
+    backgroundColor: `${ui.gold}1a`,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -784,9 +884,13 @@ const s = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: '#2a2140',
+    // Day: a faint ink well on the white card instead of a violet wash.
+    backgroundColor: ui.scheme === 'dark' ? '#2a2140' : ui.fill,
     borderWidth: 1,
-    borderColor: '#c084fc44',
+    borderColor: `${ui.gem}44`,
+  },
+  premiumCell: {
+    backgroundColor: ui.scheme === 'dark' ? '#2a2140' : pillColors(DARK.gem, ui).background,
   },
   gemButton: {
     minHeight: 48,
@@ -800,13 +904,15 @@ const s = StyleSheet.create({
     borderBottomWidth: 3,
     borderBottomColor: '#581c87',
   },
+  // On the purple button: the night text as before, white in day for contrast.
+  gemButtonText: { color: ui.scheme === 'dark' ? ui.text : ui.onColor, fontWeight: '800' },
   tierCell: {
     width: 64,
     height: 70,
     borderRadius: 14,
-    backgroundColor: ui.navy,
+    backgroundColor: ui.scheme === 'dark' ? ui.navy : ui.surfaceLow,
     borderWidth: 1.5,
-    borderColor: '#ffffff1a',
+    borderColor: ui.line,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
@@ -814,7 +920,7 @@ const s = StyleSheet.create({
   claim: {
     minHeight: 48,
     justifyContent: 'center',
-    backgroundColor: ui.green,
+    backgroundColor: GREEN_BUTTON,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -823,4 +929,4 @@ const s = StyleSheet.create({
   },
   prize: { alignItems: 'center', gap: 8 },
   prizeText: { color: ui.text, fontSize: 30, fontWeight: '900' },
-});
+}));

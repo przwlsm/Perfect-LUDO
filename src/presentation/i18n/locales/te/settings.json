@@ -8,6 +8,14 @@
     "systemHint": "ప్రస్తుతం {{language}}",
     "a11y": "{{name}}, {{englishName}}"
   },
+  "appearance": {
+    "label": "థీమ్",
+    "title": "పగలా, రాత్రా?",
+    "system": "ఫోన్ సెట్టింగ్",
+    "light": "పగలు",
+    "dark": "రాత్రి",
+    "a11y": "థీమ్: {{option}}"
+  },
   "name": {
     "label": "టేబుల్ దగ్గర",
     "title": "మిమ్మల్ని ఏమని పిలవాలి?",

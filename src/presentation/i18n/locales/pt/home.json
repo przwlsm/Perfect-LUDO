@@ -197,5 +197,13 @@
     "loading": "Carregando seu anúncio…",
     "hangTight": "Aguenta aí — sua recompensa chega logo depois.",
     "left": "RESTAM {{left}}"
+  },
+  "guestAd": {
+    "title": "Moedas grátis",
+    "reward": "+{{coins}} moedas por anúncio",
+    "caption": "Assista a um anúncio curto. As moedas ficam no seu cofre até você entrar."
+  },
+  "mode": {
+    "needsInternet": "Precisa de internet"
   }
 }

@@ -4,14 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { router, useLocalSearchParams } from 'expo-router';
 import { authProvider } from '@/config/container';
-import { Body, Button, Card, Label, Screen, Sheet, shared } from '../components/Kit';
+import { Body, Button, Card, Label, Screen, Sheet, useShared } from '../components/Kit';
 import { INITIAL_PROFILE } from '@/application/store/ProfileService';
 import { useProfile } from '../state/ProfileProvider';
 import { useAuthSession } from '../state/useAuthSession';
 import { AuthField } from '../auth/AuthField';
 import { SocialButton } from '../auth/SocialButton';
 import { useUsernameAvailability } from '../hooks/useUsernameAvailability';
-import { ui } from '../theme/themes';
+import { useUi } from '../theme/AppearanceProvider';
 import type { EmailVerification } from '@/domain';
 import { numberLocale } from '../i18n/format';
 
@@ -27,6 +27,8 @@ export default function LoginScreen() {
   const { theme, profile, perform, syncWarning, reload } = useProfile();
   const { t } = useTranslation(['account', 'common']);
   const auth = useAuthSession();
+  const ui = useUi();
+  const shared = useShared();
   const guest = auth.user?.isGuest === true;
   // A guest is here to create an account, so that form comes first for them.
   const [mode, setMode] = useState<Mode>(() =>
@@ -146,7 +148,7 @@ export default function LoginScreen() {
           </>
         ) : member ? (
           <>
-            <Label color={theme.accent}>{t('login.signedIn')}</Label>
+            <Label color={theme.accentText}>{t('login.signedIn')}</Label>
             <Body>{auth.user?.email ?? t('login.connectedAccount')}</Body>
             <Body>
               {t('login.summary', {
@@ -209,7 +211,7 @@ export default function LoginScreen() {
               <View style={[shared.row, { alignItems: 'flex-start' }]}>
                 <Text style={{ fontSize: 26 }}>🎟</Text>
                 <View style={{ flex: 1, gap: 3 }}>
-                  <Label color={theme.accent}>{t('shared.guestLabel')}</Label>
+                  <Label color={theme.accentText}>{t('shared.guestLabel')}</Label>
                   <Text style={shared.small}>
                     {signingUp ? t('login.guestSignUp') : t('login.guestSignIn')}
                   </Text>

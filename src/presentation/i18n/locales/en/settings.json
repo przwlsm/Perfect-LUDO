@@ -8,6 +8,14 @@
     "systemHint": "Currently {{language}}",
     "a11y": "{{name}}, {{englishName}}"
   },
+  "appearance": {
+    "label": "APPEARANCE",
+    "title": "Day or night?",
+    "system": "Phone setting",
+    "light": "Day",
+    "dark": "Night",
+    "a11y": "Appearance: {{option}}"
+  },
   "name": {
     "label": "AT THE TABLE",
     "title": "What should we call you?",

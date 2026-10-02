@@ -1,9 +1,9 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Text } from './AppText';
 import { useProfile } from '../state/ProfileProvider';
-import { ui } from '../theme/themes';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
 
 /** Every player for themselves, or 2 v 2 with the player opposite. Four seats only. */
 export function TeamsToggle({
@@ -14,6 +14,8 @@ export function TeamsToggle({
   onChange(teams: boolean): void;
 }) {
   const { theme } = useProfile();
+  const s = useStyles();
+  const ui = useUi();
   const { t } = useTranslation('home');
   return (
     <View style={{ gap: 8 }}>
@@ -37,9 +39,9 @@ export function TeamsToggle({
               <Ionicons
                 name={teams ? 'people' : 'person'}
                 size={16}
-                color={selected ? theme.accent : ui.muted}
+                color={selected ? theme.accentText : ui.muted}
               />
-              <Text style={[s.text, selected && { color: theme.accent }]}>
+              <Text style={[s.text, selected && { color: theme.accentText }]}>
                 {teams ? t('teams.on') : t('teams.off')}
               </Text>
             </Pressable>
@@ -51,7 +53,7 @@ export function TeamsToggle({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   row: { flexDirection: 'row', gap: 8 },
   chip: {
     flex: 1,
@@ -66,4 +68,4 @@ const s = StyleSheet.create({
   },
   text: { color: ui.text, fontWeight: '800', fontSize: 13 },
   hint: { color: ui.muted, fontSize: 12, lineHeight: 17 },
-});
+}));

@@ -8,6 +8,14 @@
     "systemHint": "Atualmente {{language}}",
     "a11y": "{{name}}, {{englishName}}"
   },
+  "appearance": {
+    "label": "APARÊNCIA",
+    "title": "Dia ou noite?",
+    "system": "Como o celular",
+    "light": "Dia",
+    "dark": "Noite",
+    "a11y": "Aparência: {{option}}"
+  },
   "name": {
     "label": "NA MESA",
     "title": "Como devemos chamar você?",

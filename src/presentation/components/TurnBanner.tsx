@@ -1,8 +1,9 @@
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from './AppText';
 import type { GameState, PlayerColor } from '@/domain';
 import { PLAYER_COLOR_HEX } from './PlayerColorPalette';
+import { makeStyles } from '../theme/AppearanceProvider';
 
 export interface TurnBannerProps {
   readonly state: GameState;
@@ -11,6 +12,7 @@ export interface TurnBannerProps {
 
 export function TurnBanner({ state, humanColor }: TurnBannerProps): React.JSX.Element {
   const { t } = useTranslation('game');
+  const styles = useStyles();
   // The colour as an id ("RED") in English, its name in other languages.
   const colorName = (color: PlayerColor) => t(`colors.${color}`).toUpperCase();
   if (state.status === 'FINISHED') {
@@ -41,7 +43,7 @@ export function TurnBanner({ state, humanColor }: TurnBannerProps): React.JSX.El
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -55,8 +57,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   text: {
-    color: '#f8fafc',
+    color: ui.text,
     fontSize: 16,
     fontWeight: '600',
   },
-});
+}));

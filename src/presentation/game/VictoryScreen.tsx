@@ -30,7 +30,10 @@ import { Bob, Shine } from '../components/Live';
 import { ProgressBar, RewardChips } from '../components/Progress';
 import { UserAvatar } from '../social/UserAvatar';
 import { useProfile } from '../state/ProfileProvider';
-import { ui } from '../theme/themes';
+import { makeStyles, SchemeScope, useUi } from '../theme/AppearanceProvider';
+import { DARK } from '../theme/palette';
+import { readableOn } from '../theme/color';
+import { iconTile, liftByDay, MARIGOLD, NAVY_HERO } from '../theme/surfaces';
 import { numberLocale } from '../i18n/format';
 import { forwardArrow } from '../i18n/rtl';
 
@@ -94,6 +97,10 @@ export function VictoryScreen({
   const { profile, member } = useProfile();
   const { t } = useTranslation('game');
   const insets = useSafeAreaInsets();
+  const s = useStyles();
+  const ui = useUi();
+  const day = ui.scheme === 'light';
+  const face = useCardFace();
   const before = levelInfo(profile.xp);
   const after = reward ? levelInfo(profile.xp + reward.xp) : before;
   const levelUp = reward !== null && after.level > before.level;
@@ -107,7 +114,11 @@ export function VictoryScreen({
   return (
     <Modal visible={visible} animationType="fade" statusBarTranslucent navigationBarTranslucent>
       <LinearGradient
-        colors={win ? ['#2a1d05', '#0e1322', '#0e1322'] : ['#161b2c', '#0e1322', '#0e1322']}
+        colors={[
+          (ui.scheme === 'dark' ? DARK_GLOW : LIGHT_GLOW)[win ? 'win' : 'other'],
+          ui.background,
+          ui.background,
+        ]}
         style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom }}
       >
         {win && motion && <Confetti />}
@@ -128,31 +139,20 @@ export function VictoryScreen({
           </View>
 
           <Animated.View entering={motion ? ZoomIn.springify().damping(12) : undefined}>
-            <LinearGradient
-              colors={win ? ['#fde68a', '#f59e0b', '#d97706'] : ['#475569', '#334155']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={s.banner}
-            >
-              <Shine active={motion && win} width={420} every={2200} />
-              <Ionicons
-                name={win ? 'trophy' : outcome === 'abandoned' ? 'exit' : 'ribbon'}
-                size={30}
-                color={win ? '#3b2400' : '#e2e8f0'}
-              />
-              <Text
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                style={[s.bannerText, { color: win ? '#3b2400' : '#f1f5f9' }]}
-              >
-                {banner}
-              </Text>
-            </LinearGradient>
+            {day ? (
+              // By day the result is the page's navy island (the 30%), drawn in
+              // the night palette; the marigold rewards card is its one pop.
+              <SchemeScope scheme="dark">
+                <ResultBanner outcome={outcome} banner={banner} motion={motion} island />
+              </SchemeScope>
+            ) : (
+              <ResultBanner outcome={outcome} banner={banner} motion={motion} island={false} />
+            )}
           </Animated.View>
           <Text style={[s.subtitle, { color: win ? ui.gold : ui.muted }]}>{subtitle}</Text>
 
           {podium.length > 0 && (
-            <Animated.View entering={rise(150)} style={s.podium}>
+            <Animated.View entering={rise(150)} style={[s.podium, { backgroundColor: face }]}>
               {columns.map((entry, i) =>
                 entry ? (
                   <PodiumColumn
@@ -171,15 +171,28 @@ export function VictoryScreen({
           )}
 
           {reward && member ? (
-            <Animated.View entering={rise(300)} style={s.card}>
+            <Animated.View entering={rise(300)} style={[s.card, day && s.prizeCard]}>
+              {day && (
+                // The one marigold card by day (the 10%): navy text reads on it at 10:1.
+                <LinearGradient
+                  colors={MARIGOLD}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              )}
               <View style={s.rowBetween}>
                 <View style={[s.row, { gap: 8 }]}>
-                  <Ionicons name="gift" size={20} color={ui.gold} />
+                  <Ionicons name="gift" size={20} color={day ? ui.text : ui.gold} />
                   <Text style={s.cardTitle}>{t('victory.rewards')}</Text>
                 </View>
-                <RewardChips coins={reward.coins} xp={reward.xp} />
+                {/* By day the gold and green amounts sit on a white chip to read on marigold. */}
+                <View style={day && [s.prizeChip, { backgroundColor: face }]}>
+                  <RewardChips coins={reward.coins} xp={reward.xp} />
+                </View>
               </View>
-              <View style={s.levelBox}>
+              {/* By day the well is white on marigold: gold and green text keep 4.5:1. */}
+              <View style={[s.levelBox, day && { backgroundColor: face }]}>
                 <View style={s.rowBetween}>
                   <Text style={s.levelText}>
                     {t('victory.level', { level: before.level })}
@@ -211,7 +224,7 @@ export function VictoryScreen({
               </View>
             </Animated.View>
           ) : note ? (
-            <Animated.View entering={rise(300)} style={s.card}>
+            <Animated.View entering={rise(300)} style={[s.card, { backgroundColor: face }]}>
               <Text style={[s.small, { textAlign: 'center', fontSize: 13 }]}>{note}</Text>
             </Animated.View>
           ) : null}
@@ -228,23 +241,24 @@ export function VictoryScreen({
                 )}
               </View>
               <View style={s.statsGrid}>
+                {/* Vivid game hues in both modes; iconTile makes them solid tiles by day. */}
                 <StatTile
                   icon="dice"
                   label={t('victory.sixes')}
                   value={stats.sixes}
-                  color={ui.gold}
+                  color={DARK.gold}
                 />
                 <StatTile
                   icon="flash"
                   label={t('victory.captured')}
                   value={stats.captures}
-                  color="#f87171"
+                  color={day ? DARK.danger : '#f87171'}
                 />
                 <StatTile
                   icon="home"
                   label={t('victory.home')}
                   value={stats.home}
-                  color={ui.green}
+                  color={DARK.green}
                 />
               </View>
             </Animated.View>
@@ -278,7 +292,7 @@ export function VictoryScreen({
               onPress={secondary.onPress}
               style={s.secondary}
             >
-              <Ionicons name="home" size={18} color={ui.text} />
+              <Ionicons name="home" size={18} color={ui.secondaryText} />
               <Text style={s.secondaryText}>{secondary.label}</Text>
             </Pressable>
             {shareMessage && (
@@ -287,8 +301,10 @@ export function VictoryScreen({
                 onPress={() => void Share.share({ message: shareMessage }).catch(() => undefined)}
                 style={s.secondary}
               >
-                <Ionicons name="share-social" size={18} color={ui.blueSoft} />
-                <Text style={[s.secondaryText, { color: ui.blueSoft }]}>{t('victory.share')}</Text>
+                <Ionicons name="share-social" size={18} color={DARK.blueSoft} />
+                <Text style={[s.secondaryText, { color: DARK.blueSoft }]}>
+                  {t('victory.share')}
+                </Text>
               </Pressable>
             )}
           </View>
@@ -298,9 +314,60 @@ export function VictoryScreen({
   );
 }
 
+/**
+ * A card's face: by day the board theme's white surface, so cards lift off
+ * the ivory page (surfaceLow sits too close to it); by night surfaceLow as before.
+ */
+function useCardFace(): string {
+  const { theme } = useProfile();
+  const ui = useUi();
+  return ui.scheme === 'light' ? theme.surface : ui.surfaceLow;
+}
+
+/**
+ * The win/lose banner. By night its own celebratory gradient; by day
+ * (`island`, rendered inside a dark SchemeScope) the navy hero, with the
+ * trophy and the word in gold for a win.
+ */
+function ResultBanner({
+  outcome,
+  banner,
+  motion,
+  island,
+}: {
+  outcome: VictoryOutcome;
+  banner: string;
+  motion: boolean;
+  island: boolean;
+}) {
+  const s = useStyles();
+  const ui = useUi();
+  const win = outcome === 'win';
+  const icon = island ? (win ? ui.gold : ui.muted) : win ? '#3b2400' : '#e2e8f0';
+  const ink = island ? (win ? ui.gold : ui.text) : win ? '#3b2400' : '#f1f5f9';
+  return (
+    <LinearGradient
+      colors={island ? NAVY_HERO : win ? ['#fde68a', '#f59e0b', '#d97706'] : ['#475569', '#334155']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={s.banner}
+    >
+      <Shine active={motion && win} width={420} every={2200} />
+      <Ionicons
+        name={win ? 'trophy' : outcome === 'abandoned' ? 'exit' : 'ribbon'}
+        size={30}
+        color={icon}
+      />
+      <Text numberOfLines={1} adjustsFontSizeToFit style={[s.bannerText, { color: ink }]}>
+        {banner}
+      </Text>
+    </LinearGradient>
+  );
+}
+
 /** Text: game:victory.place.<id>. */
 const PLACE = {
-  1: { id: 'winner', tint: ui.gold, size: 84 },
+  1: { id: 'winner', tint: '#ffb95f', size: 84 },
   2: { id: 'silver', tint: '#cbd5e1', size: 62 },
   3: { id: 'bronze', tint: '#d97706', size: 62 },
 } as const;
@@ -319,7 +386,12 @@ function PodiumColumn({
   motion: boolean;
 }) {
   const { t } = useTranslation('game');
+  const s = useStyles();
+  const ui = useUi();
+  const face = useCardFace();
   const style = PLACE[place];
+  // Medal colours are the same in both modes; as text they deepen in day mode.
+  const tintText = ui.scheme === 'dark' ? style.tint : readableOn(style.tint, [face]);
   const avatar = entry.userId ? (
     <UserAvatar
       id={entry.userId}
@@ -363,11 +435,15 @@ function PodiumColumn({
       <Text numberOfLines={1} style={[s.podiumName, entry.you && { color: ui.gold }]}>
         {entry.you ? t('victory.you', { name: entry.name }) : entry.name}
       </Text>
-      <Text style={[s.placeLabel, { color: style.tint }]}>{t(`victory.place.${style.id}`)}</Text>
+      <Text style={[s.placeLabel, { color: tintText }]}>{t(`victory.place.${style.id}`)}</Text>
       <View
         style={[
           s.podiumBox,
-          place === 1 && { minHeight: 74, backgroundColor: '#3a2a0c', borderColor: `${ui.gold}55` },
+          place === 1 && {
+            minHeight: 74,
+            backgroundColor: ui.scheme === 'dark' ? '#3a2a0c' : '#fbedcb',
+            borderColor: `${ui.gold}55`,
+          },
         ]}
       >
         {reward ? (
@@ -394,10 +470,13 @@ function StatTile({
   value: number;
   color: string;
 }) {
+  const s = useStyles();
+  const face = useCardFace();
+  const tile = iconTile(color, useUi());
   return (
-    <View style={s.stat}>
-      <View style={[s.statIcon, { backgroundColor: `${color}22` }]}>
-        <Ionicons name={icon} size={20} color={color} />
+    <View style={[s.stat, { backgroundColor: face }]}>
+      <View style={[s.statIcon, { backgroundColor: tile.background }]}>
+        <Ionicons name={icon} size={20} color={tile.icon} />
       </View>
       <Text style={s.statValue}>{value}</Text>
       <Text style={s.statLabel}>{label}</Text>
@@ -486,7 +565,11 @@ function formatDuration(ms: number, t: TFunction<'game'>): string {
     : t('victory.seconds', { seconds: sec });
 }
 
-const s = StyleSheet.create({
+/** The top of the page's backdrop: a warm glow for a win, a cool one otherwise. */
+const DARK_GLOW = { win: '#2a1d05', other: '#161b2c' };
+const LIGHT_GLOW = { win: '#fbe5b4', other: '#e4e7f0' };
+
+const useStyles = makeStyles((ui) => ({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -505,7 +588,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: '#ffffff10',
+    backgroundColor: ui.fill,
   },
   completedText: { color: ui.text, fontSize: 12, fontWeight: '900', letterSpacing: 2 },
   banner: {
@@ -518,7 +601,7 @@ const s = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     borderBottomWidth: 5,
-    borderBottomColor: '#00000040',
+    borderBottomColor: ui.shadow,
   },
   bannerText: { fontSize: 38, fontWeight: '900', letterSpacing: 1, flexShrink: 1 },
   subtitle: {
@@ -534,9 +617,10 @@ const s = StyleSheet.create({
     gap: 8,
     padding: 14,
     borderRadius: 24,
-    backgroundColor: '#161c2d',
+    backgroundColor: ui.surfaceLow,
     borderWidth: 1,
     borderColor: ui.line,
+    boxShadow: liftByDay(ui),
   },
   avatarRing: { borderWidth: 3, borderRadius: 999, padding: 3 },
   placeBadge: {
@@ -549,7 +633,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#0e1322',
+    borderColor: ui.background,
   },
   placeText: { color: '#1f1500', fontWeight: '900', fontSize: 12 },
   podiumName: { color: ui.text, fontWeight: '800', fontSize: 14, marginTop: 6, maxWidth: '100%' },
@@ -558,7 +642,7 @@ const s = StyleSheet.create({
     alignSelf: 'stretch',
     minHeight: 56,
     borderRadius: 14,
-    backgroundColor: '#ffffff08',
+    backgroundColor: ui.fill,
     borderWidth: 1,
     borderColor: ui.line,
     alignItems: 'center',
@@ -573,10 +657,13 @@ const s = StyleSheet.create({
     gap: 12,
     padding: 16,
     borderRadius: 22,
-    backgroundColor: '#161c2d',
+    backgroundColor: ui.surfaceLow,
     borderWidth: 1,
     borderColor: ui.line,
+    boxShadow: liftByDay(ui),
   },
+  prizeCard: { overflow: 'hidden', borderColor: 'transparent' },
+  prizeChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   row: { flexDirection: 'row', alignItems: 'center' },
   rowBetween: {
     flexDirection: 'row',
@@ -585,7 +672,7 @@ const s = StyleSheet.create({
     gap: 8,
   },
   cardTitle: { color: ui.text, fontSize: 18, fontWeight: '900' },
-  levelBox: { gap: 8, padding: 12, borderRadius: 16, backgroundColor: '#0a0f1c' },
+  levelBox: { gap: 8, padding: 12, borderRadius: 16, backgroundColor: ui.inset },
   levelText: { color: ui.text, fontWeight: '800', fontSize: 14 },
   small: { color: ui.muted, fontSize: 12, fontWeight: '700' },
   section: { color: ui.muted, fontSize: 12, fontWeight: '900', letterSpacing: 1.6 },
@@ -596,9 +683,10 @@ const s = StyleSheet.create({
     gap: 4,
     paddingVertical: 14,
     borderRadius: 18,
-    backgroundColor: '#161c2d',
+    backgroundColor: ui.surfaceLow,
     borderWidth: 1,
     borderColor: ui.line,
+    boxShadow: liftByDay(ui),
   },
   statIcon: {
     width: 40,
@@ -627,11 +715,11 @@ const s = StyleSheet.create({
     flex: 1,
     minHeight: 48,
     borderRadius: 16,
-    backgroundColor: '#232d4b',
+    backgroundColor: ui.navy,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
-  secondaryText: { color: ui.text, fontWeight: '800', fontSize: 14 },
-});
+  secondaryText: { color: ui.secondaryText, fontWeight: '800', fontSize: 14 },
+}));

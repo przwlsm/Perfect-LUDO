@@ -1,5 +1,5 @@
 import { Component, Suspense, lazy, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,10 +26,12 @@ import { PlayerPanel } from './PlayerPanel';
 import { RULES } from './rules';
 import { RoundBoardOverlay } from './RoundBoardOverlay';
 import { ZoomableBoard } from '../board/ZoomableBoard';
-import { Body, Button, Card, Label, Screen, shared, Sheet } from '../components/Kit';
+import { Body, Button, Card, Label, Screen, Sheet, useShared } from '../components/Kit';
+import { LudoLoader } from '../components/LudoLoader';
 import { useProfile } from '../state/ProfileProvider';
 import { useCatalogText } from '../i18n/useCatalogText';
-import { ui } from '../theme/themes';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
+import { liftByDay } from '../theme/surfaces';
 import { keepLtr } from '../i18n/rtl';
 
 /**
@@ -161,6 +163,10 @@ export function GameTable({
   const { t } = useTranslation('game');
   const catalog = useCatalogText();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
   const [savingView, setSavingView] = useState(false);
   const [notice, setNotice] = useState<'boardSaveFailed' | null>(null);
   const { match, current, humanTurn, busy, error } = game;
@@ -186,18 +192,19 @@ export function GameTable({
 
   if (!match || !current) {
     return (
-      <Screen nav={false} back>
-        <Card>
-          {error ? (
-            <>
-              <Body>{error}</Body>
-              <Button onPress={game.retry}>{t('table.tryAgain')}</Button>
-              <Button onPress={() => router.replace('/')}>{t('table.backToLobby')}</Button>
-            </>
-          ) : (
-            <ActivityIndicator color={theme.accent} />
-          )}
-        </Card>
+      <Screen nav={false} back decor="none">
+        {error ? (
+          <Card>
+            <Body>{error}</Body>
+            <Button onPress={game.retry}>{t('table.tryAgain')}</Button>
+            <Button onPress={() => router.replace('/')}>{t('table.backToLobby')}</Button>
+          </Card>
+        ) : (
+          // Centred in the page (the page scrolls, so flex alone cannot centre it).
+          <View style={{ minHeight: windowHeight * 0.62, justifyContent: 'center' }}>
+            <LudoLoader motionEnabled={motionEnabled} />
+          </View>
+        )}
       </Screen>
     );
   }
@@ -225,6 +232,7 @@ export function GameTable({
     motionEnabled,
     flip: boardFlip,
     homeStyle: profile.style === 'round-homes' ? ('round' as const) : ('triangle' as const),
+    showTurn: true,
     // Coins sharing a square are the same colour at the same progress, so
     // moving any one of them has exactly the same result: move the one tapped.
     onSelectMove: (selected: Move) => game.move(selected),
@@ -258,7 +266,7 @@ export function GameTable({
         value={game.seatRolls[color] ?? null}
         diceFinish={profile.dice}
         surface={theme.surface}
-        accent={theme.accent}
+        accent={theme.accentText}
         motionEnabled={motionEnabled}
         onRoll={game.roll}
         secondsLeft={active ? turnClock : null}
@@ -272,7 +280,11 @@ export function GameTable({
       <Suspense
         fallback={
           <View style={{ width: boardSize, height: boardSize, justifyContent: 'center' }}>
-            <ActivityIndicator color={theme.accent} />
+            <LudoLoader
+              compact
+              motionEnabled={motionEnabled}
+              size={Math.min(170, boardSize * 0.42)}
+            />
           </View>
         }
       >
@@ -302,7 +314,7 @@ export function GameTable({
           accessibilityRole="button"
           accessibilityLabel={t('pause.a11y')}
           onPress={() => setMenu(true)}
-          android_ripple={{ color: '#ffffff20' }}
+          android_ripple={{ color: ui.ripple }}
           style={[s.iconButton, { backgroundColor: theme.surface }]}
         >
           <Text style={s.icon}>{'☰'}</Text>
@@ -313,19 +325,19 @@ export function GameTable({
             accessibilityLabel={t('table.reactA11y')}
             accessibilityState={{ expanded: picker }}
             onPress={() => setPicker((open) => !open)}
-            android_ripple={{ color: '#ffffff20' }}
+            android_ripple={{ color: ui.ripple }}
             style={[
               s.iconButton,
               { backgroundColor: picker ? `${theme.accent}30` : theme.surface },
             ]}
           >
-            <Ionicons name="happy" size={24} color={picker ? theme.accent : ui.muted} />
+            <Ionicons name="happy" size={24} color={picker ? theme.accentText : ui.muted} />
           </Pressable>
         ) : (
           <View style={{ width: 48 }} />
         )}
         <View style={{ flex: 1, alignItems: 'center', gap: 3 }}>
-          <Label color={theme.accent}>{label}</Label>
+          <Label color={theme.accentText}>{label}</Label>
           {prize ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Ionicons name="trophy" size={11} color={ui.gold} />
@@ -346,9 +358,15 @@ export function GameTable({
           disabled={savingView}
           onPress={() => void toggleView()}
           android_ripple={{ color: `${theme.accent}25` }}
-          style={[s.viewButton, { borderColor: theme.accent }]}
+          // By day a white chip like the other header buttons; night keeps the outline.
+          style={[
+            s.viewButton,
+            ui.scheme === 'light'
+              ? { backgroundColor: theme.surface, borderColor: ui.line }
+              : { borderColor: theme.accent },
+          ]}
         >
-          <Text style={{ color: theme.accent, fontWeight: '800' }}>
+          <Text style={{ color: theme.accentText, fontWeight: '800' }}>
             {profile.board3d ? '3D' : '2D'}
           </Text>
         </Pressable>
@@ -387,7 +405,7 @@ export function GameTable({
                 accessibilityRole="button"
                 accessibilityLabel={t('table.reactWith', { emoji })}
                 onPress={() => react(emoji)}
-                android_ripple={{ color: '#ffffff25', borderless: true }}
+                android_ripple={{ color: ui.ripple, borderless: true }}
                 style={s.pickerItem}
               >
                 <Text style={{ fontSize: 26 }}>{emoji}</Text>
@@ -396,8 +414,16 @@ export function GameTable({
           </Animated.View>
         )}
         {!classic ? (
-          <View testID="game-table" style={{ width: boardSize, height: boardSize }}>
-            <ZoomableBoard size={boardSize}>
+          // The zoom window fills the table area (about 90% of the screen's
+          // height in portrait), so a zoomed round board uses the full height.
+          <View
+            testID="game-table"
+            style={{
+              width: Math.max(boardSize, tableArea.width),
+              height: Math.max(boardSize, tableArea.height),
+            }}
+          >
+            <ZoomableBoard size={boardSize} viewport={tableArea}>
               {board}
               <RoundBoardOverlay
                 size={boardSize}
@@ -494,7 +520,7 @@ export function GameTable({
       <Sheet visible={rules} onClose={() => setRules(false)} title={t('rulesSheet.title')}>
         {variantOf(match.state) !== 'classic' && (
           <Card style={{ borderColor: `${theme.accent}55` }}>
-            <Label color={theme.accent}>{t('rulesSheet.thisTable')}</Label>
+            <Label color={theme.accentText}>{t('rulesSheet.thisTable')}</Label>
             <Text style={[shared.sectionTitle, { fontSize: 15 }]}>
               {catalog.variantTitle(variantOf(match.state))}
             </Text>
@@ -503,7 +529,7 @@ export function GameTable({
         )}
         {RULES.map(({ n, id }) => (
           <View key={n} style={shared.row}>
-            <Text style={{ color: theme.accent, fontWeight: '900', fontSize: 18 }}>{n}</Text>
+            <Text style={{ color: theme.accentText, fontWeight: '900', fontSize: 18 }}>{n}</Text>
             <View style={{ flex: 1, gap: 6 }}>
               <Text style={[shared.sectionTitle, { fontSize: 15 }]}>{t(`rules.${id}.title`)}</Text>
               <Body>{t(`rules.${id}.text`)}</Body>
@@ -521,7 +547,7 @@ export const gameTableStyles = StyleSheet.create({
   winTitle: { fontSize: 30, fontWeight: '900', textAlign: 'center' },
 });
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -537,6 +563,10 @@ const s = StyleSheet.create({
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
+    // By day: a white chip lifted off the ivory table (night: no border, as before).
+    borderWidth: ui.scheme === 'light' ? 1 : 0,
+    borderColor: ui.line,
+    boxShadow: liftByDay(ui),
   },
   icon: { color: ui.muted, fontSize: 23 },
   bubbles: {
@@ -557,8 +587,8 @@ const s = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 2,
-    backgroundColor: '#0e1322ee',
-    boxShadow: '0 6px 18px #00000080',
+    backgroundColor: `${ui.background}ee`,
+    boxShadow: `0 6px 18px ${ui.scheme === 'dark' ? '#00000080' : ui.shadow}`,
     maxWidth: '90%',
   },
   bubbleDot: { width: 10, height: 10, borderRadius: 5 },
@@ -577,8 +607,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 4,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#ffffff20',
-    boxShadow: '0 10px 28px #00000090',
+    borderColor: ui.border,
+    boxShadow: `0 10px 28px ${ui.scheme === 'dark' ? '#00000090' : ui.shadow}`,
   },
   pickerItem: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   viewButton: {
@@ -590,5 +620,6 @@ const s = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    boxShadow: liftByDay(ui),
   },
-});
+}));

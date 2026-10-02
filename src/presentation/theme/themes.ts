@@ -1,3 +1,6 @@
+import { mix, readableOn } from './color';
+import type { Scheme } from './palette';
+
 export interface BoardTheme {
   readonly id: string;
   readonly background: string;
@@ -38,7 +41,8 @@ function theme(
     frame,
     tile,
     line: '#18233835',
-    colors: { ...colors, PURPLE: '#a77bea', ORANGE: '#ee9147', PINK: '#f472b6', CYAN: '#22d3ee' },
+    // Orange is a deep red-orange so it never reads as the amber yellow beside it.
+    colors: { ...colors, PURPLE: '#a77bea', ORANGE: '#f26b1d', PINK: '#f472b6', CYAN: '#22d3ee' },
   };
 }
 export const BOARD_THEMES: readonly BoardTheme[] = [
@@ -106,6 +110,35 @@ export const BOARD_THEMES: readonly BoardTheme[] = [
 export function getBoardTheme(id: string): BoardTheme {
   return BOARD_THEMES.find((t) => t.id === id) ?? BOARD_THEMES[0]!;
 }
+
+/** A board theme as the app chrome uses it in one appearance. */
+export interface SchemeTheme extends BoardTheme {
+  /** The accent as text: same hue, adjusted to 4.5:1 on background and surface. */
+  readonly accentText: string;
+}
+
+/**
+ * Every theme is designed for night. For day, its page and card colours
+ * become a paper white tinted with the theme's own accent, so each pack keeps
+ * its character; the accent itself stays for fills, and `accentText` is
+ * darkened until it reads on white. The board, pieces and dice are unchanged.
+ */
+export function themeForScheme(base: BoardTheme, scheme: Scheme): SchemeTheme {
+  if (scheme === 'dark') {
+    return {
+      ...base,
+      accentText: readableOn(base.accent, [base.background, base.surface]),
+    };
+  }
+  const background = mix('#fbf8f2', base.accent, 0.05);
+  const surface = '#ffffff';
+  return {
+    ...base,
+    background,
+    surface,
+    accentText: readableOn(base.accent, [background, surface]),
+  };
+}
 export const DICE_FINISHES: Record<
   string,
   { face: string; pip: string; edge?: string; radius?: number; glow?: string; wood?: boolean }
@@ -168,28 +201,3 @@ export function getCardDesign(id?: string | null) {
       key === 'neon' || key === 'cosmic' ? '0 0 12px ' + t.accent + '30' : '0 3px 8px #00000020',
   };
 }
-export const ui = {
-  text: '#dee1f7',
-  muted: '#c2c6d6',
-  // Every text colour keeps at least 4.5:1 contrast (WCAG AA) on all theme surfaces.
-  subtle: '#9ca0ac',
-  line: '#ffffff14',
-  green: '#4edea3',
-  gold: '#ffb95f',
-  violet: '#aa8efa',
-  danger: '#ff8795',
-  /** Royal blue for secondary calls to action and progress. */
-  blue: '#689fff',
-  blueSoft: '#adc6ff',
-  /** Gems. */
-  gem: '#c084fc',
-  /** Surface tiers, lowest to highest. */
-  surfaceLow: '#161b2a',
-  surfaceHigh: '#252939',
-  surfaceHighest: '#2f3445',
-  /** Deep inset fields. */
-  inset: '#111728',
-  /** Secondary button body and its bottom rim. */
-  navy: '#232d4b',
-  navyRim: '#111625',
-};

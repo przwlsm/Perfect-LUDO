@@ -5,6 +5,7 @@ import { ALL_PLAYER_COLORS, isSafeSquare } from '@/domain';
 import type { Board2DProps } from './Board2D';
 import { getBoardTheme } from '../theme/themes';
 import { AnimatedPiece2D } from './AnimatedPiece2D';
+import { TurnGlow, TurnGlowTriangle, turnColorOf } from './TurnGlow';
 import {
   radialGrid,
   radialHome,
@@ -23,6 +24,7 @@ export function RadialBoard2D({
   theme = getBoardTheme('classic'),
   motionEnabled = false,
   homeStyle = 'triangle',
+  showTurn = false,
   onSelectMove,
 }: Board2DProps) {
   const { t } = useTranslation('game');
@@ -38,6 +40,24 @@ export function RadialBoard2D({
   );
   const occupied = new Map<string, number>();
   const round = homeStyle === 'round';
+  const turnColor = showTurn ? turnColorOf(state) : null;
+  // Triangle homes light up their whole triangle; round homes get a halo around the yard.
+  const glow = (() => {
+    if (!turnColor) return null;
+    if (!round) {
+      const { apex, left, right } = radialHomeTriangle(turnColor, count);
+      const px = ([r, c]: readonly number[]) => ({ x: (c! + 0.5) * cell, y: (r! + 0.5) * cell });
+      return { kind: 'triangle' as const, apex: px(apex), left: px(left), right: px(right) };
+    }
+    const [r, c] = radialYard(turnColor, count);
+    const radius = 1.95 * cell;
+    return {
+      kind: 'circle' as const,
+      left: (c + 0.5) * cell - radius,
+      top: (r + 0.5) * cell - radius,
+      radius,
+    };
+  })();
   return (
     <View
       style={{
@@ -152,6 +172,17 @@ export function RadialBoard2D({
             </View>
           );
         })}
+      {/* Under the track, so only the visible part of the triangle glows. */}
+      {turnColor && glow?.kind === 'triangle' && (
+        <TurnGlowTriangle
+          color={theme.colors[turnColor]}
+          apex={glow.apex}
+          left={glow.left}
+          right={glow.right}
+          ring={Math.max(2, cell * 0.14)}
+          motionEnabled={motionEnabled}
+        />
+      )}
       {round &&
         colors.map((color) => {
           const [r, c] = radialYard(color, count);
@@ -254,6 +285,18 @@ export function RadialBoard2D({
       >
         <Text style={{ fontSize: cell * 0.6, color: theme.background }}>{t('board.home')}</Text>
       </View>
+      {turnColor && glow?.kind === 'circle' && (
+        <TurnGlow
+          color={theme.colors[turnColor]}
+          left={glow.left}
+          top={glow.top}
+          width={glow.radius * 2}
+          height={glow.radius * 2}
+          radius={glow.radius}
+          ring={Math.max(2, cell * 0.14)}
+          motionEnabled={motionEnabled}
+        />
+      )}
       {pieces.map(({ piece, slot, cell: location }) => {
         const key = location.join(','),
           stackIndex = occupied.get(key) ?? 0;

@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text, TextInput } from '../components/AppText';
 import { router } from 'expo-router';
 import { challengeRepository } from '@/config/container';
-import { Body, Button, Card, Label, Screen, shared } from '../components/Kit';
+import { Body, Button, Card, Label, Screen, useShared } from '../components/Kit';
 import { useFriends } from '../hooks/useFriends';
 import { useProfile } from '../state/ProfileProvider';
 import { useSocial } from '../state/SocialProvider';
@@ -13,7 +13,10 @@ import { ChallengeSheet } from '../social/ChallengeSheet';
 import { FriendList } from '../social/FriendList';
 import { RequestList } from '../social/RequestList';
 import { SearchResultList } from '../social/SearchResultList';
-import { ui } from '../theme/themes';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
+import { DARK } from '../theme/palette';
+import { liftByDay, pillColors } from '../theme/surfaces';
+import { LudoSpinner } from '../components/LoaderArt';
 
 const TABS = ['friends', 'requests', 'sent'] as const;
 type Tab = (typeof TABS)[number];
@@ -22,6 +25,8 @@ export default function FriendsScreen() {
   const { enabled, signedIn, account } = useSocial();
   const { t } = useTranslation(['social', 'common']);
   const friends = useFriends();
+  const ui = useUi();
+  const shared = useShared();
   const [tab, setTab] = useState<Tab>('friends');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [seedFriendId, setSeedFriendId] = useState<string | null>(null);
@@ -139,13 +144,17 @@ export default function FriendsScreen() {
 }
 
 function Loading() {
-  const { theme } = useProfile();
-  return <ActivityIndicator color={theme.accent} style={{ marginVertical: 30 }} />;
+  return <LudoSpinner style={{ marginVertical: 30 }} />;
 }
 
 function FriendsHeader({ count, online }: { count: number; online: number }) {
   const { identity } = useSocial();
   const { t } = useTranslation('social');
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
+  // By day the live count sits on a soft game-green pill; night is unchanged.
+  const pill = ui.scheme === 'dark' ? null : pillColors(DARK.green, ui);
   return (
     <View style={shared.between}>
       <View style={{ gap: 4 }}>
@@ -158,8 +167,14 @@ function FriendsHeader({ count, online }: { count: number; online: number }) {
           </Text>
         )}
       </View>
-      <View style={s.onlinePill}>
+      <View
+        style={[
+          s.onlinePill,
+          pill && { backgroundColor: pill.background, borderColor: 'transparent' },
+        ]}
+      >
         <View style={s.onlineDot} />
+        {/* On the ivory page (not a white card) the day green token keeps 4.5:1. */}
         <Text style={s.onlineText}>{t('friends.online', { online })}</Text>
       </View>
     </View>
@@ -169,9 +184,18 @@ function FriendsHeader({ count, online }: { count: number; online: number }) {
 function SearchField({ value, onChange }: { value: string; onChange(next: string): void }) {
   const { theme } = useProfile();
   const { t } = useTranslation('social');
+  const s = useStyles();
+  const ui = useUi();
   return (
     <View
-      style={[s.searchBox, { borderColor: `${theme.accent}40`, backgroundColor: theme.surface }]}
+      style={[
+        s.searchBox,
+        // White and lifted by day, with a hairline; night keeps the accent rim.
+        {
+          borderColor: ui.scheme === 'dark' ? `${theme.accent}40` : ui.line,
+          backgroundColor: theme.surface,
+        },
+      ]}
     >
       <Text style={s.searchIcon}>⌕</Text>
       <TextInput
@@ -189,7 +213,7 @@ function SearchField({ value, onChange }: { value: string; onChange(next: string
           accessibilityRole="button"
           accessibilityLabel={t('search.clear')}
           onPress={() => onChange('')}
-          android_ripple={{ color: '#ffffff25' }}
+          android_ripple={{ color: ui.ripple }}
           style={s.clear}
         >
           <Text style={{ color: ui.muted, fontSize: 18 }}>×</Text>
@@ -210,32 +234,66 @@ function Tabs({
 }) {
   const { theme } = useProfile();
   const { t } = useTranslation('social');
+  const s = useStyles();
+  const ui = useUi();
+  const night = ui.scheme === 'dark';
+  // Night keeps its dark ink on the bright green; day's deeper green takes white.
+  const onGreen = night ? '#0b2019' : ui.onColor;
   return (
     <View style={s.tabs}>
-      {TABS.map((key) => (
-        <Pressable
-          key={key}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: tab === key }}
-          onPress={() => onChange(key)}
-          android_ripple={{ color: `${theme.accent}25` }}
-          style={[
-            s.tab,
-            tab === key && { backgroundColor: `${theme.accent}1c`, borderColor: theme.accent },
-          ]}
-        >
-          <Text style={[s.tabText, tab === key && { color: theme.accent }]}>
-            {t(`tabs.${key}`)}
-          </Text>
-          {counts[key] > 0 && (
-            <View style={[s.badge, { backgroundColor: key === 'requests' ? ui.green : ui.line }]}>
-              <Text style={[s.badgeText, key === 'requests' && { color: '#0b2019' }]}>
-                {counts[key]}
-              </Text>
-            </View>
-          )}
-        </Pressable>
-      ))}
+      {TABS.map((key) => {
+        const active = tab === key;
+        // By day the active tab is navy (the 30%), like the bottom bar's; idle
+        // tabs are white chips. Night keeps the accent-tinted look.
+        const navyTab = active && !night;
+        return (
+          <Pressable
+            key={key}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            onPress={() => onChange(key)}
+            android_ripple={{ color: `${theme.accent}25` }}
+            style={[
+              s.tab,
+              !night && { backgroundColor: theme.surface },
+              active &&
+                (night
+                  ? { backgroundColor: `${theme.accent}1c`, borderColor: theme.accent }
+                  : { backgroundColor: ui.navy, borderColor: ui.navy }),
+            ]}
+          >
+            <Text
+              style={[
+                s.tabText,
+                active && { color: navyTab ? ui.secondaryText : theme.accentText },
+              ]}
+            >
+              {t(`tabs.${key}`)}
+            </Text>
+            {counts[key] > 0 && (
+              <View
+                style={[
+                  s.badge,
+                  {
+                    backgroundColor:
+                      key === 'requests' ? ui.green : navyTab ? DARK.fillStrong : ui.line,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    s.badgeText,
+                    navyTab && { color: DARK.text },
+                    key === 'requests' && { color: onGreen },
+                  ]}
+                >
+                  {counts[key]}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -255,6 +313,7 @@ function NoBackend() {
 /** Guests see why, not a failure: the offer to sign up, and the way back to play. */
 function GuestLocked() {
   const { t } = useTranslation('social');
+  const shared = useShared();
   return (
     <Screen title={t('friends.title')} subtitle={t('friends.subtitle')}>
       <AccountGateCard
@@ -269,10 +328,11 @@ function GuestLocked() {
 function SignedOut() {
   const { theme } = useProfile();
   const { t } = useTranslation('social');
+  const shared = useShared();
   return (
     <Screen title={t('friends.title')} subtitle={t('friends.subtitle')}>
       <Card>
-        <Label color={theme.accent}>{t('signedOut.label')}</Label>
+        <Label color={theme.accentText}>{t('signedOut.label')}</Label>
         <Text style={shared.sectionTitle}>{t('signedOut.title')}</Text>
         <Body>{t('signedOut.body')}</Body>
         <Button onPress={() => router.push('/login')}>{t('signedOut.signIn')}</Button>
@@ -284,7 +344,7 @@ function SignedOut() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   headline: { color: ui.text, fontSize: 20, fontWeight: '800' },
   onlinePill: {
     flexDirection: 'row',
@@ -295,7 +355,7 @@ const s = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: `${ui.green}40`,
-    backgroundColor: '#4edea310',
+    backgroundColor: `${ui.green}10`,
   },
   onlineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: ui.green },
   onlineText: { color: ui.green, fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
@@ -305,6 +365,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 14,
     paddingLeft: 14,
+    boxShadow: liftByDay(ui),
   },
   searchIcon: { color: ui.subtle, fontSize: 19 },
   searchInput: {
@@ -331,4 +392,4 @@ const s = StyleSheet.create({
   tabText: { color: ui.muted, fontSize: 13, fontWeight: '800' },
   badge: { minWidth: 20, paddingHorizontal: 6, borderRadius: 10, alignItems: 'center' },
   badgeText: { color: ui.text, fontSize: 11, fontWeight: '800', lineHeight: 18 },
-});
+}));

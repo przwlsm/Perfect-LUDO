@@ -8,6 +8,14 @@
     "systemHint": "தற்போது {{language}}",
     "a11y": "{{name}}, {{englishName}}"
   },
+  "appearance": {
+    "label": "தீம்",
+    "title": "பகலா, இரவா?",
+    "system": "போன் அமைப்பு",
+    "light": "பகல்",
+    "dark": "இரவு",
+    "a11y": "தீம்: {{option}}"
+  },
   "name": {
     "label": "டேபிளில்",
     "title": "உங்களை எப்படி அழைக்கலாம்?",

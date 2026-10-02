@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { Pressable, Share, StyleSheet, View } from 'react-native';
+import { Pressable, Share, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text, TextInput } from '../components/AppText';
 import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { socialIdentityRepository } from '@/config/container';
-import { Body, Button, Card, Label, shared } from '../components/Kit';
+import { Body, Button, Card, Label, useShared } from '../components/Kit';
 import { useUsernameAvailability } from '../hooks/useUsernameAvailability';
 import { useProfile } from '../state/ProfileProvider';
 import { useSocial } from '../state/SocialProvider';
-import { ui } from '../theme/themes';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
 import { SIGN_UP_HREF } from './AccountGate';
 import { UserAvatar } from './UserAvatar';
 
@@ -29,6 +29,9 @@ export function SocialIdentityCard() {
   const { theme, profile } = useProfile();
   const { enabled, signedIn, account, identity, setIdentity } = useSocial();
   const { t } = useTranslation(['account', 'common']);
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -87,8 +90,9 @@ export function SocialIdentityCard() {
 
   if (account === 'guest') {
     return (
-      <Card style={{ borderColor: `${theme.accent}40` }}>
-        <Label color={theme.accent}>{t('shared.guestLabel')}</Label>
+      // A plain white card by day (the 60%); night keeps its accent rim.
+      <Card style={{ borderColor: ui.scheme === 'dark' ? `${theme.accent}40` : ui.line }}>
+        <Label color={theme.accentText}>{t('shared.guestLabel')}</Label>
         <View style={shared.row}>
           <UserAvatar id={identity.id} name={identity.username} emoji={identity.avatar} size={54} />
           <View style={{ flex: 1, gap: 4 }}>
@@ -116,7 +120,7 @@ export function SocialIdentityCard() {
 
   return (
     <Card>
-      <Label color={theme.accent}>{t('identity.label')}</Label>
+      <Label color={theme.accentText}>{t('identity.label')}</Label>
       <View style={shared.row}>
         <UserAvatar
           id={identity.id}
@@ -257,7 +261,7 @@ export function SocialIdentityCard() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   handle: { color: ui.text, fontSize: 19, fontWeight: '800' },
   id: { color: ui.gold, fontSize: 13, fontWeight: '800', letterSpacing: 0.6 },
   field: {
@@ -265,7 +269,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderRadius: 12,
-    backgroundColor: '#00000020',
+    backgroundColor: ui.inset,
     paddingLeft: 13,
   },
   at: { color: ui.subtle, fontSize: 16, fontWeight: '800' },
@@ -287,4 +291,4 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

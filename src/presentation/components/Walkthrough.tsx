@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -11,20 +11,24 @@ import { useProfile } from '../state/ProfileProvider';
 import { useMotionEnabled } from '../hooks/useMotionEnabled';
 import { shade } from '../board/shade';
 import { PREFERENCE_KEYS } from '../preferenceKeys';
-import { ui } from '../theme/themes';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
+import { DARK } from '../theme/palette';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
-/** One idea per page, in the four player colours of the board (text: onboarding:pages.<id>). */
+/**
+ * One idea per page, in the four player colours of the board (text: onboarding:pages.<id>).
+ * The badges are art: the same bright colours in day and night, with a dark glyph.
+ */
 const PAGES: readonly {
   id: 'roll' | 'race' | 'capture' | 'modes';
   icon: IconName;
   color: string;
 }[] = [
-  { id: 'roll', icon: 'dice', color: ui.danger },
-  { id: 'race', icon: 'flag', color: ui.green },
-  { id: 'capture', icon: 'flash', color: ui.blue },
-  { id: 'modes', icon: 'people', color: ui.gold },
+  { id: 'roll', icon: 'dice', color: DARK.danger },
+  { id: 'race', icon: 'flag', color: DARK.green },
+  { id: 'capture', icon: 'flash', color: DARK.blue },
+  { id: 'modes', icon: 'people', color: DARK.gold },
 ];
 
 /** A short, skippable tour of the rules and ways to play. */
@@ -46,6 +50,8 @@ export function Walkthrough({ visible, onDone }: { visible: boolean; onDone(): v
 function Pages({ onDone }: { onDone(): void }) {
   const { theme, profile } = useProfile();
   const { t } = useTranslation(['onboarding', 'common']);
+  const s = useStyles();
+  const ui = useUi();
   const insets = useSafeAreaInsets();
   const motion = useMotionEnabled(profile.reducedMotion, true);
   const [index, setIndex] = useState(0);
@@ -72,7 +78,7 @@ function Pages({ onDone }: { onDone(): void }) {
             accessibilityRole="button"
             accessibilityLabel={t('skipA11y')}
             onPress={onDone}
-            android_ripple={{ color: '#ffffff1f' }}
+            android_ripple={{ color: ui.ripple }}
             style={s.skip}
           >
             <Text style={s.skipText}>{t('skip')}</Text>
@@ -148,7 +154,7 @@ export function FirstRunWalkthrough() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   screen: { flex: 1, paddingHorizontal: 24 },
   top: {
     width: '100%',
@@ -185,7 +191,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
-    boxShadow: '0 14px 34px #00000066',
+    // A deep drop for night; day uses the palette's softer shadow.
+    boxShadow: `0 14px 34px ${ui.scheme === 'dark' ? '#00000066' : ui.shadow}`,
   },
   title: {
     color: ui.text,
@@ -198,5 +205,5 @@ const s = StyleSheet.create({
   text: { color: ui.muted, fontSize: 16, lineHeight: 24, textAlign: 'center' },
   footer: { width: '100%', maxWidth: 440, alignSelf: 'center', gap: 12 },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 8 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#ffffff2e' },
-});
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: ui.border },
+}));

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, Switch, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, TextInput } from '../components/AppText';
 import { router } from 'expo-router';
 import { profileService, rewardedAds } from '@/config/container';
-import { Body, Button, Card, Label, Screen, Sheet, shared } from '../components/Kit';
+import { Body, Button, Card, Label, Screen, Sheet, useShared } from '../components/Kit';
 import { useProfile } from '../state/ProfileProvider';
 import { useAppUpdate, type OtaCheckResult } from '../state/AppUpdateProvider';
 import { Walkthrough } from '../components/Walkthrough';
@@ -13,13 +13,20 @@ import { useLanguage } from '../i18n/LanguageProvider';
 import { deviceLanguage } from '../i18n';
 import { LANGUAGE_CODES, LANGUAGES, type LanguagePreference } from '../i18n/languages';
 import { mirrorInRtl } from '../i18n/rtl';
-import { ui } from '../theme/themes';
+import {
+  makeStyles,
+  useAppearance,
+  useUi,
+  type AppearancePreference,
+} from '../theme/AppearanceProvider';
 
 const TOGGLES = ['board3d', 'reducedMotion', 'soundEnabled'] as const;
 
 export default function SettingsScreen() {
   const { profile, theme, perform, ready } = useProfile();
   const { t } = useTranslation('settings');
+  const ui = useUi();
+  const shared = useShared();
   const [name, setName] = useState<string | null>(null);
   const [message, setMessage] = useState<'saved' | 'saveFailed' | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,10 +43,11 @@ export default function SettingsScreen() {
     }
   }
   return (
-    <Screen title={t('title')} subtitle={t('subtitle')}>
+    <Screen title={t('title')} subtitle={t('subtitle')} decor="light">
       <LanguageCard />
+      <AppearanceCard />
       <Card>
-        <Label color={theme.accent}>{t('name.label')}</Label>
+        <Label color={theme.accentText}>{t('name.label')}</Label>
         <Text style={shared.sectionTitle}>{t('name.title')}</Text>
         <TextInput
           accessibilityLabel={t('name.a11y')}
@@ -55,7 +63,7 @@ export default function SettingsScreen() {
             padding: 15,
             borderRadius: 12,
             borderWidth: 1,
-            borderColor: '#ffffff20',
+            borderColor: ui.border,
             fontSize: 16,
           }}
         />
@@ -68,7 +76,7 @@ export default function SettingsScreen() {
         </Button>
       </Card>
       <Card>
-        <Label color={theme.accent}>{t('lookAndFeel.label')}</Label>
+        <Label color={theme.accentText}>{t('lookAndFeel.label')}</Label>
         {TOGGLES.map((key) => (
           <View key={key} style={[shared.between, { paddingVertical: 8 }]}>
             <View style={{ flex: 1, gap: 6 }}>
@@ -82,7 +90,7 @@ export default function SettingsScreen() {
               value={profile[key]}
               disabled={!ready || busy}
               onValueChange={(value) => void update({ [key]: value })}
-              trackColor={{ false: '#374158', true: theme.accent }}
+              trackColor={{ false: ui.surfaceHighest, true: theme.accent }}
               thumbColor="#ffffff"
             />
           </View>
@@ -94,7 +102,7 @@ export default function SettingsScreen() {
         </Text>
       )}
       <Card>
-        <Label color={theme.accent}>{t('about.label')}</Label>
+        <Label color={theme.accentText}>{t('about.label')}</Label>
         <Text style={shared.sectionTitle}>{t('about.title')}</Text>
         <Body>{t('about.offline')}</Body>
         <Body>{t('about.currency')}</Body>
@@ -116,6 +124,9 @@ export default function SettingsScreen() {
 function LanguageCard() {
   const { theme } = useProfile();
   const { t } = useTranslation('settings');
+  const ui = useUi();
+  const s = useStyles();
+  const shared = useShared();
   const { preference, setPreference } = useLanguage();
   const [pending, setPending] = useState<LanguagePreference | null>(null);
   const phone = LANGUAGES[deviceLanguage()];
@@ -152,7 +163,7 @@ function LanguageCard() {
 
   return (
     <Card>
-      <Label color={theme.accent}>{t('language.label')}</Label>
+      <Label color={theme.accentText}>{t('language.label')}</Label>
       {/* Eleven languages would make a very long card: show the current one,
           and the full list in a sheet. */}
       <Pressable
@@ -160,10 +171,10 @@ function LanguageCard() {
         accessibilityLabel={t('language.title')}
         accessibilityValue={{ text: current.title }}
         onPress={() => setOpen(true)}
-        android_ripple={{ color: '#ffffff14' }}
+        android_ripple={{ color: ui.ripple }}
         style={[s.option, { borderColor: `${theme.accent}55` }]}
       >
-        <Ionicons name="language" size={22} color={theme.accent} />
+        <Ionicons name="language" size={22} color={theme.accentText} />
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={s.optionTitle}>{current.title}</Text>
           <Text style={shared.small}>{current.hint}</Text>
@@ -182,6 +193,52 @@ function LanguageCard() {
   );
 }
 
+const APPEARANCES: readonly {
+  value: AppearancePreference;
+  icon: 'phone-portrait-outline' | 'sunny' | 'moon';
+}[] = [
+  { value: 'system', icon: 'phone-portrait-outline' },
+  { value: 'light', icon: 'sunny' },
+  { value: 'dark', icon: 'moon' },
+];
+
+/** Day, night, or whatever the phone is set to. Applies instantly. */
+function AppearanceCard() {
+  const { theme } = useProfile();
+  const { t } = useTranslation('settings');
+  const { preference, setPreference } = useAppearance();
+  const ui = useUi();
+  const s = useStyles();
+  return (
+    <Card>
+      <Label color={theme.accentText}>{t('appearance.label')}</Label>
+      <View accessibilityRole="radiogroup" style={s.segments}>
+        {APPEARANCES.map(({ value, icon }) => {
+          const selected = preference === value;
+          const label = t(`appearance.${value}`);
+          return (
+            <Pressable
+              key={value}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selected }}
+              accessibilityLabel={t('appearance.a11y', { option: label })}
+              onPress={() => setPreference(value)}
+              android_ripple={{ color: ui.ripple }}
+              style={[
+                s.segment,
+                selected && { borderColor: theme.accent, backgroundColor: `${theme.accent}1f` },
+              ]}
+            >
+              <Ionicons name={icon} size={22} color={selected ? theme.accentText : ui.subtle} />
+              <Text style={[s.segmentText, selected && { color: theme.accentText }]}>{label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </Card>
+  );
+}
+
 function LanguageOptions({
   options,
   selected: selectedValue,
@@ -195,6 +252,9 @@ function LanguageOptions({
 }) {
   const { theme } = useProfile();
   const { t } = useTranslation('settings');
+  const ui = useUi();
+  const s = useStyles();
+  const shared = useShared();
   return (
     <View accessibilityRole="radiogroup" style={s.options}>
       {options.map((option) => {
@@ -210,7 +270,7 @@ function LanguageOptions({
             })}
             disabled={disabled}
             onPress={() => onChoose(option.value)}
-            android_ripple={{ color: '#ffffff14' }}
+            android_ripple={{ color: ui.ripple }}
             style={[
               s.option,
               selected && { borderColor: theme.accent, backgroundColor: `${theme.accent}14` },
@@ -223,7 +283,7 @@ function LanguageOptions({
             <Ionicons
               name={selected ? 'radio-button-on' : 'radio-button-off'}
               size={22}
-              color={selected ? theme.accent : ui.subtle}
+              color={selected ? theme.accentText : ui.subtle}
             />
           </Pressable>
         );
@@ -263,6 +323,7 @@ function AdPrivacyButton() {
 function UpdatesCard() {
   const { theme } = useProfile();
   const { t } = useTranslation('settings');
+  const shared = useShared();
   const { installedVersion, updateLabel, recheckStore, checkOta } = useAppUpdate();
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<OtaCheckResult | 'store' | null>(null);
@@ -281,7 +342,7 @@ function UpdatesCard() {
 
   return (
     <Card>
-      <Label color={theme.accent}>{t('version.label')}</Label>
+      <Label color={theme.accentText}>{t('version.label')}</Label>
       <View style={{ gap: 4 }}>
         <Text style={[shared.sectionTitle, { fontSize: 16 }]}>
           {t('version.name', { version: installedVersion ?? '' })}
@@ -304,7 +365,7 @@ function UpdatesCard() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   options: { gap: 10 },
   option: {
     minHeight: 56,
@@ -316,7 +377,22 @@ const s = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: ui.line,
-    backgroundColor: '#ffffff06',
+    backgroundColor: ui.fill,
   },
   optionTitle: { color: ui.text, fontSize: 16, fontWeight: '700' },
-});
+  segments: { flexDirection: 'row', gap: 8 },
+  segment: {
+    flex: 1,
+    minHeight: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ui.line,
+    backgroundColor: ui.fill,
+  },
+  segmentText: { color: ui.muted, fontSize: 13, fontWeight: '700', textAlign: 'center' },
+}));

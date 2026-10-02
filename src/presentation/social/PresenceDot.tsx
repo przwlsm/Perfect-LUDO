@@ -3,14 +3,19 @@ import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import type { PresenceStatus } from '@/domain';
 import { i18n } from '../i18n';
-import { ui } from '../theme/themes';
+import { useUi } from '../theme/AppearanceProvider';
+import type { Palette } from '../theme/palette';
 
-export const PRESENCE_COLOR: Record<PresenceStatus, string> = {
-  ONLINE: ui.green,
-  AWAY: ui.gold,
-  IN_GAME: ui.violet,
-  OFFLINE: ui.subtle,
-};
+/** Semantic status colours, legible as text in the current appearance. */
+export function presenceColor(ui: Palette, status: PresenceStatus): string {
+  const colors: Record<PresenceStatus, string> = {
+    ONLINE: ui.green,
+    AWAY: ui.gold,
+    IN_GAME: ui.violet,
+    OFFLINE: ui.subtle,
+  };
+  return colors[status];
+}
 
 /** Translated when called, so it always follows the current language. */
 export function presenceLabel(status: PresenceStatus): string {
@@ -19,6 +24,7 @@ export function presenceLabel(status: PresenceStatus): string {
 
 export function PresenceDot({ status, size = 9 }: { status: PresenceStatus; size?: number }) {
   const { t } = useTranslation('social');
+  const ui = useUi();
   return (
     <View
       accessibilityLabel={t(`presence.${status}`)}
@@ -26,7 +32,7 @@ export function PresenceDot({ status, size = 9 }: { status: PresenceStatus; size
         width: size,
         height: size,
         borderRadius: size,
-        backgroundColor: PRESENCE_COLOR[status],
+        backgroundColor: presenceColor(ui, status),
       }}
     />
   );
@@ -34,10 +40,11 @@ export function PresenceDot({ status, size = 9 }: { status: PresenceStatus; size
 
 export function PresenceText({ status }: { status: PresenceStatus }) {
   const { t } = useTranslation('social');
+  const ui = useUi();
   return (
     <View style={s.row}>
       <PresenceDot status={status} size={7} />
-      <Text style={[s.text, { color: PRESENCE_COLOR[status] }]}>{t(`presence.${status}`)}</Text>
+      <Text style={[s.text, { color: presenceColor(ui, status) }]}>{t(`presence.${status}`)}</Text>
     </View>
   );
 }

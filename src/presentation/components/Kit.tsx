@@ -22,18 +22,25 @@ import { useSocial } from '../state/SocialProvider';
 import { NotificationBell } from '../social/NotificationBell';
 import { LudoLoader } from './LudoLoader';
 import { useMotionEnabled } from '../hooks/useMotionEnabled';
-import { getCardDesign, ui } from '../theme/themes';
+import { getCardDesign } from '../theme/themes';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
+import { readableOn } from '../theme/color';
 import { useTranslation } from 'react-i18next';
 import { numberLocale } from '../i18n/format';
 import { mirrorInRtl } from '../i18n/rtl';
+import { Doodles, type DoodleDensity } from './Doodles';
 
-export function Label({ children, color = ui.muted }: { children: ReactNode; color?: string }) {
-  return <Text style={[s.label, { color }]}>{children}</Text>;
+export function Label({ children, color }: { children: ReactNode; color?: string }) {
+  const s = useStyles();
+  const ui = useUi();
+  return <Text style={[s.label, { color: color ?? ui.muted }]}>{children}</Text>;
 }
 export function Title({ children }: { children: ReactNode }) {
+  const s = useStyles();
   return <Text style={s.title}>{children}</Text>;
 }
 export function Body({ children, style }: { children: ReactNode; style?: ViewStyle }) {
+  const s = useStyles();
   return (
     <View style={style}>
       <Text style={s.body}>{children}</Text>
@@ -65,6 +72,8 @@ export function Button({
   fit?: boolean;
 }) {
   const { theme } = useProfile();
+  const s = useStyles();
+  const ui = useUi();
   const accent = danger ? ui.danger : theme.accent;
   const radius = compact ? 14 : 16;
   return (
@@ -73,17 +82,17 @@ export function Button({
       accessibilityState={{ disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={onPress}
-      android_ripple={{ color: secondary ? '#ffffff22' : '#00000022' }}
+      android_ripple={{ color: secondary ? ui.ripple : '#00000022' }}
       style={({ pressed }) => [
         s.button,
         { borderRadius: radius, opacity: disabled ? 0.45 : 1 },
         secondary
           ? {
               borderWidth: 1,
-              borderColor: danger ? '#ff879555' : `${accent}45`,
+              borderColor: danger ? `${ui.danger}55` : `${accent}45`,
               borderBottomWidth: pressed ? 1 : 3,
-              borderBottomColor: danger ? '#2c1620' : ui.navyRim,
-              boxShadow: `0 4px 14px #00000040`,
+              borderBottomColor: danger ? ui.dangerSecondary[2] : ui.navyRim,
+              boxShadow: `0 4px 14px ${ui.shadow}`,
             }
           : {
               borderBottomWidth: pressed ? 1 : 4,
@@ -98,8 +107,8 @@ export function Button({
         colors={
           secondary
             ? danger
-              ? ['#472436', '#3a1d2a', '#2c1620']
-              : ['#303c66', ui.navy, '#1c2440']
+              ? ui.dangerSecondary
+              : ui.secondary
             : [shade(accent, 0.18), accent, shade(accent, -0.14)]
         }
         style={[StyleSheet.absoluteFill, { borderRadius: radius }]}
@@ -109,7 +118,7 @@ export function Button({
         style={[
           s.buttonText,
           secondary
-            ? { color: danger ? ui.danger : ui.text }
+            ? { color: danger ? ui.danger : ui.secondaryText }
             : { color: shade(accent, -0.78), textTransform: 'uppercase', letterSpacing: 0.9 },
         ]}
         {...(fit ? { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.75 } : {})}
@@ -121,6 +130,7 @@ export function Button({
 }
 export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   const { theme, profile } = useProfile();
+  const s = useStyles();
   return (
     <View
       style={[
@@ -150,6 +160,7 @@ const PILL_HIT_SLOP = { top: 4, bottom: 4 };
 export function CoinPill() {
   const { profile, member, wallet, refreshWallet } = useProfile();
   const { t } = useTranslation();
+  const s = useStyles();
   if (!member)
     // A guest's header shows the vault filling up; tapping it opens Rewards,
     // where the sign-in claim lives.
@@ -201,6 +212,7 @@ export function CoinPill() {
 export function GemPill() {
   const { profile, member, wallet } = useProfile();
   const { t } = useTranslation();
+  const s = useStyles();
   if (!member || wallet !== 'ready') return null;
   return (
     <Pressable
@@ -223,6 +235,7 @@ export function Screen({
   nav = true,
   back = false,
   immersive = false,
+  decor = 'full',
 }: {
   children: ReactNode;
   title?: string;
@@ -230,9 +243,13 @@ export function Screen({
   nav?: boolean;
   back?: boolean;
   immersive?: boolean;
+  /** The faint doodle wallpaper behind the page: full, light, or none. */
+  decor?: DoodleDensity | 'none';
 }) {
   const { theme, ready, error, reload, member, wallet, profile } = useProfile();
   const { t } = useTranslation();
+  const s = useStyles();
+  const ui = useUi();
   const loaderMotion = useMotionEnabled(profile.reducedMotion, !ready);
   const level = member && wallet === 'ready' ? levelInfo(profile.xp).level : null;
   const { width, height, fontScale } = useWindowDimensions();
@@ -253,6 +270,9 @@ export function Screen({
   // Landscape on a phone leaves little height; tighten the chrome so more
   // of each screen's content is on screen without scrolling.
   const landscape = width > height;
+  // The wordmark is large bold text, legible at 3:1, so it keeps a richer gold by day.
+  const brandGold =
+    ui.scheme === 'dark' ? theme.accentText : readableOn(theme.accent, [theme.background], 3);
   return (
     <View
       style={[
@@ -266,19 +286,23 @@ export function Screen({
         },
       ]}
     >
+      {decor !== 'none' && <Doodles density={decor} />}
       {!immersive && (
         <View style={[s.header, landscape && { paddingVertical: 8 }]}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={back ? t('actions.back') : t('brand.homeA11y')}
             onPress={() => (back && router.canGoBack() ? router.back() : router.replace('/'))}
-            android_ripple={{ color: '#ffffff1f' }}
+            android_ripple={{ color: ui.ripple }}
             style={s.brand}
           >
             <View style={[s.brandMark, { backgroundColor: theme.accent }]}>
               <Text style={[s.brandDie, back && mirrorInRtl]}>{back ? '‹' : '⚄'}</Text>
               {level !== null && !back && (
-                <View accessibilityLabel={t('wallet.levelA11y', { level })} style={s.levelBadge}>
+                <View
+                  accessibilityLabel={t('wallet.levelA11y', { level })}
+                  style={[s.levelBadge, { borderColor: theme.background }]}
+                >
                   <Text style={s.levelText}>{level}</Text>
                 </View>
               )}
@@ -286,7 +310,7 @@ export function Screen({
             {!compactHeader && (
               <View>
                 <Text style={s.brandText}>
-                  LUDO<Text style={{ color: theme.accent }}> RUMBLE</Text>
+                  LUDO<Text style={{ color: brandGold }}> RUMBLE</Text>
                 </Text>
                 <Text style={s.brandSub}>{t('brand.tagline')}</Text>
               </View>
@@ -326,7 +350,7 @@ export function Screen({
           >
             {title && (
               <View style={s.heading}>
-                <Label color={theme.accent}>{subtitle ?? t('brand.defaultSubtitle')}</Label>
+                <Label color={theme.accentText}>{subtitle ?? t('brand.defaultSubtitle')}</Label>
                 <Title>{title}</Title>
               </View>
             )}
@@ -343,6 +367,10 @@ function BottomNav({ compact }: { compact: boolean }) {
   const { theme } = useProfile();
   const { account } = useSocial();
   const { t } = useTranslation();
+  const s = useStyles();
+  const ui = useUi();
+  // By day the active tab is a navy pill with a gold icon (the 30% / 10% of 60-30-10).
+  const day = ui.scheme === 'light';
   // Guests still reach Friends, where the account offer explains the lock.
   const locked = (href: string) => account === 'guest' && href === '/friends';
   const tabs = [
@@ -367,17 +395,27 @@ function BottomNav({ compact }: { compact: boolean }) {
           accessibilityLabel={locked(href) ? t('nav.accountRequired', { label }) : label}
           accessibilityState={{ selected: path === href }}
           onPress={() => open(href, index)}
-          android_ripple={{ color: '#ffffff1f' }}
+          android_ripple={{ color: ui.ripple }}
           style={s.navItem}
         >
-          <View style={[s.navIconWrap, path === href && { backgroundColor: `${theme.accent}22` }]}>
+          <View
+            style={[
+              s.navIconWrap,
+              path === href && { backgroundColor: day ? ui.navy : `${theme.accent}22` },
+            ]}
+          >
             <Ionicons
               name={path === href ? symbol : (`${symbol}-outline` as typeof symbol)}
               size={23}
-              color={path === href ? theme.accent : ui.subtle}
+              color={path === href ? (day ? theme.accent : theme.accentText) : ui.subtle}
             />
           </View>
-          <Text style={[s.navText, { color: path === href ? theme.accent : ui.subtle }]}>
+          <Text
+            style={[
+              s.navText,
+              { color: path === href ? (day ? ui.text : theme.accentText) : ui.subtle },
+            ]}
+          >
             {label}
             {locked(href) ? ' 🔒' : ''}
           </Text>
@@ -399,6 +437,8 @@ export function Sheet({
 }) {
   const { theme } = useProfile();
   const { t } = useTranslation();
+  const s = useStyles();
+  const ui = useUi();
   const insets = useSafeAreaInsets();
   return (
     // Translucent bars so the dialog draws edge to edge like the rest of the
@@ -425,7 +465,7 @@ export function Sheet({
               accessibilityRole="button"
               accessibilityLabel={t('actions.closeDialog')}
               onPress={onClose}
-              android_ripple={{ color: '#ffffff25' }}
+              android_ripple={{ color: ui.ripple }}
               style={s.close}
             >
               <Text style={{ color: ui.muted, fontSize: 24 }}>×</Text>
@@ -444,7 +484,8 @@ export function Sheet({
     </Modal>
   );
 }
-export const shared = StyleSheet.create({
+/** Layout and text styles shared by every screen, in the current day/night colours. */
+export const useShared = makeStyles((ui) => ({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   section: { gap: 14 },
@@ -452,8 +493,8 @@ export const shared = StyleSheet.create({
   small: { color: ui.muted, fontSize: 12, lineHeight: 18 },
   error: { color: ui.danger, fontSize: 13, lineHeight: 20 },
   selected: { borderColor: ui.gold, borderWidth: 1 },
-});
-const s = StyleSheet.create({
+}));
+const useStyles = makeStyles((ui) => ({
   screen: { flex: 1 },
   header: {
     width: '100%',
@@ -477,11 +518,10 @@ const s = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: ui.blue,
     borderWidth: 2,
-    borderColor: '#0e1322',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  levelText: { color: '#fff', fontSize: 10, fontWeight: '900', lineHeight: 13 },
+  levelText: { color: ui.onColor, fontSize: 10, fontWeight: '900', lineHeight: 13 },
   brandMark: {
     width: 40,
     height: 42,
@@ -489,7 +529,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderBottomWidth: 3,
-    borderBottomColor: '#00000040',
+    borderBottomColor: ui.shadow,
   },
   brandDie: { fontSize: 30, color: '#29213a', lineHeight: 36 },
   brandText: { color: ui.text, fontWeight: '900', fontSize: 18, letterSpacing: 0.5 },
@@ -501,9 +541,9 @@ const s = StyleSheet.create({
     paddingLeft: 6,
     paddingRight: 5,
     minHeight: 40,
-    backgroundColor: '#0f1423d9',
+    backgroundColor: ui.surfaceLow,
     borderWidth: 1,
-    borderColor: '#ffffff1f',
+    borderColor: ui.line,
     borderRadius: 999,
   },
 
@@ -535,7 +575,7 @@ const s = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.5,
     lineHeight: 38,
-    textShadowColor: '#00000080',
+    textShadowColor: ui.scheme === 'dark' ? '#00000080' : 'transparent',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 0,
   },
@@ -569,7 +609,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: ui.line,
     gap: 14,
-    boxShadow: '0 8px 24px #00000033',
+    boxShadow: `0 8px 24px ${ui.shadow}`,
   },
   nav: {
     borderTopWidth: 1,
@@ -594,7 +634,7 @@ const s = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 },
   overlay: {
     flex: 1,
-    backgroundColor: '#030612cc',
+    backgroundColor: ui.scrim,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
@@ -605,7 +645,7 @@ const s = StyleSheet.create({
     maxHeight: '88%',
     borderRadius: 26,
     borderWidth: 1,
-    borderColor: '#ffffff20',
+    borderColor: ui.border,
     padding: 24,
     gap: 16,
   },
@@ -621,7 +661,7 @@ const s = StyleSheet.create({
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff08',
+    backgroundColor: ui.fill,
     borderRadius: 14,
   },
-});
+}));

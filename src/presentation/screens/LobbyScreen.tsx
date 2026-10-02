@@ -1,5 +1,5 @@
 import { useCallback, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Text, TextInput } from '../components/AppText';
 import { router, useFocusEffect, useIsFocused } from 'expo-router';
 import { Trans, useTranslation } from 'react-i18next';
@@ -29,16 +29,26 @@ import { Bob, LiveDot, Pulse, Shine, Spin } from '../components/Live';
 import { UserAvatar } from '../social/UserAvatar';
 import { useSocial } from '../state/SocialProvider';
 import { ConnectionPill } from '../components/ConnectionPill';
-import { Body, Button, Card, Label, Screen, shared, Sheet } from '../components/Kit';
+import { GuestAdOffer } from '../components/GuestAdOffer';
+import { Body, Button, Card, Label, Screen, Sheet, useShared } from '../components/Kit';
 import { useConnectivity } from '../state/ConnectivityProvider';
 import { useProfile } from '../state/ProfileProvider';
-import { ui } from '../theme/themes';
+import { makeStyles, SchemeScope, useUi } from '../theme/AppearanceProvider';
+import { DARK, type Palette } from '../theme/palette';
+import { iconTile, liftByDay, MARIGOLD, NAVY_HERO, pillColors } from '../theme/surfaces';
 import { useCatalogText } from '../i18n/useCatalogText';
 import { numberLocale } from '../i18n/format';
 import { mirrorInRtl } from '../i18n/rtl';
 
 export default function LobbyScreen() {
   const { profile, theme, member } = useProfile();
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
+  const night = ui.scheme === 'dark';
+  // The computer section's red: as text it needs a deeper red by day.
+  const computerRed = night ? '#f87171' : ui.danger;
+  const storeViolet = night ? '#ad8efa' : ui.violet;
   const connectivity = useConnectivity();
   const [mode, setMode] = useState<MatchMode | null>(null);
   const [players, setPlayers] = useState<2 | 3 | 4 | 5 | 6 | 7 | 8>(4);
@@ -102,7 +112,7 @@ export default function LobbyScreen() {
             emoji={identity?.avatar ?? null}
             size={52}
           />
-          <View style={s.onlineDot}>
+          <View style={[s.onlineDot, { backgroundColor: theme.background }]}>
             <LiveDot color={online ? ui.green : ui.subtle} size={9} active={motion && online} />
           </View>
         </View>
@@ -125,15 +135,20 @@ export default function LobbyScreen() {
         <ConnectionPill />
       </View>
 
+      {/* Guests learn first thing that ads can fill their coin vault. */}
+      {!member && <GuestAdOffer />}
+
       {/* Daily lucky spin */}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={freeSpin ? t('spin.a11yReady') : t('spin.a11y')}
         onPress={() => (member ? router.push('/rewards') : needAccount())}
-        android_ripple={{ color: '#ffffff14' }}
+        android_ripple={{ color: ui.ripple }}
       >
         <LinearGradient
-          colors={freeSpin ? ['#3a2a0c', '#1d1b2e'] : ['#262a3d', '#1a1f2f']}
+          colors={
+            freeSpin ? (night ? SPIN_FREE.dark : SPIN_FREE.light) : night ? SPIN.dark : SPIN.light
+          }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[s.spinCard, freeSpin && { borderColor: `${ui.gold}80` }]}
@@ -172,7 +187,7 @@ export default function LobbyScreen() {
             )}
           </View>
           <Pulse active={motion && Boolean(freeSpin)}>
-            <View style={[s.spinButton, !freeSpin && { backgroundColor: '#ffffff14' }]}>
+            <View style={[s.spinButton, !freeSpin && { backgroundColor: ui.line }]}>
               <Text style={[s.spinButtonText, !freeSpin && { color: ui.muted }]}>
                 {freeSpin
                   ? t('spin.spinButton')
@@ -224,72 +239,17 @@ export default function LobbyScreen() {
         }
       />
       {connectivity.available && (
-        <LinearGradient
-          colors={['#123f31', '#11284d', '#1a1f2f']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={s.hero}
-        >
-          <Shine active={motion && online} />
-          <View style={shared.between}>
-            <View style={s.heroBadge}>
-              <Ionicons name="flash" size={12} color={ui.gold} />
-              <Text style={s.heroBadgeText}>{t('online.mostPlayed')}</Text>
-            </View>
-            <Bob active={motion}>
-              <Text style={{ fontSize: 34 }}>🎲</Text>
-            </Bob>
-          </View>
-          <Text style={s.heroTitle}>{t('online.quickMatch')}</Text>
-          <Text style={s.heroBody}>
-            <Trans
-              t={t}
-              i18nKey="online.body"
-              values={{ coins: REWARDS.online.win.coins, xp: REWARDS.online.win.xp }}
-              components={{
-                coins: <Text style={{ color: ui.gold, fontWeight: '800' }} />,
-                xp: <Text style={{ color: ui.green, fontWeight: '800' }} />,
-              }}
-            />
-          </Text>
-          <View style={s.heroActions}>
-            <View style={s.segment}>
-              {([2, 4, 'teams'] as const).map((n) => (
-                <Pressable
-                  key={n}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    n === 'teams' ? t('online.teamsA11y') : t('online.seatsA11y', { seats: n })
-                  }
-                  accessibilityState={{ selected: arenaSeats === n }}
-                  onPress={() => setArenaSeats(n)}
-                  style={[s.segmentItem, arenaSeats === n && s.segmentOn]}
-                >
-                  <Text style={[s.segmentText, arenaSeats === n && { color: '#1f1500' }]}>
-                    {n === 'teams' ? t('online.teamsShort') : t('online.seatsShort', { seats: n })}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <Pulse active={motion && online} style={{ flex: 1 }}>
-              <Button
-                fit
-                disabled={!online}
-                onPress={() =>
-                  router.push({
-                    pathname: '/online',
-                    params:
-                      arenaSeats === 'teams'
-                        ? { seats: '4', teams: '1' }
-                        : { seats: String(arenaSeats) },
-                  })
-                }
-              >
-                {online ? t('online.playNow') : t('online.offlineButton')}
-              </Button>
-            </Pulse>
-          </View>
-        </LinearGradient>
+        // A navy island on the day page (the 30% of 60-30-10): it renders in
+        // the night palette, so its text and controls stay as at night.
+        <SchemeScope scheme="dark">
+          <QuickMatchHero
+            day={!night}
+            online={online}
+            motion={motion}
+            seats={arenaSeats}
+            onSeats={setArenaSeats}
+          />
+        </SchemeScope>
       )}
 
       {/* Weekly tournament */}
@@ -297,10 +257,10 @@ export default function LobbyScreen() {
         accessibilityRole="button"
         accessibilityLabel={t('tournament.a11y')}
         onPress={() => router.push('/tournament')}
-        android_ripple={{ color: '#ffffff14' }}
+        android_ripple={{ color: ui.ripple }}
       >
         <LinearGradient
-          colors={['#3b2a0e', '#1f1a14']}
+          colors={night ? TOURNEY.dark : TOURNEY.light}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={s.tourney}
@@ -311,7 +271,7 @@ export default function LobbyScreen() {
               <Text style={{ fontSize: 28 }}>🏆</Text>
             </Bob>
             <View style={s.liveBadge}>
-              <LiveDot color="#fff" size={5} active={motion} />
+              <LiveDot color={ui.onColor} size={5} active={motion} />
               <Text style={s.liveBadgeText}>{t('tournament.live')}</Text>
             </View>
           </View>
@@ -332,7 +292,7 @@ export default function LobbyScreen() {
                   height={6}
                   colors={[ui.gold, '#f59e0b']}
                 />
-                <Text style={s.tinyText}>
+                <Text style={[s.tinyText, !night && { color: ui.muted }]}>
                   {topTen > 0
                     ? t('tournament.toTopTen', { points: myPoints, need: topTen })
                     : t('tournament.firstToScore', { points: myPoints })}
@@ -340,7 +300,12 @@ export default function LobbyScreen() {
               </>
             )}
           </View>
-          <Ionicons name="chevron-forward" style={mirrorInRtl} size={20} color={ui.gold} />
+          <Ionicons
+            name="chevron-forward"
+            style={mirrorInRtl}
+            size={20}
+            color={night ? ui.gold : ui.text}
+          />
         </LinearGradient>
       </Pressable>
 
@@ -354,18 +319,19 @@ export default function LobbyScreen() {
       <View style={s.grid}>
         <ModeCard
           icon="key"
-          colors={['#123b2c', '#16222a']}
-          accent={ui.green}
+          tones={MODE_TONES.party}
+          accent={night ? ui.green : DARK.green}
           title={t('friends.party.title')}
           subtitle={t('friends.party.subtitle')}
           pill={t('friends.party.pill')}
           disabled={!online}
+          lockedLabel={t('mode.needsInternet')}
           onPress={() => router.push({ pathname: '/online', params: { private: '1' } })}
         />
         <ModeCard
           icon="phone-portrait"
-          colors={['#3a2a4f', '#1f1b2e']}
-          accent={ui.gem}
+          tones={MODE_TONES.pass}
+          accent={night ? ui.gem : DARK.gem}
           title={t('friends.pass.title')}
           subtitle={t('friends.pass.subtitle')}
           pill={t('friends.pass.pill')}
@@ -373,22 +339,24 @@ export default function LobbyScreen() {
         />
         <ModeCard
           icon="person-add"
-          colors={['#3b2a10', '#221c16']}
-          accent={ui.gold}
+          tones={MODE_TONES.challenge}
+          accent={night ? ui.gold : DARK.gold}
           title={t('friends.challenge.title')}
           subtitle={t('friends.challenge.subtitle')}
           pill={member ? t('friends.challenge.pillMember') : t('friends.challenge.pillGuest')}
           disabled={!online}
+          lockedLabel={t('mode.needsInternet')}
           onPress={() => router.push('/friends')}
         />
         <ModeCard
           icon="people-circle"
-          colors={['#2a1f4a', '#1c1a2e']}
-          accent={ui.gem}
+          tones={MODE_TONES.teamup}
+          accent={night ? ui.gem : DARK.gem}
           title={t('friends.teamUp.title')}
           subtitle={t('friends.teamUp.subtitle')}
           pill={t('friends.teamUp.pill')}
           disabled={!online}
+          lockedLabel={t('mode.needsInternet')}
           onPress={() => router.push({ pathname: '/online', params: { teamup: '1' } })}
         />
       </View>
@@ -396,15 +364,15 @@ export default function LobbyScreen() {
       {/* 3. Play vs computer: offline, any time */}
       <SectionHeader
         icon="hardware-chip"
-        color="#f87171"
+        color={computerRed}
         title={t('computer.title')}
         subtitle={t('computer.subtitle')}
       />
       <View style={s.grid}>
         <ModeCard
           icon="grid"
-          colors={['#4a1d1d', '#221a26']}
-          accent="#f87171"
+          tones={MODE_TONES.classic}
+          accent={night ? computerRed : '#f87171'}
           title={t('computer.classic.title')}
           subtitle={t('computer.classic.subtitle')}
           pill={t('computer.classic.pill', { coins: REWARDS.bot.win.coins })}
@@ -412,8 +380,8 @@ export default function LobbyScreen() {
         />
         <ModeCard
           icon="flash"
-          colors={['#4a3510', '#241d14']}
-          accent={ui.gold}
+          tones={MODE_TONES.quick}
+          accent={night ? ui.gold : DARK.gold}
           title={variantTitle('quick1')}
           subtitle={t('computer.quick.subtitle')}
           pill={t('computer.quick.pill')}
@@ -421,7 +389,7 @@ export default function LobbyScreen() {
         />
         <ModeCard
           icon="skull"
-          colors={['#3d1530', '#211726']}
+          tones={MODE_TONES.kill}
           accent="#f472b6"
           title={variantTitle('kill')}
           subtitle={t('computer.kill.subtitle')}
@@ -430,8 +398,8 @@ export default function LobbyScreen() {
         />
         <ModeCard
           icon="people"
-          colors={['#1d2b52', '#191f33']}
-          accent={ui.blueSoft}
+          tones={MODE_TONES.teams}
+          accent={night ? ui.blueSoft : DARK.blue}
           title={t('computer.teams.title')}
           subtitle={t('computer.teams.subtitle')}
           pill={t('computer.teams.pill')}
@@ -452,7 +420,7 @@ export default function LobbyScreen() {
           accessibilityRole="button"
           accessibilityLabel={t('progress.seasonA11y')}
           onPress={() => router.push('/rewards')}
-          android_ripple={{ color: '#ffffff14' }}
+          android_ripple={{ color: ui.ripple }}
         >
           <Card style={{ gap: 10 }}>
             <View style={[shared.row, { alignItems: 'center', gap: 12 }]}>
@@ -545,15 +513,20 @@ export default function LobbyScreen() {
       <Pressable
         accessibilityRole="button"
         onPress={() => router.push('/store')}
-        android_ripple={{ color: '#ad8efa30' }}
+        android_ripple={{ color: `${storeViolet}30` }}
       >
-        <View style={s.storeRow}>
+        <View style={[s.storeRow, { borderColor: `${storeViolet}35` }]}>
           <Text style={{ fontSize: 26 }}>🎨</Text>
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={s.cardTitle}>{t('store.title')}</Text>
             <Text style={shared.small}>{t('store.subtitle')}</Text>
           </View>
-          <Ionicons name="chevron-forward" style={mirrorInRtl} size={20} color="#c5a5ff" />
+          <Ionicons
+            name="chevron-forward"
+            style={mirrorInRtl}
+            size={20}
+            color={night ? '#c5a5ff' : ui.violet}
+          />
         </View>
       </Pressable>
       {message && (
@@ -635,7 +608,7 @@ export default function LobbyScreen() {
                       borderRadius: 11,
                       backgroundColor: theme.colors[color],
                       borderWidth: 2,
-                      borderColor: '#ffffffcc',
+                      borderColor: SEAT_RIM,
                     }}
                   />
                   <TextInput
@@ -751,6 +724,7 @@ function SectionHeader({
   subtitle: string;
   right?: ReactNode;
 }) {
+  const s = useStyles();
   return (
     <View style={s.sectionHead}>
       <View style={[s.sectionIcon, { backgroundColor: `${color}22` }]}>
@@ -765,49 +739,175 @@ function SectionHeader({
   );
 }
 
+/** A mode card's gradient, night and day. */
+interface Tones {
+  readonly dark: readonly [string, string];
+  readonly light: readonly [string, string];
+}
+
+/**
+ * The Quick Match hero. Always drawn in the night palette (see SchemeScope at
+ * its call site): by night it blends in as before, by day it is the page's
+ * navy anchor with a royal-blue glow.
+ */
+function QuickMatchHero({
+  day,
+  online,
+  motion,
+  seats,
+  onSeats,
+}: {
+  day: boolean;
+  online: boolean;
+  motion: boolean;
+  seats: 2 | 4 | 'teams';
+  onSeats(seats: 2 | 4 | 'teams'): void;
+}) {
+  const { t } = useTranslation('home');
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
+  return (
+    <LinearGradient
+      colors={day ? HERO.day : HERO.dark}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={s.hero}
+    >
+      <Shine active={motion && online} />
+      <View style={shared.between}>
+        <View style={s.heroBadge}>
+          <Ionicons name="flash" size={12} color={ui.gold} />
+          <Text style={s.heroBadgeText}>{t('online.mostPlayed')}</Text>
+        </View>
+        <Bob active={motion}>
+          <Text style={{ fontSize: 34 }}>🎲</Text>
+        </Bob>
+      </View>
+      <Text style={s.heroTitle}>{t('online.quickMatch')}</Text>
+      <Text style={s.heroBody}>
+        <Trans
+          t={t}
+          i18nKey="online.body"
+          values={{ coins: REWARDS.online.win.coins, xp: REWARDS.online.win.xp }}
+          components={{
+            coins: <Text style={{ color: ui.gold, fontWeight: '800' }} />,
+            xp: <Text style={{ color: ui.green, fontWeight: '800' }} />,
+          }}
+        />
+      </Text>
+      <View style={s.heroActions}>
+        <View style={s.segment}>
+          {([2, 4, 'teams'] as const).map((n) => (
+            <Pressable
+              key={n}
+              accessibilityRole="button"
+              accessibilityLabel={
+                n === 'teams' ? t('online.teamsA11y') : t('online.seatsA11y', { seats: n })
+              }
+              accessibilityState={{ selected: seats === n }}
+              onPress={() => onSeats(n)}
+              style={[s.segmentItem, seats === n && s.segmentOn]}
+            >
+              <Text style={[s.segmentText, seats === n && { color: ON_GOLD }]}>
+                {n === 'teams' ? t('online.teamsShort') : t('online.seatsShort', { seats: n })}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <Pulse active={motion && online} style={{ flex: 1 }}>
+          <Button
+            fit
+            disabled={!online}
+            onPress={() =>
+              router.push({
+                pathname: '/online',
+                params: seats === 'teams' ? { seats: '4', teams: '1' } : { seats: String(seats) },
+              })
+            }
+          >
+            {online ? t('online.playNow') : t('online.offlineButton')}
+          </Button>
+        </Pulse>
+      </View>
+    </LinearGradient>
+  );
+}
+
 function ModeCard({
   icon,
-  colors,
+  tones,
   accent,
   title,
   subtitle,
   pill,
   disabled = false,
+  lockedLabel,
   onPress,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
-  colors: readonly [string, string];
+  tones: Tones;
   accent: string;
   title: string;
   subtitle: string;
   pill: string;
   disabled?: boolean;
+  /** Shown as a lock chip while disabled, so the card says why instead of fading out. */
+  lockedLabel?: string;
   onPress(): void;
 }) {
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
+  const day = ui.scheme === 'light';
+  const locked = disabled && Boolean(lockedLabel);
+  // By day: a white card with a solid tile in the mode's Ludo colour (the
+  // playful 10% of 60-30-10); by night the tinted glass card as before.
+  const colors = day ? (['#ffffff', '#ffffff'] as const) : tones.dark;
+  const tile = iconTile(accent, ui);
+  const pillTone = pillColors(accent, ui);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={title}
-      accessibilityHint={subtitle}
+      accessibilityHint={locked ? lockedLabel : subtitle}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
       android_ripple={{ color: `${accent}30` }}
-      style={({ pressed }) => [s.modeWrap, { opacity: disabled ? 0.5 : pressed ? 0.85 : 1 }]}
+      style={({ pressed }) => [
+        s.modeWrap,
+        { opacity: disabled && !locked ? 0.5 : pressed ? 0.85 : 1 },
+      ]}
     >
       <LinearGradient
         colors={colors}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[s.mode, { borderColor: `${accent}40` }]}
+        style={[s.mode, { borderColor: day ? ui.line : `${accent}40` }, day && s.modeDay]}
       >
         <View style={shared.between}>
-          <View style={[s.modeIcon, { backgroundColor: `${accent}22` }]}>
-            <Ionicons name={icon} size={20} color={accent} />
+          <View style={[s.modeIcon, { backgroundColor: locked ? ui.fillStrong : tile.background }]}>
+            <Ionicons name={icon} size={20} color={locked ? ui.subtle : tile.icon} />
           </View>
-          <Text style={[s.modePill, { color: accent, borderColor: `${accent}55` }]}>{pill}</Text>
+          {locked ? (
+            <View style={s.lockChip}>
+              <Ionicons name="lock-closed" size={11} color={ui.muted} />
+              <Text style={s.lockChipText}>{lockedLabel}</Text>
+            </View>
+          ) : (
+            <Text
+              style={[
+                s.modePill,
+                { color: pillTone.color, borderColor: `${accent}55` },
+                day && { backgroundColor: pillTone.background, borderColor: 'transparent' },
+              ]}
+            >
+              {pill}
+            </Text>
+          )}
         </View>
-        <Text style={s.modeTitle}>{title}</Text>
+        <Text style={[s.modeTitle, locked && { color: ui.muted }]}>{title}</Text>
         <Text numberOfLines={2} style={s.modeSub}>
           {subtitle}
         </Text>
@@ -816,7 +916,48 @@ function ModeCard({
   );
 }
 
-const s = StyleSheet.create({
+/**
+ * Gold and green buttons and chips stay bright in both modes, like the
+ * accent buttons, with dark text on them.
+ */
+const GOLD_FILL = DARK.gold;
+const GREEN_FILL = DARK.green;
+const ON_GOLD = '#1f1500';
+/** The white rim of a seat's colour swatch, part of the coin look. */
+const SEAT_RIM = '#ffffffcc';
+
+/** By day, cards lift off the page with a soft navy shadow; night is unchanged. */
+
+/** A recessed well on a card: dark glass by night, frosted paper by day. */
+function well(ui: Palette, nightAlpha: string): string {
+  return ui.scheme === 'dark' ? `#000000${nightAlpha}` : `${ui.background}b3`;
+}
+
+/** Decorative card gradients: the night originals and soft day versions of the same hues. */
+const SPIN_FREE = {
+  dark: ['#3a2a0c', '#1d1b2e'],
+  light: ['#fdebc6', '#efeaf8'],
+} as const;
+const SPIN = { dark: ['#262a3d', '#1a1f2f'], light: ['#ffffff', '#ffffff'] } as const;
+const HERO = {
+  dark: ['#123f31', '#11284d', '#1a1f2f'],
+  // Day: royal blue into the brand navy.
+  day: NAVY_HERO,
+} as const;
+/** Day: marigold, the 10% pop; navy text on it reads at 10:1. */
+const TOURNEY = { dark: ['#3b2a0e', '#1f1a14'], light: MARIGOLD } as const;
+const MODE_TONES = {
+  party: { dark: ['#123b2c', '#16222a'], light: ['#d8f2e6', '#eef4f2'] },
+  pass: { dark: ['#3a2a4f', '#1f1b2e'], light: ['#ebe1fa', '#f4f1fa'] },
+  challenge: { dark: ['#3b2a10', '#221c16'], light: ['#fbe9c8', '#f8f3ea'] },
+  teamup: { dark: ['#2a1f4a', '#1c1a2e'], light: ['#e4ddfa', '#f2f1f9'] },
+  classic: { dark: ['#4a1d1d', '#221a26'], light: ['#fadbdb', '#f7eff2'] },
+  quick: { dark: ['#4a3510', '#241d14'], light: ['#fae5bf', '#f9f3e8'] },
+  kill: { dark: ['#3d1530', '#211726'], light: ['#f8dbeb', '#f6eff4'] },
+  teams: { dark: ['#1d2b52', '#191f33'], light: ['#dce4f9', '#eff1f8'] },
+} as const satisfies Record<string, Tones>;
+
+const useStyles = makeStyles((ui) => ({
   profile: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   onlineDot: {
     position: 'absolute',
@@ -824,11 +965,10 @@ const s = StyleSheet.create({
     bottom: -2,
     padding: 3,
     borderRadius: 10,
-    backgroundColor: '#0e1322',
   },
   profileName: { color: ui.text, fontSize: 20, fontWeight: '900', letterSpacing: -0.4 },
   levelTag: {
-    color: '#fff',
+    color: ui.onColor,
     backgroundColor: ui.blue,
     fontSize: 10,
     fontWeight: '900',
@@ -846,20 +986,21 @@ const s = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: ui.line,
+    boxShadow: liftByDay(ui),
     overflow: 'hidden',
   },
   spinWheel: {
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: '#00000035',
+    backgroundColor: well(ui, '35'),
     alignItems: 'center',
     justifyContent: 'center',
   },
   freeBadge: {
     position: 'absolute',
     bottom: -6,
-    color: '#fff',
+    color: ui.onColor,
     backgroundColor: ui.green,
     fontSize: 9,
     fontWeight: '900',
@@ -869,16 +1010,16 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   cardTitle: { color: ui.text, fontSize: 16, fontWeight: '800' },
-  streakDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#ffffff1f' },
+  streakDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: ui.ripple },
   streakText: { color: ui.gold, fontSize: 9, fontWeight: '900', letterSpacing: 0.6, marginLeft: 4 },
   spinButton: {
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 14,
-    backgroundColor: ui.gold,
-    boxShadow: `0 4px 14px ${ui.gold}55`,
+    backgroundColor: GOLD_FILL,
+    boxShadow: `0 4px 14px ${GOLD_FILL}55`,
   },
-  spinButtonText: { color: '#1f1500', fontWeight: '900', fontSize: 13, letterSpacing: 1 },
+  spinButtonText: { color: ON_GOLD, fontWeight: '900', fontSize: 13, letterSpacing: 1 },
   section: { color: ui.muted, fontSize: 12, fontWeight: '900', letterSpacing: 1.6 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
   sectionIcon: {
@@ -906,7 +1047,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: '#00000040',
+    backgroundColor: well(ui, '40'),
   },
   heroBadgeText: { color: ui.gold, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   heroTitle: { color: ui.text, fontSize: 30, fontWeight: '900', letterSpacing: -0.6 },
@@ -916,7 +1057,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     padding: 3,
     borderRadius: 14,
-    backgroundColor: '#00000045',
+    backgroundColor: well(ui, '45'),
   },
   segmentItem: {
     minWidth: 48,
@@ -927,11 +1068,22 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  segmentOn: { backgroundColor: ui.gold },
+  segmentOn: { backgroundColor: GOLD_FILL },
   segmentText: { color: ui.muted, fontWeight: '900', fontSize: 13 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   modeWrap: { flexBasis: '47%', flexGrow: 1 },
   mode: { borderRadius: 20, borderWidth: 1, padding: 14, gap: 6, minHeight: 138 },
+  modeDay: { boxShadow: liftByDay(ui) },
+  lockChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: ui.fillStrong,
+  },
+  lockChipText: { color: ui.muted, fontSize: 10, fontWeight: '900' },
   modeIcon: {
     width: 40,
     height: 40,
@@ -958,13 +1110,14 @@ const s = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: `${ui.gold}55`,
+    boxShadow: liftByDay(ui),
     overflow: 'hidden',
   },
   tourneyIcon: {
     width: 54,
     height: 54,
     borderRadius: 16,
-    backgroundColor: '#00000035',
+    backgroundColor: well(ui, '35'),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -980,7 +1133,7 @@ const s = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: ui.danger,
   },
-  liveBadgeText: { color: '#fff', fontSize: 8, fontWeight: '900' },
+  liveBadgeText: { color: ui.onColor, fontSize: 8, fontWeight: '900' },
   rankChip: {
     color: ui.gold,
     fontWeight: '900',
@@ -988,7 +1141,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 7,
-    backgroundColor: '#00000040',
+    backgroundColor: well(ui, '40'),
     overflow: 'hidden',
   },
   tinyText: { color: ui.subtle, fontSize: 11, fontWeight: '700' },
@@ -1000,10 +1153,10 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tierText: { color: '#fff', fontSize: 18, fontWeight: '900' },
+  tierText: { color: ui.onColor, fontSize: 18, fontWeight: '900' },
   proChip: {
-    color: '#1f1500',
-    backgroundColor: ui.gold,
+    color: ON_GOLD,
+    backgroundColor: GOLD_FILL,
     fontSize: 9,
     fontWeight: '900',
     paddingHorizontal: 5,
@@ -1025,7 +1178,7 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#ffffff0d',
+    backgroundColor: ui.fill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1035,7 +1188,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 11,
-    backgroundColor: ui.green,
+    backgroundColor: GREEN_FILL,
     justifyContent: 'center',
   },
   claimText: { color: '#04261a', fontWeight: '900', fontSize: 12 },
@@ -1046,16 +1199,15 @@ const s = StyleSheet.create({
     padding: 14,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#ad8efa35',
     backgroundColor: ui.surfaceLow,
   },
   nameInput: {
     flex: 1,
     minHeight: 48,
     borderWidth: 1,
-    borderColor: '#ffffff28',
+    borderColor: ui.border,
     borderRadius: 12,
-    backgroundColor: '#00000020',
+    backgroundColor: well(ui, '20'),
     color: ui.text,
     fontSize: 15,
     paddingHorizontal: 12,
@@ -1069,4 +1221,4 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   choiceText: { color: ui.text, fontSize: 13, fontWeight: '700' },
-});
+}));

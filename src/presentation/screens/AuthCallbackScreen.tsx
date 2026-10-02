@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { router, useLocalSearchParams } from 'expo-router';
 import { authProvider } from '@/config/container';
-import { Body, Button, Card, Screen, shared } from '../components/Kit';
+import { Body, Button, Card, Screen, useShared } from '../components/Kit';
 import { authRedirect } from '../auth/authBrowser';
 import { i18n } from '../i18n';
+import { LudoSpinner } from '../components/LoaderArt';
 
 export default function AuthCallbackScreen() {
   const params = useLocalSearchParams<{
@@ -16,6 +17,7 @@ export default function AuthCallbackScreen() {
     error?: string;
   }>();
   const { t } = useTranslation('account');
+  const shared = useShared();
   // A server's own message, or `null` with `failed` for the catalogue's fallback.
   const [error, setError] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -66,7 +68,7 @@ export default function AuthCallbackScreen() {
           </>
         ) : (
           <>
-            <ActivityIndicator />
+            <LudoSpinner />
             <Body>{t('callback.finishing')}</Body>
           </>
         )}

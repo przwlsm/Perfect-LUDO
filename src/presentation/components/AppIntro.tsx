@@ -16,7 +16,7 @@ import Animated, {
 import * as SplashScreen from 'expo-splash-screen';
 import { useTranslation } from 'react-i18next';
 import { Text } from './AppText';
-import { ui } from '../theme/themes';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
 
 const ICON = require('../../../assets/brand/splash-icon.png');
 const COINS = ['#ef4444', '#10b981', '#f59e0b', '#3b82f6'];
@@ -32,6 +32,8 @@ const LOGO = 288;
  */
 export function AppIntro({ onDone }: { onDone(): void }) {
   const { t } = useTranslation();
+  const s = useStyles();
+  const ui = useUi();
   const [reduced, setReduced] = useState<boolean | null>(null);
   const logo = useSharedValue(1);
   const title = useSharedValue(0);
@@ -126,6 +128,7 @@ export function AppIntro({ onDone }: { onDone(): void }) {
 }
 
 function Coin({ color, index, t }: { color: string; index: number; t: SharedValue<number> }) {
+  const s = useStyles();
   const style = useAnimatedStyle(() => {
     // Each coin hops a beat after the one before.
     const phase = Math.max(0, Math.min(1, t.value * 1.6 - index * 0.2));
@@ -134,9 +137,10 @@ function Coin({ color, index, t }: { color: string; index: number; t: SharedValu
   return <Animated.View style={[s.coin, { backgroundColor: color }, style]} />;
 }
 
-const s = StyleSheet.create({
+const useStyles = makeStyles((ui) => ({
   screen: {
-    backgroundColor: '#0e1322',
+    // The day or night splash colour, so the hand-over is seamless.
+    backgroundColor: ui.background,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 100,
@@ -158,4 +162,4 @@ const s = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#ffffffdd',
   },
-});
+}));
