@@ -4,24 +4,24 @@ import { i18n } from '../i18n';
 import { Text } from './AppText';
 import { CoinIcon, GemIcon } from './Currency';
 import { useUi } from '../theme/AppearanceProvider';
-import { DARK } from '../theme/palette';
+import { FILLS, type FillTone } from '../theme/surfaces';
 import { numberLocale } from '../i18n/format';
 
 /** A rounded track with a glossy gradient fill, 0..1. */
 export function ProgressBar({
   value,
+  tone = 'blue',
   colors,
   height = 10,
 }: {
   value: number;
+  /** One of the shared fills (theme/surfaces FILLS); `colors` overrides it. */
+  tone?: FillTone;
   colors?: readonly [string, string];
   height?: number;
 }) {
   const ui = useUi();
-  // By day the default fill starts from the vivid game blue (the 10% of
-  // 60-30-10) and deepens into the blue token; night as before.
-  const fill: readonly [string, string] =
-    colors ?? (ui.scheme === 'dark' ? [ui.blueSoft, ui.blue] : [DARK.blue, ui.blue]);
+  const fill: readonly [string, string] = colors ?? FILLS[tone];
   const pct = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
   return (
     <View
@@ -30,10 +30,10 @@ export function ProgressBar({
       style={{
         height,
         borderRadius: height,
-        // A deep groove by night; a faint ink tint by day.
-        backgroundColor: ui.scheme === 'dark' ? '#0a0f1c' : ui.fillStrong,
+        // A deep groove by night; by day an ink groove that still shows when empty.
+        backgroundColor: ui.scheme === 'dark' ? '#0a0f1c' : '#16204a1c',
         borderWidth: 1,
-        borderColor: ui.scheme === 'dark' ? '#ffffff12' : ui.line,
+        borderColor: ui.scheme === 'dark' ? '#ffffff12' : ui.border,
         overflow: 'hidden',
       }}
     >

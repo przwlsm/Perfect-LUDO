@@ -7,7 +7,7 @@
  * Money only flows in: everything bought here is virtual and never
  * redeemable, so play stays a game everywhere.
  */
-export type IapKind = 'gems' | 'coins' | 'starter' | 'pass' | 'piggy' | 'club';
+export type IapKind = 'gems' | 'coins' | 'starter' | 'pass' | 'piggy' | 'club' | 'tip';
 
 export interface IapProduct {
   readonly sku: string;
@@ -105,7 +105,78 @@ export const IAP_PRODUCTS: readonly IapProduct[] = [
     consumable: false,
     subscription: true,
   },
+  // "Buy me a coffee": voluntary tips that support the game's upkeep. They
+  // grant nothing in the game (so tipping is never pay-to-win) and go through
+  // the store's own billing like everything else, as store rules require.
+  {
+    sku: 'ludo.tip.coffee',
+    kind: 'tip',
+    gems: 0,
+    coins: 0,
+    name: 'Coffee',
+    blurb: 'A small coffee for the developer.',
+    consumable: true,
+  },
+  {
+    sku: 'ludo.tip.big',
+    kind: 'tip',
+    gems: 0,
+    coins: 0,
+    name: 'Big coffee',
+    blurb: 'A big coffee for a long night of fixes.',
+    consumable: true,
+  },
+  {
+    sku: 'ludo.tip.feast',
+    kind: 'tip',
+    gems: 0,
+    coins: 0,
+    name: 'Coffee & snack',
+    blurb: 'Coffee and a snack: keeps the servers running.',
+    consumable: true,
+  },
+  // "Gift more": bigger tips for players who want to give more. Store
+  // billing has no free amount, so the ladder of fixed tiers stands in for one.
+  {
+    sku: 'ludo.tip.lunch',
+    kind: 'tip',
+    gems: 0,
+    coins: 0,
+    name: 'Lunch',
+    blurb: 'Lunch for the developer.',
+    consumable: true,
+  },
+  {
+    sku: 'ludo.tip.dinner',
+    kind: 'tip',
+    gems: 0,
+    coins: 0,
+    name: 'Dinner',
+    blurb: 'A proper dinner: a big help.',
+    consumable: true,
+  },
+  {
+    sku: 'ludo.tip.party',
+    kind: 'tip',
+    gems: 0,
+    coins: 0,
+    name: 'Party',
+    blurb: 'A party for the whole team.',
+    consumable: true,
+  },
+  {
+    sku: 'ludo.tip.patron',
+    kind: 'tip',
+    gems: 0,
+    coins: 0,
+    name: 'Patron',
+    blurb: 'For the true patrons of the game.',
+    consumable: true,
+  },
 ] as const;
+
+/** Every tip, smallest first: the three coffees, then the "gift more" tiers. */
+export const TIP_PRODUCTS: readonly IapProduct[] = IAP_PRODUCTS.filter((p) => p.kind === 'tip');
 
 export function getIapProduct(sku: string): IapProduct | null {
   return IAP_PRODUCTS.find((p) => p.sku === sku) ?? null;

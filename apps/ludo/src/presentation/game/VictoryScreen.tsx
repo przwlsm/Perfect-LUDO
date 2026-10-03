@@ -207,7 +207,7 @@ export function VictoryScreen({
                 <ProgressBar
                   value={after.into / after.need}
                   height={10}
-                  colors={levelUp ? [ui.gold, '#f59e0b'] : [ui.green, ui.blue]}
+                  tone={levelUp ? 'gold' : 'xp'}
                 />
                 <View style={s.rowBetween}>
                   <Text style={s.small}>

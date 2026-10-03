@@ -193,5 +193,28 @@
         "description": "The original round yards for 5 and 6 player tables."
       }
     }
+  },
+  "support": {
+    "label": "SUPPORT THE GAME",
+    "title": "Buy me a coffee ☕",
+    "body": "Ludo Rumble is built and kept running by an independent developer. If you enjoy it, a small tip helps pay for the servers and new features.",
+    "tiers": {
+      "coffee": "Coffee",
+      "bigCoffee": "Big coffee",
+      "feast": "Coffee & snack",
+      "lunch": "Lunch",
+      "dinner": "Dinner",
+      "party": "Party",
+      "patron": "Patron"
+    },
+    "tipA11y": "Tip a {{tier}} for {{price}}",
+    "signIn": "Sign in to send a tip",
+    "unavailable": "Tips open when the game is installed from Google Play.",
+    "noReward": "Tips are a thank-you only: they don't unlock anything in the game.",
+    "thanks": "Thank you so much! Your tip keeps Ludo Rumble going. ❤️",
+    "failed": "The tip didn't go through. Please try again.",
+    "more": "Gift more ❤️",
+    "moreTitle": "Gift more",
+    "moreBody": "Want to give more? Pick a bigger tip below. Every tip, big or small, means a lot."
   }
 }

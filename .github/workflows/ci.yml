@@ -26,6 +26,9 @@ jobs:
       - name: Ludo database rules and RPC integrity
         run: npm run test:online --workspace ludo
 
+      - name: Bagh-Chal database rules and RPC integrity
+        run: npm run test:online --workspace baghchal
+
       - name: Export Ludo for all platforms
         run: npm run export:all --workspace ludo
 

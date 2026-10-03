@@ -193,5 +193,28 @@
         "description": "Las casas redondas originales para mesas de 5 y 6 jugadores."
       }
     }
+  },
+  "support": {
+    "label": "APOYA EL JUEGO",
+    "title": "Invítame a un café ☕",
+    "body": "Ludo Rumble lo crea y lo mantiene un desarrollador independiente. Si te gusta, una pequeña propina ayuda a pagar los servidores y las novedades.",
+    "tiers": {
+      "coffee": "Café",
+      "bigCoffee": "Café grande",
+      "feast": "Café y merienda",
+      "lunch": "Almuerzo",
+      "dinner": "Cena",
+      "party": "Fiesta",
+      "patron": "Mecenas"
+    },
+    "tipA11y": "Dar una propina de {{tier}} por {{price}}",
+    "signIn": "Inicia sesión para dar una propina",
+    "unavailable": "Las propinas se activan al instalar el juego desde Google Play.",
+    "noReward": "La propina es solo un agradecimiento: no desbloquea nada en el juego.",
+    "thanks": "¡Muchísimas gracias! Tu propina mantiene vivo Ludo Rumble. ❤️",
+    "failed": "La propina no se completó. Inténtalo de nuevo.",
+    "more": "Regala más ❤️",
+    "moreTitle": "Regala más",
+    "moreBody": "¿Quieres dar más? Elige una propina mayor. Cada propina, grande o pequeña, significa mucho."
   }
 }

@@ -1,10 +1,10 @@
 This is a Turborepo monorepo of Expo/React Native mobile apps (npm workspaces).
 
 - `apps/ludo/` — Ludo Rumble: the whole app (code, assets, scripts, docs) and its own Supabase project in `apps/ludo/supabase/`.
-- `apps/starter/` — a second app, intentionally empty for now. When it is created it gets its own Supabase project; it never shares Ludo's database.
-- `packages/` — shared code, empty for now.
+- `apps/baghchal/` — Bagh-Chal Arena: the second app, with its own Supabase project in `apps/baghchal/supabase/` (it never shares Ludo's database). Its plan is in `apps/baghchal/docs/PLAN.md`.
+- `packages/baghchal-engine/` — the Bagh-Chal rules engine: pure TypeScript, no dependencies, used by the app, its AI and its server-rule parity tests.
 
-Run app commands (`npx expo ...`, `npx eas-cli@latest ...`) from inside the app's folder. From the root, `npx turbo run lint typecheck test` checks every app, and `npm run ludo` starts Ludo's dev server. All apps must use the same Expo SDK and React Native version.
+Run app commands (`npx expo ...`, `npx eas-cli@latest ...`) from inside the app's folder. From the root, `npx turbo run lint typecheck test` checks every app, and `npm run ludo` / `npm run baghchal` start an app's dev server. All apps must use the same Expo SDK and React Native version.
 
 Each app is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 

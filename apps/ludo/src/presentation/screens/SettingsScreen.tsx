@@ -6,6 +6,7 @@ import { Text, TextInput } from '../components/AppText';
 import { router } from 'expo-router';
 import { profileService, rewardedAds } from '@/config/container';
 import { Body, Button, Card, Label, Screen, Sheet, useShared } from '../components/Kit';
+import { SupportCard } from '../components/SupportCard';
 import { useProfile } from '../state/ProfileProvider';
 import { useAppUpdate, type OtaCheckResult } from '../state/AppUpdateProvider';
 import { Walkthrough } from '../components/Walkthrough';
@@ -90,7 +91,7 @@ export default function SettingsScreen() {
               value={profile[key]}
               disabled={!ready || busy}
               onValueChange={(value) => void update({ [key]: value })}
-              trackColor={{ false: ui.surfaceHighest, true: theme.accent }}
+              trackColor={{ false: ui.track, true: theme.accent }}
               thumbColor="#ffffff"
             />
           </View>
@@ -101,6 +102,7 @@ export default function SettingsScreen() {
           {t(message)}
         </Text>
       )}
+      <SupportCard />
       <Card>
         <Label color={theme.accentText}>{t('about.label')}</Label>
         <Text style={shared.sectionTitle}>{t('about.title')}</Text>

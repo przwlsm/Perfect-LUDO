@@ -173,7 +173,10 @@ export default function StoreScreen() {
   );
   const piggyItem = shopItems.find((x) => x.product.kind === 'piggy');
   const clubItem = shopItems.find((x) => x.product.kind === 'club');
-  const bundles = shopItems.filter((x) => x.product.kind !== 'piggy' && x.product.kind !== 'club');
+  // Tips live in their own "Buy me a coffee" card (Profile, Settings), not here.
+  const bundles = shopItems.filter(
+    (x) => x.product.kind !== 'piggy' && x.product.kind !== 'club' && x.product.kind !== 'tip',
+  );
   const clubActive =
     profile.clubUntil !== null && new Date(profile.clubUntil).getTime() > new Date().getTime();
   async function buy(sku: string) {
@@ -500,7 +503,11 @@ export default function StoreScreen() {
                 </Text>
               </Pressable>
             </View>
-            <ProgressBar value={Math.min(1, profile.piggyCoins / PIGGY_CAP)} height={8} />
+            <ProgressBar
+              value={Math.min(1, profile.piggyCoins / PIGGY_CAP)}
+              height={8}
+              tone="gold"
+            />
           </PiggyShell>
         )}
         {bundles.map(({ product, price }) => (

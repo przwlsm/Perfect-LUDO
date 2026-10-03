@@ -35,7 +35,7 @@ import { useConnectivity } from '../state/ConnectivityProvider';
 import { useProfile } from '../state/ProfileProvider';
 import { makeStyles, SchemeScope, useUi } from '../theme/AppearanceProvider';
 import { DARK, type Palette } from '../theme/palette';
-import { iconTile, liftByDay, MARIGOLD, NAVY_HERO, pillColors } from '../theme/surfaces';
+import { iconTile, liftByDay, MARIGOLD, NAVY_HERO, pillColors, BADGE } from '../theme/surfaces';
 import { useCatalogText } from '../i18n/useCatalogText';
 import { numberLocale } from '../i18n/format';
 import { mirrorInRtl } from '../i18n/rtl';
@@ -126,7 +126,7 @@ export default function LobbyScreen() {
                 <Text style={s.levelTag}>{t('profile.levelTag', { level: level.level })}</Text>
                 <Text style={s.levelTitle}>{t(`profile.titles.${levelTitle(level.level)}`)}</Text>
               </View>
-              <ProgressBar value={level.into / level.need} height={6} />
+              <ProgressBar value={level.into / level.need} height={6} tone="xp" />
             </>
           ) : (
             <Text style={shared.small}>{t('profile.guest')}</Text>
@@ -287,11 +287,7 @@ export default function LobbyScreen() {
             </Text>
             {member && tournament.data && (
               <>
-                <ProgressBar
-                  value={topTen > 0 ? myPoints / topTen : 0}
-                  height={6}
-                  colors={[ui.gold, '#f59e0b']}
-                />
+                <ProgressBar value={topTen > 0 ? myPoints / topTen : 0} height={6} tone="gold" />
                 <Text style={[s.tinyText, !night && { color: ui.muted }]}>
                   {topTen > 0
                     ? t('tournament.toTopTen', { points: myPoints, need: topTen })
@@ -481,7 +477,7 @@ export default function LobbyScreen() {
                   <ProgressBar
                     value={m.progress / m.target}
                     height={5}
-                    colors={done ? [ui.green, '#059669'] : [ui.blueSoft, ui.blue]}
+                    tone={done ? 'green' : 'blue'}
                   />
                   <Text style={s.tinyText}>
                     {Math.min(m.progress, m.target)}/{m.target}
@@ -969,7 +965,7 @@ const useStyles = makeStyles((ui) => ({
   profileName: { color: ui.text, fontSize: 20, fontWeight: '900', letterSpacing: -0.4 },
   levelTag: {
     color: ui.onColor,
-    backgroundColor: ui.blue,
+    backgroundColor: BADGE.blue,
     fontSize: 10,
     fontWeight: '900',
     paddingHorizontal: 7,
@@ -1001,7 +997,7 @@ const useStyles = makeStyles((ui) => ({
     position: 'absolute',
     bottom: -6,
     color: ui.onColor,
-    backgroundColor: ui.green,
+    backgroundColor: BADGE.green,
     fontSize: 9,
     fontWeight: '900',
     paddingHorizontal: 6,
@@ -1131,7 +1127,7 @@ const useStyles = makeStyles((ui) => ({
     paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 6,
-    backgroundColor: ui.danger,
+    backgroundColor: BADGE.red,
   },
   liveBadgeText: { color: ui.onColor, fontSize: 8, fontWeight: '900' },
   rankChip: {
@@ -1149,7 +1145,7 @@ const useStyles = makeStyles((ui) => ({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: ui.blue,
+    backgroundColor: BADGE.blue,
     alignItems: 'center',
     justifyContent: 'center',
   },

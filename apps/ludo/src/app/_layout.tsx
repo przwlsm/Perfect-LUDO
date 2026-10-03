@@ -96,6 +96,9 @@ function ThemedStack() {
         {TAB_ROUTES.map((name) => (
           <Stack.Screen key={name} name={name} options={{ animation: 'none' }} />
         ))}
+        {/* No iOS edge-swipe out of a game: leaving goes through the pause menu,
+            like the Android back button does. */}
+        <Stack.Screen name="game" options={{ gestureEnabled: false }} />
       </Stack>
     </>
   );

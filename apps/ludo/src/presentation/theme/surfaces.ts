@@ -40,3 +40,28 @@ export const MARIGOLD = ['#ffe08a', '#ffc94d'] as const;
  * content inside `<SchemeScope scheme="dark">` so it takes night tokens.
  */
 export const NAVY_HERO = ['#1e336e', '#1a2a62', '#141e4f'] as const;
+
+/**
+ * Progress and meter fills (the 10%): vivid game colours that read the same
+ * by day and night. Never build a fill from a text token such as `ui.gold`:
+ * by day those are deepened for reading on white and turn a bar muddy.
+ */
+export const FILLS = {
+  blue: ['#6aa8ff', '#2f6be0'],
+  gold: ['#ffd36b', '#f59e0b'],
+  green: ['#34d399', '#059669'],
+  /** Experience: green into blue, as on the level bar. */
+  xp: ['#34d399', '#3b82f6'],
+} as const;
+export type FillTone = keyof typeof FILLS;
+
+/**
+ * Solid badge fills that carry white text at 4.5:1 or better in both modes
+ * ("FREE", "LIVE", level and tier tags). The `ui.green`/`ui.blue`/`ui.danger`
+ * tokens are text colours: pale at night, so white on them fails there.
+ */
+export const BADGE = {
+  green: '#047857',
+  blue: '#2563eb',
+  red: '#dc2626',
+} as const;

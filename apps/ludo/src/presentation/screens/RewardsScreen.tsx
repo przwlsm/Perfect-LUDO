@@ -609,7 +609,7 @@ function GuestRewards() {
           </View>
           <ProgressBar
             value={Math.min(1, profile.vaultCoins / GUEST_VAULT_CAP)}
-            colors={[ui.gold, '#f59e0b']}
+            tone="gold"
             height={10}
           />
           <Text style={[shared.small, { textAlign: 'center' }]}>
@@ -706,11 +706,7 @@ function MissionRow({
         )}
       </View>
       {!mission.claimed && (
-        <ProgressBar
-          value={mission.progress / mission.target}
-          colors={[DARK.green, '#10b981']}
-          height={8}
-        />
+        <ProgressBar value={mission.progress / mission.target} tone="green" height={8} />
       )}
     </Card>
   );

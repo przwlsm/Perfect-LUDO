@@ -193,5 +193,28 @@
         "description": "As bases redondas originais para mesas de 5 e 6 jogadores."
       }
     }
+  },
+  "support": {
+    "label": "APOIE O JOGO",
+    "title": "Me pague um café ☕",
+    "body": "O Ludo Rumble é criado e mantido por um desenvolvedor independente. Se você gosta, uma pequena gorjeta ajuda a pagar os servidores e as novidades.",
+    "tiers": {
+      "coffee": "Café",
+      "bigCoffee": "Café grande",
+      "feast": "Café e lanche",
+      "lunch": "Almoço",
+      "dinner": "Jantar",
+      "party": "Festa",
+      "patron": "Patrono"
+    },
+    "tipA11y": "Dar uma gorjeta de {{tier}} por {{price}}",
+    "signIn": "Entre para dar uma gorjeta",
+    "unavailable": "As gorjetas ficam disponíveis quando o jogo é instalado pelo Google Play.",
+    "noReward": "A gorjeta é só um agradecimento: não desbloqueia nada no jogo.",
+    "thanks": "Muito obrigado! Sua gorjeta mantém o Ludo Rumble funcionando. ❤️",
+    "failed": "A gorjeta não foi concluída. Tente novamente.",
+    "more": "Presentear mais ❤️",
+    "moreTitle": "Presentear mais",
+    "moreBody": "Quer dar mais? Escolha uma gorjeta maior abaixo. Cada gorjeta, grande ou pequena, significa muito."
   }
 }

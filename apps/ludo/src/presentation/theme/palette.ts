@@ -41,6 +41,8 @@ export interface Palette {
   readonly surfaceLow: string;
   readonly surfaceHigh: string;
   readonly surfaceHighest: string;
+  /** Off state of switches and other controls: 3:1 on cards, as controls need. */
+  readonly track: string;
   /** Deep inset fields (inputs, wells). */
   readonly inset: string;
   /** Secondary button body, its bottom rim, and its gradient top to bottom. */
@@ -79,6 +81,7 @@ export const DARK: Palette = {
   surfaceLow: '#161b2a',
   surfaceHigh: '#252939',
   surfaceHighest: '#2f3445',
+  track: '#6a7190',
   inset: '#111728',
   navy: '#232d4b',
   navyRim: '#111625',
@@ -120,6 +123,7 @@ export const LIGHT: Palette = {
   surfaceLow: '#f3f1f8',
   surfaceHigh: '#e9e7f1',
   surfaceHighest: '#dddbe8',
+  track: '#878da6',
   inset: '#f2f3f9',
   navy: '#1e2a5e',
   navyRim: '#0f1738',

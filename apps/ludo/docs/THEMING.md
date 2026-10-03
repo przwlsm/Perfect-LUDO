@@ -89,6 +89,19 @@ src/presentation/theme/
 
 7. **The board stays the same in both modes**; only the table around it changes.
 
+8. **Text tokens are not fills.** `ui.gold`, `ui.green`, `ui.blue` and `ui.danger`
+   are tuned for reading: deep by day, pale by night. Never paint a bar or a
+   white-text badge with them:
+   - progress and meters: `<ProgressBar tone="gold" | "green" | "blue" | "xp" />`
+     (fills live in `FILLS`, `theme/surfaces.ts`);
+   - badges with white text ("FREE", "LIVE", level and tier tags): `BADGE.green`,
+     `BADGE.blue`, `BADGE.red` (white on each passes 4.5:1 in both modes);
+   - dark ink on a gold chip: `MARIGOLD[1]` by day, not `ui.gold`.
+
+9. **Controls** (switch off-tracks, outlines a player must find) use `ui.track`,
+   which stands 3:1 off cards in both modes. Disabled buttons are a flat neutral
+   slab (`Button disabled` does this): never a faded gradient.
+
 ## The doodle wallpaper
 
 Every `Screen` draws a faint doodle pattern behind its content

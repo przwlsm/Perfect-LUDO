@@ -10,6 +10,7 @@ import { useCatalogText } from '../i18n/useCatalogText';
 import { useAuthSession } from '../state/useAuthSession';
 import { Text } from '../components/AppText';
 import { Body, Button, Card, Label, Screen, useShared } from '../components/Kit';
+import { SupportCard } from '../components/SupportCard';
 import { CoinIcon, GemIcon } from '../components/Currency';
 import { Dice } from '../components/Dice';
 import { ProgressBar } from '../components/Progress';
@@ -81,13 +82,14 @@ export default function ProfileScreen() {
         />
       </View>
       <View style={shared.row}>
-        {/* The win streak is the screen's one marigold highlight by day (the 10%). */}
+        {/* A live win streak is the screen's one marigold highlight by day (the 10%);
+            at zero there is nothing to celebrate, so it stays a plain tile. */}
         <Stat
           icon="flame"
           label={t('profile.stats.winStreak')}
           value={profile.streak}
           accent={FLAME}
-          highlight={!night}
+          highlight={!night && profile.streak > 0}
         />
         <Stat
           icon="star"
@@ -197,6 +199,7 @@ export default function ProfileScreen() {
         <Text style={shared.sectionTitle}>{t('profile.tips.title')}</Text>
         <Body>{t('profile.tips.body')}</Body>
       </Card>
+      <SupportCard />
       <Card>
         <Label color={theme.accentText}>{t('profile.feedback.label')}</Label>
         <Text style={shared.sectionTitle}>{t('profile.feedback.title')}</Text>
@@ -263,7 +266,7 @@ function ProfileHero({ day }: { day: boolean }) {
       </View>
       {member && (
         <View style={{ gap: 6 }}>
-          <ProgressBar value={level.into / level.need} height={9} />
+          <ProgressBar value={level.into / level.need} height={9} tone="xp" />
           <View style={shared.between}>
             <Text style={shared.small}>{t('profile.level', { level: level.level })}</Text>
             <Text style={shared.small}>

@@ -1,6 +1,6 @@
 import { contrast } from './color';
 import { DARK, LIGHT, PALETTES, type Scheme } from './palette';
-import { MARIGOLD, NAVY_HERO } from './surfaces';
+import { BADGE, MARIGOLD, NAVY_HERO } from './surfaces';
 import { BOARD_THEMES, themeForScheme } from './themes';
 
 const TEXT_TOKENS = [
@@ -66,4 +66,25 @@ it('navy and muted text read on every stop of the marigold card', () => {
       .map((token) => `${token} on ${stop}`),
   );
   expect(failures).toEqual([]);
+});
+
+it('white badge text reads on every badge fill', () => {
+  const failures = Object.entries(BADGE)
+    .filter(([, fill]) => contrast('#ffffff', fill) < 4.5)
+    .map(([name]) => name);
+  expect(failures).toEqual([]);
+});
+
+describe.each(SCHEMES)('%s mode controls', (scheme) => {
+  const ui = PALETTES[scheme];
+  const cards = scheme === 'light' ? ['#ffffff', ui.background] : ['#1a1f2f', ui.background];
+
+  it('the off track of a switch stands out from cards (3:1, as controls need)', () => {
+    const failures = cards.filter((card) => contrast(ui.track, card) < 3);
+    expect(failures).toEqual([]);
+  });
+
+  it('a disabled button label still reads', () => {
+    expect(contrast(ui.subtle, ui.surfaceHigh)).toBeGreaterThanOrEqual(4.5);
+  });
 });

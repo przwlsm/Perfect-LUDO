@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useWindowDimensions } from 'react-native';
+import { BackHandler, useWindowDimensions } from 'react-native';
 import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
@@ -138,6 +138,20 @@ function MatchScreen({
     if (matchState === 'FINISHED' && startedAt.current !== null)
       setDurationMs(Date.now() - startedAt.current);
   }, [matchState]);
+
+  // The phone's back button never drops a game in one press: it opens the
+  // pause menu (Back to game / Save & return to lobby). With the menu or the
+  // rules open, back closes them and returns to the board.
+  const playing = matchState === 'IN_PROGRESS';
+  useEffect(() => {
+    if (!playing || !focused) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (rules) setRules(false);
+      else setMenu(!menu);
+      return true;
+    });
+    return () => sub.remove();
+  }, [playing, focused, menu, rules]);
   const seatName = (color: PlayerColor) => match?.options.names?.[color] ?? t(`colors.${color}`);
   const reactionBubbles = useReactionBubbles();
   const againstBots = (match?.options.mode ?? options.mode) === 'ai';

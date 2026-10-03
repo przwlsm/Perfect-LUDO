@@ -25,6 +25,7 @@ import { useMotionEnabled } from '../hooks/useMotionEnabled';
 import { getCardDesign } from '../theme/themes';
 import { makeStyles, useUi } from '../theme/AppearanceProvider';
 import { readableOn } from '../theme/color';
+import { BADGE, MARIGOLD } from '../theme/surfaces';
 import { useTranslation } from 'react-i18next';
 import { numberLocale } from '../i18n/format';
 import { mirrorInRtl } from '../i18n/rtl';
@@ -76,50 +77,62 @@ export function Button({
   const ui = useUi();
   const accent = danger ? ui.danger : theme.accent;
   const radius = compact ? 14 : 16;
+  // Disabled is a flat, neutral slab: no gradient, lip or glow, so it never
+  // reads as a faded but still pressable gold button.
+  const off = Boolean(disabled);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled: Boolean(disabled) }}
+      accessibilityState={{ disabled: off }}
       disabled={disabled}
       onPress={onPress}
       android_ripple={{ color: secondary ? ui.ripple : '#00000022' }}
       style={({ pressed }) => [
         s.button,
-        { borderRadius: radius, opacity: disabled ? 0.45 : 1 },
-        secondary
-          ? {
-              borderWidth: 1,
-              borderColor: danger ? `${ui.danger}55` : `${accent}45`,
-              borderBottomWidth: pressed ? 1 : 3,
-              borderBottomColor: danger ? ui.dangerSecondary[2] : ui.navyRim,
-              boxShadow: `0 4px 14px ${ui.shadow}`,
-            }
-          : {
-              borderBottomWidth: pressed ? 1 : 4,
-              borderBottomColor: shade(accent, -0.5),
-              boxShadow: `0 6px 18px ${accent}40`,
-            },
+        { borderRadius: radius },
+        off
+          ? { backgroundColor: ui.surfaceHigh, borderWidth: 1, borderColor: ui.line }
+          : secondary
+            ? {
+                borderWidth: 1,
+                borderColor: danger ? `${ui.danger}55` : `${accent}45`,
+                borderBottomWidth: pressed ? 1 : 3,
+                borderBottomColor: danger ? ui.dangerSecondary[2] : ui.navyRim,
+                boxShadow: `0 4px 14px ${ui.shadow}`,
+              }
+            : {
+                borderBottomWidth: pressed ? 1 : 4,
+                borderBottomColor: shade(accent, -0.5),
+                boxShadow: `0 6px 18px ${accent}40`,
+              },
         compact && { paddingVertical: 10, minHeight: 48 },
-        pressed && { transform: [{ translateY: secondary ? 2 : 3 }] },
+        pressed && !off && { transform: [{ translateY: secondary ? 2 : 3 }] },
       ]}
     >
-      <LinearGradient
-        colors={
-          secondary
-            ? danger
-              ? ui.dangerSecondary
-              : ui.secondary
-            : [shade(accent, 0.18), accent, shade(accent, -0.14)]
-        }
-        style={[StyleSheet.absoluteFill, { borderRadius: radius }]}
-      />
-      <View style={[s.gloss, { borderTopLeftRadius: radius, borderTopRightRadius: radius }]} />
+      {!off && (
+        <>
+          <LinearGradient
+            colors={
+              secondary
+                ? danger
+                  ? ui.dangerSecondary
+                  : ui.secondary
+                : [shade(accent, 0.18), accent, shade(accent, -0.14)]
+            }
+            style={[StyleSheet.absoluteFill, { borderRadius: radius }]}
+          />
+          <View style={[s.gloss, { borderTopLeftRadius: radius, borderTopRightRadius: radius }]} />
+        </>
+      )}
       <Text
         style={[
           s.buttonText,
-          secondary
-            ? { color: danger ? ui.danger : ui.secondaryText }
-            : { color: shade(accent, -0.78), textTransform: 'uppercase', letterSpacing: 0.9 },
+          off
+            ? { color: ui.subtle }
+            : secondary
+              ? { color: danger ? ui.danger : ui.secondaryText }
+              : { color: shade(accent, -0.78) },
+          !secondary && { textTransform: 'uppercase', letterSpacing: 0.9 },
         ]}
         {...(fit ? { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.75 } : {})}
       >
@@ -128,6 +141,7 @@ export function Button({
     </Pressable>
   );
 }
+
 export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   const { theme, profile } = useProfile();
   const s = useStyles();
@@ -516,7 +530,7 @@ const useStyles = makeStyles((ui) => ({
     height: 20,
     paddingHorizontal: 4,
     borderRadius: 10,
-    backgroundColor: ui.blue,
+    backgroundColor: BADGE.blue,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -550,7 +564,8 @@ const useStyles = makeStyles((ui) => ({
   coinText: { color: ui.text, fontWeight: '800', fontSize: 14 },
   coinPlus: {
     color: '#1d2030',
-    backgroundColor: ui.gold,
+    // Vivid marigold in both modes: by day the gold token is a deep text brown.
+    backgroundColor: ui.scheme === 'dark' ? ui.gold : MARIGOLD[1],
     width: 23,
     height: 23,
     borderRadius: 8,

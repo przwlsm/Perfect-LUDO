@@ -838,6 +838,17 @@ try {
   assert.equal(starter.coins, 6000);
   assert.equal(starter.gems, 460);
   assert.equal((await grantIap('ludo.starter', 'order-4')).coins, 6000, 'the starter pack is once per account');
+  // Coffee tips (0030): recorded once, and they change nothing in the game.
+  const beforeTip = await grantIap('ludo.gems.small', 'order-2');
+  const tipped = await grantIap('ludo.tip.coffee', 'tip-1');
+  assert.equal(tipped.coins, beforeTip.coins, 'a tip grants no coins');
+  assert.equal(tipped.gems, beforeTip.gems, 'a tip grants no gems');
+  await grantIap('ludo.tip.coffee', 'tip-1');
+  assert.equal(
+    Number((await db.query("select count(*) from public.iap_receipts where order_id='tip-1'")).rows[0].count),
+    1,
+    'a replayed tip is recorded once',
+  );
   await grantIap('ludo.pass', 'order-5');
   assert.equal(
     (await db.query('select premium from public.season_progress where uid=$1 and season=public.current_season()', [iapUser])).rows[0].premium,

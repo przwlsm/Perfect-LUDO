@@ -9,6 +9,7 @@
   "packageManager": "npm@11.4.1",
   "scripts": {
     "ludo": "npm run start --workspace ludo",
+    "baghchal": "npm run start --workspace baghchal",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",

@@ -1,4 +1,5 @@
 import { Pressable, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { levelInfo, STAKES, stakeMinLevel, tablePrize, type Stake } from '@/domain';
 import { Text } from './AppText';
@@ -63,15 +64,26 @@ export function StakePicker({
                   borderColor: ui.gold,
                   backgroundColor: ui.scheme === 'dark' ? '#2a2210' : `${ui.gold}18`,
                 },
-                !allowed && { opacity: 0.4 },
+                // Locked: dashed and quieter, with a lock, so it never reads as choosable.
+                !allowed && s.locked,
               ]}
             >
               {stake === 0 ? (
                 <Text style={[s.chipText, selected && { color: ui.gold }]}>{t('stake.free')}</Text>
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <CoinIcon size={14} />
-                  <Text style={[s.chipText, selected && { color: ui.gold }]}>
+                  {allowed ? (
+                    <CoinIcon size={14} />
+                  ) : (
+                    <Ionicons name="lock-closed" size={12} color={ui.subtle} />
+                  )}
+                  <Text
+                    style={[
+                      s.chipText,
+                      selected && { color: ui.gold },
+                      !allowed && { color: ui.subtle },
+                    ]}
+                  >
                     {stake >= 1000 ? `${stake / 1000}K` : stake}
                   </Text>
                 </View>
@@ -111,6 +123,7 @@ const useStyles = makeStyles((ui) => ({
     gap: 1,
   },
   chipText: { color: ui.text, fontWeight: '900', fontSize: 14 },
+  locked: { borderStyle: 'dashed', borderColor: ui.border, opacity: 0.75 },
   gate: { color: ui.subtle, fontSize: 9, fontWeight: '800' },
   hint: { color: ui.muted, fontSize: 12, lineHeight: 17 },
 }));
