@@ -194,5 +194,28 @@
     "wins": "{{color}} wins",
     "yourTurn": "Your turn",
     "turn": "{{color}}'s turn"
+  },
+  "gift": {
+    "title": "Send a gift",
+    "subtitle": "To {{name}} · gems leave your wallet, nothing reaches theirs",
+    "sendToA11y": "{{name}}: send a gift",
+    "hint": "Opens the gift picker.",
+    "sendA11y": "Send {{gift}} for {{gems}} gems",
+    "cancel": "Not now",
+    "sent": "{{gift}} sent to {{name}}!",
+    "failed": "The gift did not go through.",
+    "needGems": "Not enough gems. Missions and the season pass earn them.",
+    "names": {
+      "rose": "Rose",
+      "punch": "Punch",
+      "laugh": "Laugh",
+      "crown": "Crown"
+    },
+    "blurb": {
+      "rose": "A rose for a worthy rival.",
+      "punch": "Playful payback for that capture.",
+      "laugh": "Could not resist.",
+      "crown": "For the champion of the table."
+    }
   }
 }

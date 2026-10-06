@@ -201,5 +201,28 @@
     "wins": "{{color}} venceu",
     "yourTurn": "Sua vez",
     "turn": "Vez do {{color}}"
+  },
+  "gift": {
+    "title": "Enviar um presente",
+    "subtitle": "Para {{name}} · as gemas saem da sua carteira, nada chega à dele",
+    "sendToA11y": "{{name}}: enviar um presente",
+    "hint": "Abre o seletor de presentes.",
+    "sendA11y": "Enviar {{gift}} por {{gems}} gemas",
+    "cancel": "Agora não",
+    "sent": "{{gift}} enviado para {{name}}!",
+    "failed": "O presente não foi enviado.",
+    "needGems": "Gemas insuficientes. Missões e o passe da temporada rendem gemas.",
+    "names": {
+      "rose": "Rosa",
+      "punch": "Soco",
+      "laugh": "Risada",
+      "crown": "Coroa"
+    },
+    "blurb": {
+      "rose": "Uma rosa para um rival à altura.",
+      "punch": "Vingança brincalhona por aquela captura.",
+      "laugh": "Não resisti.",
+      "crown": "Para o campeão da mesa."
+    }
   }
 }

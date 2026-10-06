@@ -1,5 +1,6 @@
 import type { WalletSnapshot } from '../entities/Wallet';
 import type { MatchStats } from '../entities/Progression';
+import type { TableGiftId } from '../social/tableGifts';
 
 /**
  * The account wallet on the server. Every call is one atomic operation for
@@ -27,6 +28,17 @@ export interface IWalletRepository {
    * Friends only; refused when the friend already owns it.
    */
   gift(toUserId: string, itemId: string, expectedPrice: number): Promise<WalletSnapshot>;
+  /**
+   * Sends a table gift (a rose, a punch) at another seat of an online match
+   * this account is playing, charging its gems. Refused when either seat is
+   * not at that table, the match is over, or gems are short.
+   */
+  sendTableGift(
+    matchId: string,
+    toSeat: number,
+    giftId: TableGiftId,
+    expectedGems: number,
+  ): Promise<WalletSnapshot>;
   /**
    * Pays the guest vault onto this account: capped server-side, once per
    * account ever. A replay returns the wallet unchanged.

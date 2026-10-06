@@ -201,5 +201,28 @@
     "wins": "Gana {{color}}",
     "yourTurn": "Tu turno",
     "turn": "Turno de {{color}}"
+  },
+  "gift": {
+    "title": "Enviar un regalo",
+    "subtitle": "Para {{name}} · las gemas salen de tu cartera, nada llega a la suya",
+    "sendToA11y": "{{name}}: enviar un regalo",
+    "hint": "Abre el selector de regalos.",
+    "sendA11y": "Enviar {{gift}} por {{gems}} gemas",
+    "cancel": "Ahora no",
+    "sent": "¡{{gift}} enviado a {{name}}!",
+    "failed": "El regalo no se pudo enviar.",
+    "needGems": "No tienes gemas suficientes. Las misiones y el pase de temporada dan gemas.",
+    "names": {
+      "rose": "Rosa",
+      "punch": "Puñetazo",
+      "laugh": "Risa",
+      "crown": "Corona"
+    },
+    "blurb": {
+      "rose": "Una rosa para un rival digno.",
+      "punch": "Venganza juguetona por esa captura.",
+      "laugh": "No pude resistirme.",
+      "crown": "Para el campeón de la mesa."
+    }
   }
 }

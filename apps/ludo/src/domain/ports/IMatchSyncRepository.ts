@@ -27,6 +27,12 @@ export interface IMatchSyncRepository {
    * turn. `version` is the board the caller saw, so the turn is played once.
    */
   claimTimeout(matchId: string, version: number): Promise<OnlineMatchSnapshot>;
+  /**
+   * Asks the server to play the computer player whose turn it is: the first
+   * call rolls, the next moves. `version` is the board the caller saw, so a
+   * turn is played once however many players ask.
+   */
+  playBotTurn(matchId: string, version: number): Promise<OnlineMatchSnapshot>;
   /** Ends the match for everyone; an escape hatch when somebody walks away. */
   abandon(matchId: string): Promise<OnlineMatchSnapshot>;
   subscribe(

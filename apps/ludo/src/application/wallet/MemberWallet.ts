@@ -1,8 +1,10 @@
 import {
+  getTableGift,
   NO_STATS,
   WalletRefusedError,
   type IWalletRepository,
   type MatchStats,
+  type TableGiftId,
   type WalletSnapshot,
 } from '@/domain';
 import { getCosmetic } from '@/domain/cosmetics/catalog';
@@ -57,6 +59,14 @@ export class MemberWallet {
   async gift(toUserId: string, id: string): Promise<Profile> {
     const item = getCosmetic(id);
     return this.profiles.mirrorWallet(await this.wallet.gift(toUserId, id, item.price));
+  }
+
+  /** Sends a table gift at another seat; only this account's gems change. */
+  async sendTableGift(matchId: string, toSeat: number, giftId: TableGiftId): Promise<Profile> {
+    const gift = getTableGift(giftId);
+    return this.profiles.mirrorWallet(
+      await this.wallet.sendTableGift(matchId, toSeat, giftId, gift.gems),
+    );
   }
 
   /** Pays the guest vault onto the account, then starts the vault again. */

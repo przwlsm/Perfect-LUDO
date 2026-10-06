@@ -13,6 +13,7 @@ import {
 } from '../entities/Wallet';
 import type { MatchStats } from '../entities/Progression';
 import type { IWalletRepository } from '../ports/IWalletRepository';
+import { getTableGift, type TableGiftId } from '../social/tableGifts';
 
 interface Account {
   coins: number;
@@ -204,6 +205,31 @@ export class InMemoryWalletRepository implements IWalletRepository {
     else account.coins -= item.price;
     for (const id of [itemId, item.contents?.board, item.contents?.dice])
       if (id && !target.owned.includes(id)) target.owned.push(id);
+    return this.snapshot(account);
+  }
+
+  /** Online tables this fake knows about: match id -> seats held by uid (for gift tests). */
+  readonly tables = new Map<string, Map<number, string>>();
+
+  /** Same rules as the server's send_table_gift. */
+  async sendTableGift(
+    matchId: string,
+    toSeat: number,
+    giftId: TableGiftId,
+    expectedGems: number,
+  ): Promise<WalletSnapshot> {
+    const account = this.account();
+    const uid = this.session!.uid;
+    const seats = this.tables.get(matchId);
+    const mySeat = seats ? [...seats].find(([, who]) => who === uid)?.[0] : undefined;
+    if (mySeat === undefined) throw new WalletRefusedError('You are not at that table.');
+    if (!seats?.has(toSeat) || toSeat === mySeat)
+      throw new WalletRefusedError('There is nobody in that seat.');
+    const gift = getTableGift(giftId);
+    if (gift.gems !== expectedGems)
+      throw new WalletRefusedError('The price of this gift has changed. Please try again.');
+    if (account.gems < gift.gems) throw new WalletRefusedError('Not enough gems for that gift.');
+    account.gems -= gift.gems;
     return this.snapshot(account);
   }
 

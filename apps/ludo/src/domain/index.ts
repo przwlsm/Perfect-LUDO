@@ -30,6 +30,8 @@ export * from './entities/OnlineMatch';
 export * from './social/rules';
 export * from './social/invite';
 export * from './social/reactions';
+export * from './social/tableGifts';
+export * from './social/countryFlag';
 export * from './entities/Stakes';
 export * from './entities/Variant';
 export * from './ports/IMatchSyncRepository';

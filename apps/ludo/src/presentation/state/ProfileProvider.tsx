@@ -18,6 +18,7 @@ import {
   type AuthUser,
   type MatchStats,
   type WalletSnapshot,
+  type TableGiftId,
 } from '@/domain';
 import { getBoardTheme, themeForScheme } from '../theme/themes';
 import { useAppearance } from '../theme/AppearanceProvider';
@@ -48,6 +49,8 @@ interface ProfileContextValue {
   claimRescue(): Promise<void>;
   /** Buys a look for a friend, charging this account. Members only. */
   giftItem(toUserId: string, id: string): Promise<void>;
+  /** Sends a table gift at another seat of an online match (gems). */
+  sendTableGift(matchId: string, toSeat: number, giftId: TableGiftId): Promise<void>;
   /** Pays the guest vault onto the signed-in account, once ever. */
   claimVault(): Promise<void>;
   /** A guest's watch-an-ad vault bonus (device-side, capped per day). */
@@ -292,6 +295,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   async function giftItem(toUserId: string, id: string) {
     await spend((account) => account.gift(toUserId, id));
   }
+  async function sendTableGift(matchId: string, toSeat: number, giftId: TableGiftId) {
+    await spend((account) => account.sendTableGift(matchId, toSeat, giftId));
+  }
   async function claimVault() {
     await spend((account) => account.claimVault());
   }
@@ -366,6 +372,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         claimGift,
         claimRescue,
         giftItem,
+        sendTableGift,
         claimVault,
         claimGuestAd,
         creditGuestVault,

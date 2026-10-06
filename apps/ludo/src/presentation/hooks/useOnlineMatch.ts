@@ -57,7 +57,6 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
   // a phone whose clock is off.
   const clockOffset = useRef(0);
   const claimedVersion = useRef<number | null>(null);
-  const myTurnRef = useRef(false);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const fresh = useCallback(() => mounted.current && scopeRef.current === scope, [scope]);
 
@@ -185,12 +184,12 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
     () => (board && myTurn ? getValidMovesForCurrentPlayer(board) : []),
     [board, myTurn],
   );
-  useEffect(() => {
-    myTurnRef.current = myTurn;
-  }, [myTurn]);
-
-  // The turn clock: counts down for everyone, and once it has run out on
-  // somebody else's turn, asks the server to play that turn for them.
+  // The turn clock: counts down for everyone, and once it has run out, asks
+  // the server to play that turn. Another seat's turn, so the table never
+  // waits on a player who left; the player's own turn too, so a seat that
+  // dozed off (a phone that slept) still moves on rather than sitting at
+  // "0s" forever. A computer player's turn is never claimed here: the poke
+  // below plays it, and the server plays it itself should the clock run out.
   const deadlineIso = snapshot?.match.status === 'IN_PROGRESS' ? snapshot.match.turnDeadline : null;
   const clockVersion = snapshot?.match.version ?? null;
   useEffect(() => {
@@ -209,7 +208,7 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
         matchSyncRepository &&
         current &&
         current.mySeat !== null &&
-        !myTurnRef.current &&
+        !current.players.find((p) => p.seatIndex === current.match.turnSeat)?.isBot &&
         current.match.version === clockVersion &&
         claimedVersion.current !== clockVersion
       ) {
@@ -224,6 +223,33 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
     const timer = setInterval(tick, 500);
     return () => clearInterval(timer);
   }, [deadlineIso, clockVersion, foreground, fresh, accept]);
+
+  // A computer player's turn is played by the server, poked from here: once
+  // for the roll, once for the move, each after a beat so it reads like a
+  // person. Every human at the table pokes; the server plays each version once.
+  const botTurn = Boolean(
+    snapshot?.match.status === 'IN_PROGRESS' &&
+    snapshot.players.find((p) => p.seatIndex === snapshot.match.turnSeat)?.isBot,
+  );
+  const botRolled = snapshot?.match.lastRoll !== null;
+  const pokedVersion = useRef<number | null>(null);
+  useEffect(() => {
+    if (!botTurn || clockVersion === null || !foreground || mySeat === null) return;
+    if (!matchSyncRepository || connection === 'reconnecting') return;
+    if (pokedVersion.current === clockVersion) return;
+    const repository = matchSyncRepository;
+    const delay = (botRolled ? 700 : 900) + Math.random() * 600;
+    const timer = setTimeout(() => {
+      const current = latest.current?.snapshot;
+      if (!fresh() || !current || current.match.version !== clockVersion) return;
+      pokedVersion.current = clockVersion;
+      void repository
+        .playBotTurn(current.match.id, clockVersion)
+        .then(accept)
+        .catch(() => undefined);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [botTurn, botRolled, clockVersion, foreground, mySeat, connection, fresh, accept]);
 
   const guard = useCallback(
     async (kind: 'rolling' | 'moving', action: () => Promise<OnlineMatchSnapshot>) => {

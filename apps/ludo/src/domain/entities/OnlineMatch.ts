@@ -17,6 +17,10 @@ export interface OnlineMatchPlayer {
   readonly missed: number;
   /** Out of lifelines: their turns are skipped for the rest of the match. */
   readonly out: boolean;
+  /** A computer player the server plays (free tables only). */
+  readonly isBot: boolean;
+  /** ISO 3166-1 alpha-2 country, shown as a flag; null when unknown. */
+  readonly country: string | null;
 }
 
 export interface OnlineMatch {

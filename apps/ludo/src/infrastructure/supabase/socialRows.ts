@@ -268,6 +268,8 @@ function toMatchPlayer(value: unknown): OnlineMatchPlayer {
     // Servers before lifelines send neither field.
     missed: row.missed == null ? 0 : int(row.missed),
     out: row.out === true,
+    isBot: row.isBot === true,
+    country: optionalStr(row.country),
   };
 }
 

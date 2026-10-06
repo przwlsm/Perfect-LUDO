@@ -8,12 +8,48 @@ import {
   type PlayerColor,
   type Reaction,
   type ReactionRoom,
+  type TableGiftId,
+  type TableGiftMessage,
 } from '@/domain';
 
 export interface ReactionBubble {
   readonly id: number;
   readonly color: PlayerColor;
   readonly emoji: Reaction;
+}
+
+/** A gift in flight over the table, from one seat's colour at another's. */
+export interface TableGiftFlight {
+  readonly id: number;
+  readonly from: PlayerColor;
+  readonly to: PlayerColor;
+  readonly gift: TableGiftId;
+}
+
+const FLIGHT_MS = 2400;
+
+/** The gifts currently flying over the table; each clears itself when it lands. */
+export function useGiftFlights() {
+  const [flights, setFlights] = useState<readonly TableGiftFlight[]>([]);
+  const seq = useRef(0);
+  const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  useEffect(() => {
+    const pending = timers.current;
+    return () => pending.forEach(clearTimeout);
+  }, []);
+
+  const launch = useCallback((from: PlayerColor, to: PlayerColor, gift: TableGiftId) => {
+    seq.current += 1;
+    const id = seq.current;
+    setFlights((list) => [...list, { id, from, to, gift }].slice(-4));
+    const timer = setTimeout(() => {
+      timers.current.delete(timer);
+      setFlights((list) => list.filter((f) => f.id !== id));
+    }, FLIGHT_MS);
+    timers.current.add(timer);
+  }, []);
+
+  return { flights, launch };
 }
 
 const BUBBLE_MS = 2600;
@@ -109,6 +145,7 @@ export function useOnlineReactions(
   mySeat: number | null,
   colorOfSeat: (seat: number) => PlayerColor | null,
   show: (color: PlayerColor, emoji: Reaction) => void,
+  launch?: (from: PlayerColor, to: PlayerColor, gift: TableGiftId) => void,
 ) {
   const room = useRef<ReactionRoom | null>(null);
   const colorRef = useRef(colorOfSeat);
@@ -118,21 +155,36 @@ export function useOnlineReactions(
     seatRef.current = mySeat;
   }, [colorOfSeat, mySeat]);
 
+  const fly = useCallback(
+    (message: TableGiftMessage) => {
+      const from = colorRef.current(message.from);
+      const to = colorRef.current(message.to);
+      if (from && to) launch?.(from, to, message.gift);
+    },
+    [launch],
+  );
+
   useEffect(() => {
     if (!reactionChannel || !matchId) return;
-    const joined = reactionChannel.join(matchId, (message) => {
-      if (message.seat === seatRef.current) return;
-      const color = colorRef.current(message.seat);
-      if (color) show(color, message.emoji);
-    });
+    const joined = reactionChannel.join(
+      matchId,
+      (message) => {
+        if (message.seat === seatRef.current) return;
+        const color = colorRef.current(message.seat);
+        if (color) show(color, message.emoji);
+      },
+      (message) => {
+        if (message.from !== seatRef.current) fly(message);
+      },
+    );
     room.current = joined;
     return () => {
       joined.leave();
       room.current = null;
     };
-  }, [matchId, show]);
+  }, [matchId, show, fly]);
 
-  return useCallback(
+  const send = useCallback(
     (emoji: Reaction) => {
       const seat = seatRef.current;
       if (seat === null) return;
@@ -142,4 +194,18 @@ export function useOnlineReactions(
     },
     [show],
   );
+
+  /** Plays a gift the server has just charged, here and on every other phone. */
+  const announceGift = useCallback(
+    (toSeat: number, gift: TableGiftId) => {
+      const seat = seatRef.current;
+      if (seat === null) return;
+      const message = { from: seat, to: toSeat, gift };
+      fly(message);
+      room.current?.sendGift(message);
+    },
+    [fly],
+  );
+
+  return { send, announceGift };
 }

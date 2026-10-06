@@ -13,11 +13,13 @@ import {
   controlledColor,
   type GameState,
   type PlayerColor,
+  type TableGiftId,
+  countryFlag,
 } from '@/domain';
 import { useTranslation } from 'react-i18next';
 import { useCatalogText } from '../i18n/useCatalogText';
 
-import { useOnlineReactions, useReactionBubbles } from '../hooks/useReactions';
+import { useGiftFlights, useOnlineReactions, useReactionBubbles } from '../hooks/useReactions';
 import { useGameSounds } from '../audio/useGameSounds';
 import { Body, Button, Card, Screen, Sheet } from '../components/Kit';
 import { GameTable } from '../game/GameTable';
@@ -40,7 +42,8 @@ function goalKey(state: Pick<GameState, 'goal' | 'teams'>) {
 }
 
 export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
-  const { profile, theme, recordOnlineMatch, creditGuestVault, member, ready } = useProfile();
+  const { profile, theme, recordOnlineMatch, creditGuestVault, member, ready, sendTableGift } =
+    useProfile();
   useAtBoardPresence();
   const { width, height } = useWindowDimensions();
   const [menu, setMenu] = useState(false);
@@ -66,11 +69,23 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [seatColors],
   );
-  const sendReaction = useOnlineReactions(
+  const giftFlights = useGiftFlights();
+  const { send: sendReaction, announceGift } = useOnlineReactions(
     match?.id ?? null,
     mySeat,
     colorOfSeat,
     reactionBubbles.show,
+    giftFlights.launch,
+  );
+  // A gift is charged by the server first; only a charged gift is announced.
+  const sendGift = useCallback(
+    async (color: PlayerColor, gift: TableGiftId) => {
+      const seat = match?.state.players.findIndex((p) => p.color === color) ?? -1;
+      if (!match || seat < 0) return;
+      await sendTableGift(match.id, seat, gift);
+      announceGift(seat, gift);
+    },
+    [match, sendTableGift, announceGift],
   );
   // How long this match lasted on this device, for the results screen.
   const startedAt = useRef<number | null>(null);
@@ -289,7 +304,10 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
           const seat = match?.state.players.findIndex((p) => p.color === color) ?? -1;
           if (seat === mySeat) return t('match.you');
           const player = players.find((p) => p.seatIndex === seat);
-          const shown = player ? displayNameOf(player) : colorName(color);
+          const flag = countryFlag(player?.country);
+          const shown = player
+            ? `${flag ? `${flag} ` : ''}${displayNameOf(player)}`
+            : colorName(color);
           return seat === partnerSeat ? t('match.partner', { name: shown }) : shown;
         }}
         motionEnabled={motionEnabled}
@@ -311,6 +329,15 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
         reactions={{
           bubbles: reactionBubbles.bubbles,
           send: mySeat === null ? undefined : sendReaction,
+        }}
+        gifts={{
+          flights: giftFlights.flights,
+          avatarOf: (color) => {
+            const seat = match?.state.players.findIndex((p) => p.color === color) ?? -1;
+            return players.find((p) => p.seatIndex === seat)?.avatar ?? null;
+          },
+          send: mySeat === null || !member ? undefined : sendGift,
+          gems: profile.gems,
         }}
         resultSheet={
           match && (

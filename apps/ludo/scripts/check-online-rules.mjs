@@ -823,6 +823,250 @@ try {
   assert.equal(reclimbed.division, 2);
   assert.equal(reclimbed.lastResult.gems, 0, 'a promotion already banked pays once');
 
+  // The gift catalogue the client shows must be the one the server charges.
+  {
+    const { TABLE_GIFTS } = createRequire(import.meta.url)(path.join(out, 'social/tableGifts.js'));
+    const rows = (await db.query('select id, gems from public.table_gifts order by id')).rows;
+    assert.deepEqual(
+      rows,
+      [...TABLE_GIFTS]
+        .map((g) => ({ id: g.id, gems: g.gems }))
+        .sort((x, y) => (x.id < y.id ? -1 : 1)),
+      'table_gifts must mirror src/domain/social/tableGifts.ts (update the migration)',
+    );
+  }
+  // Computer players (0032): a free table fills with bots after the wait, never
+  // before it and never for coins; the server plays their turns legally; they
+  // stay out of search and the weekly ladder.
+  {
+    const bots = (await db.query('select country from public.profiles where is_bot')).rows;
+    assert.equal(bots.length, 30, 'thirty computer players');
+    assert.equal(new Set(bots.map((b) => b.country)).size, 30, 'each from a different country');
+    const solo = randomUUID();
+    await db.query("insert into auth.users(id,email) values ($1,'solo@example.test')", [solo]);
+    await login(solo);
+    await db.query('select public.get_wallet()');
+    let ticket = (await db.query('select public.join_quick_match(3) as t')).rows[0].t;
+    assert.equal(ticket.status, 'WAITING', 'no bots before the wait');
+    await db.query(
+      "update public.matchmaking_queue set joined_at = now() - interval '61 seconds' where user_id=$1",
+      [solo],
+    );
+    ticket = (await db.query('select public.join_quick_match(3) as t')).rows[0].t;
+    assert.equal(ticket.status, 'MATCHED', 'after the wait, computer players fill the free table');
+    const room = (await db.query('select public.get_lobby($1) as l', [ticket.lobbyId])).rows[0].l;
+    assert.equal(room.lobby.status, 'COUNTDOWN');
+    assert.equal(room.lobby.hostId, solo, 'the person hosts');
+    const seatedBots = room.players.filter((p) => p.isBot);
+    assert.equal(seatedBots.length, 2, 'the two empty seats are bots');
+    assert.ok(
+      seatedBots.every((p) => p.presence === 'ONLINE' && p.country && p.avatar && p.isReady),
+      'bots look present and ready',
+    );
+    assert.equal(
+      (await db.query("select * from public.search_users('aarav')")).rows.length,
+      0,
+      'bots are not searchable',
+    );
+
+    await db.query("update public.lobbies set start_at = now() - interval '1 second' where id=$1", [
+      ticket.lobbyId,
+    ]);
+    await db.query('select public.start_match($1)', [ticket.lobbyId]);
+    const botMatch = (
+      await db.query('select id from public.matches where lobby_id=$1', [ticket.lobbyId])
+    ).rows[0].id;
+    await assert.rejects(
+      db.query('select public.play_bot_turn($1,0)', [botMatch]),
+      /not a computer player/,
+      "a person's turn cannot be played for them",
+    );
+    // Hand the turn to the bot in seat 1 and let the server play it.
+    const base = (
+      await db.query(
+        `select public.ludo_opening(3,'classic',false) || '{"currentPlayerIndex":1}'::jsonb as b`,
+      )
+    ).rows[0].b;
+    await db.query('update public.matches set state=$2::jsonb, turn_seat=1 where id=$1', [
+      botMatch,
+      JSON.stringify(base),
+    ]);
+    let snap = (await db.query('select public.play_bot_turn($1,0) as s', [botMatch])).rows[0].s;
+    assert.equal(snap.match.version, 1);
+    assert.ok(
+      snap.match.lastRoll >= 1 && snap.match.lastRoll <= 6,
+      'the first poke rolls for the bot',
+    );
+    const die = snap.match.lastRoll;
+    assert.equal(
+      (await db.query('select public.play_bot_turn($1,0) as s', [botMatch])).rows[0].s.match
+        .version,
+      1,
+      'a stale poke changes nothing',
+    );
+    snap = (await db.query('select public.play_bot_turn($1,1) as s', [botMatch])).rows[0].s;
+    assert.equal(snap.match.version, 2);
+    assert.equal(snap.match.lastRoll, null, 'the second poke moves');
+    const legal = (
+      await db.query(
+        'select exists(select 1 from public.ludo_successors($1::jsonb,$2) s where s = $3::jsonb) as ok',
+        [JSON.stringify(base), die, JSON.stringify(snap.match.state)],
+      )
+    ).rows[0].ok;
+    assert.ok(legal, 'the bot played a legal move for its roll');
+    assert.ok(snap.players.find((p) => p.seatIndex === 1).isBot, 'the snapshot marks the bot');
+    // An expired bot turn is played by the clock, never charged as a lifeline.
+    await db.query('update public.matches set state=$2::jsonb, turn_seat=1, last_roll=null where id=$1', [botMatch, JSON.stringify(base)]);
+    await db.query("update public.matches set turn_deadline = now() - interval '1 second' where id=$1", [botMatch]);
+    const v = (await db.query('select version from public.matches where id=$1', [botMatch])).rows[0].version;
+    await db.query('select public.claim_turn_timeout($1,$2)', [botMatch, v]);
+    // The roll restarts the clock; expire it again for the move.
+    await db.query("update public.matches set turn_deadline = now() - interval '1 second' where id=$1", [botMatch]);
+    const expired = (await db.query('select public.claim_turn_timeout($1,$2) as s', [botMatch, v + 1])).rows[0].s;
+    assert.equal(expired.match.status, 'IN_PROGRESS', 'the table stays open');
+    assert.equal(expired.match.version, v + 2, 'the clock rolled then moved for the bot');
+    assert.equal(expired.match.lastRoll, null);
+    assert.equal(expired.players.find((p) => p.seatIndex === 1).missed, 0, 'a bot keeps all its lifelines');
+    await login(a);
+    await assert.rejects(
+      db.query('select public.play_bot_turn($1,2)', [botMatch]),
+      /not in that match/,
+      'outsiders cannot poke',
+    );
+    await login(solo);
+    // The person wins: the usual free-table coins and XP, but no ladder points.
+    const coinsBefore = (await db.query('select coins from public.profiles where uid=$1', [solo]))
+      .rows[0].coins;
+    await db.query(
+      "update public.matches set status='FINISHED', winner_seat=0, finished_at=now(), state=null where id=$1",
+      [botMatch],
+    );
+    await db.query('select public.award_online_match($1)', [botMatch]);
+    const botReward = (
+      await db.query('select coins, won from public.profile_rewards where uid=$1 and match_id=$2', [
+        solo,
+        'online:' + botMatch,
+      ])
+    ).rows[0];
+    assert.equal(botReward.coins, 100, 'a win over bots pays the free-table coins');
+    assert.equal(botReward.won, true);
+    assert.ok(
+      (await db.query('select coins from public.profiles where uid=$1', [solo])).rows[0].coins >=
+        coinsBefore + 100,
+      'the coins reach the wallet (plus any level-up bonus)',
+    );
+    assert.equal(
+      Number(
+        (await db.query('select count(*) from public.tournament_scores where uid=$1', [solo]))
+          .rows[0].count,
+      ),
+      0,
+      'a bot table scores no tournament points',
+    );
+    // For coins, the table waits for real players however long it takes.
+    const staked = randomUUID();
+    await db.query("insert into auth.users(id,email) values ($1,'staked@example.test')", [staked]);
+    await login(staked);
+    await db.query('select public.get_wallet()');
+    await db.query('select public.join_quick_match(2, 100)');
+    await db.query(
+      "update public.matchmaking_queue set joined_at = now() - interval '120 seconds' where user_id=$1",
+      [staked],
+    );
+    assert.equal(
+      (await db.query('select public.join_quick_match(2, 100) as t')).rows[0].t.status,
+      'WAITING',
+      'no bots at a staked table',
+    );
+    await db.query('select public.leave_quick_match()');
+  }
+
+  // Table gifts (0031): a seat pays gems to send a rose at another seat of
+  // its own live table; nothing reaches the receiver, and outsiders, finished
+  // tables, empty seats and quick repeats are all refused.
+  {
+    const g1 = randomUUID(),
+      g2 = randomUUID(),
+      g3 = randomUUID();
+    await db.query(
+      "insert into auth.users(id,email) values ($1,'g1@example.test'),($2,'g2@example.test'),($3,'g3@example.test')",
+      [g1, g2, g3],
+    );
+    for (const u of [g1, g2, g3]) {
+      await login(u);
+      await db.query('select public.get_wallet()');
+    }
+    await db.query('update public.profiles set gems = 12 where uid=$1', [g1]);
+    await db.query('update public.profiles set gems = 0 where uid=$1', [g2]);
+    const gLobby = randomUUID(),
+      gMatch = randomUUID();
+    await db.query(
+      "insert into public.lobbies(id,host_id,max_players,status) values ($1,$2,2,'STARTED')",
+      [gLobby, g1],
+    );
+    await db.query('insert into public.matches(id,lobby_id,player_count) values ($1,$2,2)', [
+      gMatch,
+      gLobby,
+    ]);
+    await db.query(
+      'insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0),($1,$3,1)',
+      [gMatch, g1, g2],
+    );
+    const gift = async (seat, id, gems) =>
+      (await db.query('select public.send_table_gift($1,$2,$3,$4) as w', [gMatch, seat, id, gems]))
+        .rows[0].w;
+    const cooled = () =>
+      db.query("update public.table_gift_log set sent_at = now() - interval '10 seconds'");
+    await login(g1);
+    assert.equal((await gift(1, 'rose', 5)).gems, 7, 'a rose costs the sender 5 gems');
+    await assert.rejects(
+      gift(1, 'rose', 5),
+      /One gift at a time/,
+      'a second gift within 3 seconds is refused',
+    );
+    await cooled();
+    await assert.rejects(gift(1, 'rose', 4), /price of this gift/, 'a stale price is refused');
+    await assert.rejects(gift(1, 'tank', 5), /no such gift/, 'an unknown gift is refused');
+    await assert.rejects(gift(0, 'rose', 5), /other players/, 'a self-gift is refused');
+    await assert.rejects(gift(3, 'rose', 5), /nobody in that seat/, 'an empty seat is refused');
+    await assert.rejects(
+      gift(1, 'crown', 15),
+      /Not enough gems/,
+      'a crown needs 15 gems; 7 are left',
+    );
+    assert.equal(
+      (await db.query('select gems from public.profiles where uid=$1', [g2])).rows[0].gems,
+      0,
+      'the receiver gains nothing',
+    );
+    assert.equal(
+      (await db.query('select gems from public.profiles where uid=$1', [g1])).rows[0].gems,
+      7,
+      'refusals charge nothing',
+    );
+    await login(g3);
+    await assert.rejects(
+      gift(1, 'rose', 5),
+      /not at that table/,
+      'an outsider cannot gift at a table',
+    );
+    await login(g1);
+    await cooled();
+    await db.query("update public.matches set status='FINISHED', finished_at=now() where id=$1", [
+      gMatch,
+    ]);
+    await assert.rejects(gift(1, 'rose', 5), /game is over/, 'no gifts after the match ends');
+    assert.equal(
+      (
+        await db.query('select count(*)::int as n from public.table_gift_log where from_uid=$1', [
+          g1,
+        ])
+      ).rows[0].n,
+      1,
+      'only the sent gift is logged',
+    );
+  }
+
   // Real-money grants (0023): a verified order grants exactly once, and the
   // function is closed to clients entirely (only the Edge Function calls it).
   const iapUser = randomUUID();

@@ -38,6 +38,12 @@ export class SupabaseMatchSyncRepository implements IMatchSyncRepository {
     );
   }
 
+  async playBotTurn(matchId: string, version: number): Promise<OnlineMatchSnapshot> {
+    return toMatchSnapshot(
+      await rpc(this.client, 'play_bot_turn', { p_match_id: matchId, p_version: version }),
+    );
+  }
+
   async abandon(matchId: string): Promise<OnlineMatchSnapshot> {
     return toMatchSnapshot(await rpc(this.client, 'abandon_match', { p_match_id: matchId }));
   }

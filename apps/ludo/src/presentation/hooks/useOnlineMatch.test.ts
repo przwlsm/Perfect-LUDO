@@ -4,6 +4,7 @@ import { useOnlineMatch } from './useOnlineMatch';
 const mockGet = jest.fn();
 const mockRoll = jest.fn();
 const mockSubmit = jest.fn();
+const mockClaim = jest.fn();
 let mockChanged: () => void;
 jest.mock('@/config/container', () => ({
   authProvider: { getCurrentUser: () => ({ uid: 'me' }) },
@@ -11,6 +12,7 @@ jest.mock('@/config/container', () => ({
     getMatchForLobby: (...args: unknown[]) => mockGet(...args),
     rollDice: (...args: unknown[]) => mockRoll(...args),
     submitTurn: (...args: unknown[]) => mockSubmit(...args),
+    claimTimeout: (...args: unknown[]) => mockClaim(...args),
     subscribe: (_id: string, changed: () => void) => {
       mockChanged = changed;
       return () => {};
@@ -18,7 +20,11 @@ jest.mock('@/config/container', () => ({
   },
 }));
 jest.mock('../state/SocialProvider', () => ({ useSocial: () => ({ signedIn: true }) }));
-function snapshot(version = 0, lastRoll: 1 | 6 | null = null): OnlineMatchSnapshot {
+function snapshot(
+  version = 0,
+  lastRoll: 1 | 6 | null = null,
+  turnDeadline: string | null = null,
+): OnlineMatchSnapshot {
   return {
     serverNow: new Date().toISOString(),
     mySeat: 0,
@@ -36,7 +42,7 @@ function snapshot(version = 0, lastRoll: 1 | 6 | null = null): OnlineMatchSnapsh
       stake: 0,
       pool: 0,
       prize: 0,
-      turnDeadline: null,
+      turnDeadline,
       variant: 'classic',
       lifelines: 5,
       teams: false,
@@ -94,4 +100,16 @@ it('does not endlessly resubmit an automatic move after a failure', async () => 
   await act(() => new Promise((resolve) => setTimeout(resolve, 950)));
   expect(mockSubmit).toHaveBeenCalledTimes(1);
   expect(result.current.error).toBe('Move could not be sent');
+});
+it("claims the player's own turn once its clock has run out", async () => {
+  // A deadline already two seconds gone: the seat dozed off (or a bot table
+  // had nobody poking). The server plays the turn when asked, so ask once.
+  const gone = new Date(Date.now() - 2000).toISOString();
+  mockGet.mockResolvedValue(snapshot(0, null, gone));
+  mockClaim.mockResolvedValue(snapshot(1, null, null));
+  const { result } = await renderHook(() => useOnlineMatch('room', false));
+  await waitFor(() => expect(result.current.humanTurn).toBe(true));
+  await waitFor(() => expect(mockClaim).toHaveBeenCalledWith('match', 0), { timeout: 2500 });
+  await act(() => new Promise((resolve) => setTimeout(resolve, 1200)));
+  expect(mockClaim).toHaveBeenCalledTimes(1);
 });

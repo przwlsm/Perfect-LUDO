@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type LayoutChangeEvent } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import Animated, {
@@ -8,6 +8,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { TURN_SECONDS, type DieValue } from '@/domain';
@@ -39,9 +40,21 @@ export function PlayerPanel({
   onRoll,
   secondsLeft = null,
   lives = null,
+  avatar = null,
+  hit = 0,
+  onGift,
+  onLayout,
 }: {
   /** Online only: lifelines left of the total, and whether the player is out. */
   lives?: { left: number; total: number; out: boolean } | null;
+  /** Online: the player's profile emoji, shown on their token. */
+  avatar?: string | null;
+  /** Bumps when a gift lands on this seat; the panel shakes once per bump. */
+  hit?: number;
+  /** Online: opens the gift picker aimed at this seat (opponents only). */
+  onGift?: () => void;
+  /** Reports where the panel sits, so gifts can fly to it. */
+  onLayout?: (event: LayoutChangeEvent) => void;
   /** Online turn clock for the active seat; null when there is none. */
   secondsLeft?: number | null;
   color: string;
@@ -86,6 +99,28 @@ export function PlayerPanel({
     transform: [{ translateX: (mirrored ? -1 : 1) * nudge.value * 5 }],
   }));
 
+  // A landed gift rocks the whole panel: a quick shake that settles.
+  const shake = useSharedValue(0);
+  useEffect(() => {
+    if (!hit || !motionEnabled) return;
+    shake.set(0);
+    shake.set(
+      withSequence(
+        withTiming(1, { duration: 60 }),
+        withTiming(-1, { duration: 90 }),
+        withTiming(0.6, { duration: 80 }),
+        withTiming(-0.3, { duration: 80 }),
+        withTiming(0, { duration: 120, easing: Easing.out(Easing.quad) }),
+      ),
+    );
+  }, [hit, motionEnabled, shake]);
+  const shakeStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: shake.get() * 7 },
+      { rotate: `${shake.get() * 2.5 + (rotated ? 180 : 0)}deg` },
+    ],
+  }));
+
   const identity = (
     <View style={{ alignItems: 'center', gap: 3, flexShrink: 1, minWidth: 0 }}>
       <View
@@ -101,14 +136,18 @@ export function PlayerPanel({
           boxShadow: '0 2px 4px #00000060',
         }}
       >
-        <View
-          style={{
-            width: token * 0.34,
-            height: token * 0.34,
-            borderRadius: token,
-            backgroundColor: '#ffffff90',
-          }}
-        />
+        {avatar ? (
+          <Text style={{ fontSize: token * 0.56, lineHeight: token * 0.72 }}>{avatar}</Text>
+        ) : (
+          <View
+            style={{
+              width: token * 0.34,
+              height: token * 0.34,
+              borderRadius: token,
+              backgroundColor: '#ffffff90',
+            }}
+          />
+        )}
       </View>
       <Text
         numberOfLines={1}
@@ -179,32 +218,46 @@ export function PlayerPanel({
     </Animated.Text>
   );
 
+  // An opponent's panel is the gift target: tapping it opens the picker.
+  // The device's own panel stays the roll button.
+  const giftable = Boolean(onGift) && !canRoll;
   return (
-    <Pressable
+    <AnimatedPressable
+      onLayout={onLayout}
       accessibilityRole="button"
-      accessibilityLabel={t('dice.rollA11y', { name: label })}
-      accessibilityHint={canRoll ? t('dice.yourTurnHint') : t('dice.waitHint')}
-      accessibilityState={{ disabled: !canRoll }}
-      disabled={!canRoll}
-      onPress={onRoll}
-      style={{
-        width,
-        height,
-        borderRadius: 18,
-        paddingHorizontal: 8,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 4,
-        backgroundColor: surface,
-        borderWidth: 2,
-        // By day an idle seat is a white card lifted off the ivory page (the
-        // 60%); the active seat keeps its colour border and glow in both modes.
-        borderColor: active ? color : day ? ui.line : `${color}40`,
-        boxShadow: active ? `0 0 16px ${color}90` : day ? liftByDay(ui) : `0 4px 10px ${ui.shadow}`,
-        opacity: lives?.out ? 0.45 : active ? 1 : 0.82,
-        transform: [{ rotate: rotated ? '180deg' : '0deg' }],
-      }}
+      accessibilityLabel={
+        giftable ? t('gift.sendToA11y', { name: label }) : t('dice.rollA11y', { name: label })
+      }
+      accessibilityHint={
+        canRoll ? t('dice.yourTurnHint') : giftable ? t('gift.hint') : t('dice.waitHint')
+      }
+      accessibilityState={{ disabled: !canRoll && !giftable }}
+      disabled={!canRoll && !giftable}
+      onPress={canRoll ? onRoll : onGift}
+      style={[
+        shakeStyle,
+        {
+          width,
+          height,
+          borderRadius: 18,
+          paddingHorizontal: 8,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 4,
+          backgroundColor: surface,
+          borderWidth: 2,
+          // By day an idle seat is a white card lifted off the ivory page (the
+          // 60%); the active seat keeps its colour border and glow in both modes.
+          borderColor: active ? color : day ? ui.line : `${color}40`,
+          boxShadow: active
+            ? `0 0 16px ${color}90`
+            : day
+              ? liftByDay(ui)
+              : `0 4px 10px ${ui.shadow}`,
+          opacity: lives?.out ? 0.45 : active ? 1 : 0.82,
+        },
+      ]}
     >
       {active && secondsLeft !== null && (
         <>
@@ -273,6 +326,8 @@ export function PlayerPanel({
           {arrow}
         </>
       )}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);

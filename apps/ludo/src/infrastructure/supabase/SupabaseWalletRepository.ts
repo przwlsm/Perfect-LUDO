@@ -7,6 +7,7 @@ import {
   WalletUnavailableError,
   type IWalletRepository,
   type WalletSnapshot,
+  type TableGiftId,
 } from '@/domain';
 import { toFriendlyError } from './socialRows';
 
@@ -69,6 +70,20 @@ export class SupabaseWalletRepository implements IWalletRepository {
       p_to: toUserId,
       p_item_id: itemId,
       p_expected_price: expectedPrice,
+    });
+  }
+
+  sendTableGift(
+    matchId: string,
+    toSeat: number,
+    giftId: TableGiftId,
+    expectedGems: number,
+  ): Promise<WalletSnapshot> {
+    return this.call('send_table_gift', {
+      p_match_id: matchId,
+      p_to_seat: toSeat,
+      p_gift: giftId,
+      p_expected_gems: expectedGems,
     });
   }
 

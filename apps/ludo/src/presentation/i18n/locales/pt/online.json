@@ -192,7 +192,7 @@
     },
     "subtitle": {
       "abandoned": "Alguém saiu, então a partida terminou antes",
-      "won": "{{mode}} · {{goal}} · você venceu jogadores reais",
+      "won": "{{mode}} · {{goal}} · vitória online",
       "lost": "{{name}} levou essa · revanche?",
       "lostRival": "Seu rival levou essa · revanche?"
     },
@@ -210,7 +210,7 @@
     },
     "playAgain": "Jogar de novo",
     "lobby": "Lobby",
-    "share": "Acabei de vencer jogadores reais numa partida {{mode}} de Ludo Rumble! 🎲🏆"
+    "share": "Acabei de vencer uma partida {{mode}} online no Ludo Rumble! 🎲🏆"
   },
   "lobby": {
     "title": "Sala do jogo",

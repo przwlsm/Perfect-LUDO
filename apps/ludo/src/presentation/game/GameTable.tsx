@@ -1,5 +1,11 @@
-import { Component, Suspense, lazy, useRef, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Component, Suspense, lazy, useCallback, useRef, useState, type ReactNode } from 'react';
+import {
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+  type LayoutChangeEvent,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,10 +21,13 @@ import {
   type Player,
   type PlayerColor,
   type Reaction,
+  type TableGiftId,
 } from '@/domain';
 import Animated, { FadeOut, ZoomIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import type { ReactionBubble } from '../hooks/useReactions';
+import type { ReactionBubble, TableGiftFlight } from '../hooks/useReactions';
+import { GiftFlight, type Point } from './GiftFlight';
+import { GiftPicker } from './GiftPicker';
 import { Board2D } from '../board/Board2D';
 import type { Board3DProps } from '../board/Board3D';
 import { tableArrangement } from '../board/tableLayout';
@@ -126,6 +135,7 @@ export function GameTable({
   resultSheet,
   seatLabel,
   reactions,
+  gifts,
   turnClock = null,
   livesFor,
 }: {
@@ -137,6 +147,16 @@ export function GameTable({
   reactions?: {
     readonly bubbles: readonly ReactionBubble[];
     readonly send?: (emoji: Reaction) => void;
+  };
+  /**
+   * Gifts at the table (online only): the ones in flight, each seat's
+   * profile emoji, and how to send one at a seat. Absent: no gifting.
+   */
+  gifts?: {
+    readonly flights: readonly TableGiftFlight[];
+    readonly avatarOf: (color: PlayerColor) => string | null;
+    readonly send?: (color: PlayerColor, gift: TableGiftId) => Promise<void>;
+    readonly gems: number;
   };
   game: GameSource;
   label: string;
@@ -172,6 +192,27 @@ export function GameTable({
   const { match, current, humanTurn, busy, error } = game;
   const [picker, setPicker] = useState(false);
   const lastSent = useRef(0);
+  // Where each seat's panel sits inside the table area, so gifts can fly to it.
+  const [spots, setSpots] = useState<Partial<Record<PlayerColor, Point>>>({});
+  const spotOf = useCallback(
+    (color: PlayerColor) =>
+      ({ nativeEvent: { layout } }: LayoutChangeEvent) =>
+        setSpots((all) => {
+          const next = { x: layout.x + layout.width / 2, y: layout.y + layout.height / 2 };
+          const old = all[color];
+          return old && old.x === next.x && old.y === next.y ? all : { ...all, [color]: next };
+        }),
+    [],
+  );
+  // Which seat the gift picker is aimed at, and the landing tick per seat.
+  const [giftTarget, setGiftTarget] = useState<PlayerColor | null>(null);
+  const [hits, setHits] = useState<Partial<Record<PlayerColor, number>>>({});
+  const land = useCallback(
+    (color: PlayerColor) => setHits((all) => ({ ...all, [color]: (all[color] ?? 0) + 1 })),
+    [],
+  );
+  // The picker never shows over the menu, nor once gifting stops being possible.
+  const giftAim = menu || !gifts?.send ? null : giftTarget;
   function react(emoji: Reaction) {
     setPicker(false);
     if (!reactions?.send || !takeCooldown(lastSent)) return;
@@ -271,6 +312,14 @@ export function GameTable({
         onRoll={game.roll}
         secondsLeft={active ? turnClock : null}
         lives={livesFor?.(color) ?? null}
+        avatar={gifts?.avatarOf(color) ?? null}
+        hit={hits[color] ?? 0}
+        onGift={
+          gifts?.send && color !== game.myColor && match.state.status !== 'FINISHED'
+            ? () => setGiftTarget(color)
+            : undefined
+        }
+        onLayout={gifts ? spotOf(color) : undefined}
       />
     );
   }
@@ -482,6 +531,38 @@ export function GameTable({
           </View>
         )}
       </View>
+
+      {gifts && gifts.flights.length > 0 && (
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { zIndex: 25 }]}>
+          {gifts.flights.map((flight) => {
+            // Round tables have no panels: gifts rise from the top edge and
+            // land on the board's centre instead.
+            const fallback = { x: tableArea.width / 2, y: tableArea.height / 2 };
+            const from = spots[flight.from] ?? { x: fallback.x, y: 0 };
+            const to = spots[flight.to] ?? fallback;
+            return (
+              <GiftFlight
+                key={flight.id}
+                gift={flight.gift}
+                from={from}
+                to={to}
+                motionEnabled={motionEnabled}
+                onLand={() => land(flight.to)}
+              />
+            );
+          })}
+        </View>
+      )}
+      {gifts?.send && (
+        <GiftPicker
+          target={giftAim}
+          targetName={giftAim ? nameOf(giftAim) : ''}
+          targetColor={giftAim ? theme.colors[giftAim] : ui.text}
+          gems={gifts.gems}
+          onClose={() => setGiftTarget(null)}
+          onSend={gifts.send}
+        />
+      )}
 
       <View style={{ paddingHorizontal: 16, paddingVertical: 8, alignItems: 'center', gap: 4 }}>
         <Text

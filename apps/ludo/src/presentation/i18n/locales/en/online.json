@@ -185,7 +185,7 @@
     },
     "subtitle": {
       "abandoned": "Someone left, so the match ended early",
-      "won": "{{mode}} · {{goal}} · you beat real players",
+      "won": "{{mode}} · {{goal}} · won online",
       "lost": "{{name}} took this one · rematch?",
       "lostRival": "Your rival took this one · rematch?"
     },
@@ -203,7 +203,7 @@
     },
     "playAgain": "Play again",
     "lobby": "Lobby",
-    "share": "I just beat real players in a {{mode}} game of Ludo Rumble! 🎲🏆"
+    "share": "I just won a {{mode}} game of Ludo Rumble online! 🎲🏆"
   },
   "lobby": {
     "title": "Game lobby",
