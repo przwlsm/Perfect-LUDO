@@ -19,11 +19,11 @@ export const CLUB_DAILY_GEMS = 10;
  * paid onto the account they eventually create. The server accepts the
  * claim once per account, capped, so the client-held number stays honest.
  */
-export const GUEST_VAULT_CAP = 5000;
+export const GUEST_VAULT_CAP = 10000;
 export const GUEST_VAULT_WIN = 50;
 export const GUEST_VAULT_PLAYED = 0;
-export const GUEST_VAULT_AD_COINS = 150;
-export const GUEST_VAULT_ADS_PER_DAY = 3;
+export const GUEST_VAULT_AD_COINS = 250;
+export const GUEST_VAULT_ADS_PER_DAY = 5;
 /** How long a guest's watch-an-ad board trial lasts. */
 export const TRIAL_HOURS = 24;
 

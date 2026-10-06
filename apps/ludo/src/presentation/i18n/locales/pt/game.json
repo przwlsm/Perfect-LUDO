@@ -149,7 +149,10 @@
     "you": "{{name}} (Você)",
     "homeCount": "{{home}}/{{goal}} em casa",
     "minutesSeconds": "{{minutes}}min {{seconds}}s",
-    "seconds": "{{seconds}}s"
+    "seconds": "{{seconds}}s",
+    "doubleIt": "Dobrar · assista a um anúncio",
+    "doubling": "Dobrando…",
+    "doubled": "Dobrado! +{{coins}} moedas"
   },
   "result": {
     "playerWins": "{{name}} venceu!",

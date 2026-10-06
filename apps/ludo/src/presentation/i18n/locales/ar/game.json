@@ -161,7 +161,10 @@
     "you": "{{name}} (أنت)",
     "homeCount": "{{home}}/{{goal}} في البيت",
     "minutesSeconds": "{{minutes}} د {{seconds}} ث",
-    "seconds": "{{seconds}} ث"
+    "seconds": "{{seconds}} ث",
+    "doubleIt": "ضاعفها · شاهد إعلانًا",
+    "doubling": "جارٍ المضاعفة…",
+    "doubled": "تمت المضاعفة! +{{coins}} عملة"
   },
   "result": {
     "playerWins": "{{name}} يفوز!",

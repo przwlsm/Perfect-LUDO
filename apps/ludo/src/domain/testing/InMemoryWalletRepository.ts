@@ -14,6 +14,7 @@ import {
 import type { MatchStats } from '../entities/Progression';
 import type { IWalletRepository } from '../ports/IWalletRepository';
 import { getTableGift, type TableGiftId } from '../social/tableGifts';
+import { GEM_BUNDLES, GEM_COIN_RATE } from '../entities/Progression';
 
 interface Account {
   coins: number;
@@ -233,12 +234,23 @@ export class InMemoryWalletRepository implements IWalletRepository {
     return this.snapshot(account);
   }
 
+  /** Same rules as the server's convert_gems: fixed bundles, one way. */
+  async convertGems(gems: number): Promise<WalletSnapshot> {
+    const account = this.account();
+    if (!(GEM_BUNDLES as readonly number[]).includes(gems))
+      throw new WalletRefusedError('Gems exchange in bundles of 10, 50 or 250.');
+    if (account.gems < gems) throw new WalletRefusedError('Not enough gems for that bundle.');
+    account.gems -= gems;
+    account.coins += gems * GEM_COIN_RATE;
+    return this.snapshot(account);
+  }
+
   /** Same rules as the server's claim_vault: capped, once per account. */
   async claimVault(coins: number): Promise<WalletSnapshot> {
     const account = this.account();
     if (!account.vaultClaimed) {
       account.vaultClaimed = true;
-      account.coins += Math.min(Math.max(coins, 0), 5000);
+      account.coins += Math.min(Math.max(coins, 0), 10000);
     }
     return this.snapshot(account);
   }

@@ -144,7 +144,10 @@
     "you": "{{name}} (आप)",
     "homeCount": "{{home}}/{{goal}} घर",
     "minutesSeconds": "{{minutes}} मि {{seconds}} से",
-    "seconds": "{{seconds}} से"
+    "seconds": "{{seconds}} से",
+    "doubleIt": "दोगुना करें · विज्ञापन देखें",
+    "doubling": "दोगुना हो रहा है…",
+    "doubled": "दोगुना हो गया! +{{coins}} सिक्के"
   },
   "result": {
     "playerWins": "{{name}} की जीत!",

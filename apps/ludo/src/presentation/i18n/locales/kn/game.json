@@ -144,7 +144,10 @@
     "you": "{{name}} (ನೀವು)",
     "homeCount": "{{home}}/{{goal}} ಮನೆ",
     "minutesSeconds": "{{minutes}}ನಿ {{seconds}}ಸೆ",
-    "seconds": "{{seconds}}ಸೆ"
+    "seconds": "{{seconds}}ಸೆ",
+    "doubleIt": "ಎರಡು ಪಟ್ಟು · ಜಾಹೀರಾತು ನೋಡಿ",
+    "doubling": "ಎರಡು ಪಟ್ಟಾಗುತ್ತಿದೆ…",
+    "doubled": "ಎರಡು ಪಟ್ಟಾಯಿತು! +{{coins}} ನಾಣ್ಯಗಳು"
   },
   "result": {
     "playerWins": "{{name}} ಗೆದ್ದರು!",

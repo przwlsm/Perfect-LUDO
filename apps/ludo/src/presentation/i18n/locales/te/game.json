@@ -144,7 +144,10 @@
     "you": "{{name}} (మీరు)",
     "homeCount": "{{home}}/{{goal}} ఇంట్లో",
     "minutesSeconds": "{{minutes}}ని {{seconds}}సె",
-    "seconds": "{{seconds}}సె"
+    "seconds": "{{seconds}}సె",
+    "doubleIt": "రెట్టింపు చేయండి · ప్రకటన చూడండి",
+    "doubling": "రెట్టింపు అవుతోంది…",
+    "doubled": "రెట్టింపు అయింది! +{{coins}} కాయిన్లు"
   },
   "result": {
     "playerWins": "{{name}} గెలిచారు!",

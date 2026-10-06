@@ -25,7 +25,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { levelInfo, type MatchStats } from '@/domain';
 import { Text } from '../components/AppText';
-import { CoinPill, GemPill } from '../components/Kit';
+import { Button, CoinPill, GemPill } from '../components/Kit';
 import { Bob, Shine } from '../components/Live';
 import { ProgressBar, RewardChips } from '../components/Progress';
 import { UserAvatar } from '../social/UserAvatar';
@@ -64,6 +64,7 @@ export function VictoryScreen({
   subtitle,
   standings,
   reward,
+  doubleUp = null,
   note,
   stats,
   durationMs,
@@ -83,6 +84,11 @@ export function VictoryScreen({
   /** Best first. */
   standings: readonly Standing[];
   reward: { coins: number; xp: number } | null;
+  /**
+   * "Double it": a rewarded ad pays a free online win again. Absent when the
+   * table was staked, the player is a guest, or ads are off.
+   */
+  doubleUp?: { done: boolean; busy: boolean; onPress(): void } | null;
   note?: string;
   stats: MatchStats | null;
   durationMs: number | null;
@@ -191,6 +197,19 @@ export function VictoryScreen({
                   <RewardChips coins={reward.coins} xp={reward.xp} />
                 </View>
               </View>
+              {doubleUp && (
+                <View style={[s.doubleRow, day && { backgroundColor: face }]}>
+                  {doubleUp.done ? (
+                    <Text style={[s.levelText, { color: ui.green }]}>
+                      {t('victory.doubled', { coins: reward.coins })}
+                    </Text>
+                  ) : (
+                    <Button compact fit disabled={doubleUp.busy} onPress={doubleUp.onPress}>
+                      {doubleUp.busy ? t('victory.doubling') : t('victory.doubleIt')}
+                    </Button>
+                  )}
+                </View>
+              )}
               {/* By day the well is white on marigold: gold and green text keep 4.5:1. */}
               <View style={[s.levelBox, day && { backgroundColor: face }]}>
                 <View style={s.rowBetween}>
@@ -651,6 +670,7 @@ const useStyles = makeStyles((ui) => ({
     paddingVertical: 8,
   },
   rewardCoins: { color: ui.gold, fontWeight: '900', fontSize: 16 },
+  doubleRow: { borderRadius: 14, padding: 6, alignItems: 'center' },
   rewardXp: { color: ui.green, fontWeight: '800', fontSize: 13 },
   homeText: { color: ui.muted, fontWeight: '800', fontSize: 13 },
   card: {

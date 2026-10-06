@@ -68,6 +68,9 @@ export class SupabaseRewardsRepository implements IRewardsRepository {
   claimAdReward(kind: AdRewardKind): Promise<WalletSnapshot> {
     return this.call('claim_ad_reward', parseWalletSnapshot, { p_kind: kind });
   }
+  claimDoubleUp(matchId: string): Promise<WalletSnapshot> {
+    return this.call('claim_double_up', parseWalletSnapshot, { p_match_id: matchId });
+  }
   getLeague(): Promise<LeagueView> {
     return this.call('get_league', parseLeague);
   }

@@ -25,6 +25,10 @@ import {
   type AdRewardKind,
   type Mission,
   type SpinResult,
+  AD_COIN_AMOUNT,
+  AD_GEM_AMOUNT,
+  GEM_BUNDLES,
+  GEM_COIN_RATE,
 } from '@/domain';
 import { rewardedAds } from '@/config/container';
 import { Text } from '../components/AppText';
@@ -43,6 +47,7 @@ import { makeStyles, SchemeScope, useUi } from '../theme/AppearanceProvider';
 import { DARK } from '../theme/palette';
 import { liftByDay, MARIGOLD, NAVY_HERO, pillColors } from '../theme/surfaces';
 import { numberLocale } from '../i18n/format';
+import { forwardArrow } from '../i18n/rtl';
 
 /**
  * A message under a card: a catalogue key, so it follows a language change,
@@ -79,7 +84,7 @@ const PRIZE_KEYS = {
 } as const satisfies Record<SpinResult['reward']['kind'], string>;
 
 export default function RewardsScreen() {
-  const { theme, profile, member, claimGift, claimRescue, claimVault } = useProfile();
+  const { theme, profile, member, claimGift, claimRescue, claimVault, convertGems } = useProfile();
   const { t } = useTranslation('rewards');
   const s = useStyles();
   const ui = useUi();
@@ -88,6 +93,7 @@ export default function RewardsScreen() {
   const rewards = useRewards();
   const [busy, setBusy] = useState<string | null>(null);
   const [claimError, setClaimError] = useState<Notice | null>(null);
+  const [exchanged, setExchanged] = useState<number | null>(null);
   const motionEnabled = useMotionEnabled(profile.reducedMotion, true);
   const [wheelOpen, setWheelOpen] = useState(false);
   const [landing, setLanding] = useState<SpinResult | null>(null);
@@ -131,8 +137,22 @@ export default function RewardsScreen() {
     }
   }
 
+  async function exchange(gems: number) {
+    setBusy(`exchange:${gems}`);
+    setClaimError(null);
+    setExchanged(null);
+    try {
+      await convertGems(gems);
+      setExchanged(gems * GEM_COIN_RATE);
+    } catch (e) {
+      setClaimError(e instanceof Error ? { text: e.message } : { key: 'claimFailed' });
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const adsOk = rewardedAds.supported();
-  const adsUsed = data?.ads ?? { gem: 0, spin: 0, 'rescue-boost': 0 };
+  const adsUsed = data?.ads ?? { gem: 0, spin: 0, 'rescue-boost': 0, coin: 0, double: 0 };
   const adsLeft = (kind: AdRewardKind) => Math.max(0, AD_REWARD_CAPS[kind] - adsUsed[kind]);
 
   /** Shows one rewarded ad; the server pays only when the view finished. */
@@ -299,11 +319,28 @@ export default function RewardsScreen() {
         />
       </SchemeScope>
 
+      {/* ---- Coins for a rewarded ad: the best ad in the game, by design ---- */}
+      {adsOk && (
+        <AdTile
+          title={t('coinAd.title')}
+          reward={t('coinAd.reward', { coins: AD_COIN_AMOUNT })}
+          icon="coin"
+          caption={
+            adsLeft('coin') > 0 ? t('coinAd.caption', { coins: AD_COIN_AMOUNT }) : t('coinAd.done')
+          }
+          busy={busy === 'ad:coin'}
+          disabled={adsLeft('coin') <= 0 || busy !== null}
+          left={adsLeft('coin')}
+          total={AD_REWARD_CAPS.coin}
+          onPress={() => void watchAd('coin')}
+        />
+      )}
+
       {/* ---- Free gems for a rewarded ad ---- */}
       {adsOk && (
         <AdTile
           title={t('gemAd.title')}
-          reward={t('gemAd.reward')}
+          reward={t('gemAd.reward', { gems: AD_GEM_AMOUNT })}
           icon="gem"
           caption={adsLeft('gem') > 0 ? t('gemAd.caption') : t('gemAd.done')}
           busy={busy === 'ad:gem'}
@@ -313,6 +350,51 @@ export default function RewardsScreen() {
           onPress={() => void watchAd('gem')}
         />
       )}
+
+      {/* ---- Gems to coins, one way, in fixed bundles ---- */}
+      <Card>
+        <Label color={theme.accentText}>{t('exchange.label')}</Label>
+        <Text style={shared.sectionTitle}>{t('exchange.title')}</Text>
+        <Body>{t('exchange.body', { rate: GEM_COIN_RATE })}</Body>
+        <View style={s.bundles}>
+          {GEM_BUNDLES.map((gems) => {
+            const coins = gems * GEM_COIN_RATE;
+            const enough = profile.gems >= gems;
+            return (
+              <Pressable
+                key={gems}
+                accessibilityRole="button"
+                accessibilityLabel={t('exchange.a11y', {
+                  gems,
+                  coins: coins.toLocaleString(numberLocale()),
+                })}
+                accessibilityState={{ disabled: !enough || busy !== null }}
+                disabled={!enough || busy !== null}
+                onPress={() => void exchange(gems)}
+                android_ripple={{ color: ui.ripple }}
+                style={[s.bundle, !enough && s.bundleOff]}
+              >
+                <View style={shared.row}>
+                  <GemIcon size={16} />
+                  <Text style={s.bundleGems}>{gems}</Text>
+                </View>
+                <Text style={s.bundleArrow}>{forwardArrow}</Text>
+                <View style={shared.row}>
+                  <CoinIcon size={16} />
+                  <Text style={s.bundleCoins}>{coins.toLocaleString(numberLocale())}</Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+        {exchanged !== null ? (
+          <Text style={[shared.small, { color: ui.green, textAlign: 'center' }]}>
+            {t('exchange.done', { coins: exchanged.toLocaleString(numberLocale()) })}
+          </Text>
+        ) : profile.gems < GEM_BUNDLES[0] ? (
+          <Text style={[shared.small, { textAlign: 'center' }]}>{t('exchange.short')}</Text>
+        ) : null}
+      </Card>
 
       {/* ---- Daily missions ---- */}
       <View style={shared.section}>
@@ -791,6 +873,22 @@ function TierColumn({
 }
 
 const useStyles = makeStyles((ui) => ({
+  bundles: { flexDirection: 'row', gap: 8 },
+  bundle: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ui.border,
+    backgroundColor: ui.scheme === 'light' ? '#ffffff' : ui.fill,
+  },
+  bundleOff: { opacity: 0.5 },
+  bundleGems: { color: ui.gem, fontWeight: '900', fontSize: 15 },
+  bundleArrow: { color: ui.subtle, fontSize: 12 },
+  bundleCoins: { color: ui.text, fontWeight: '800', fontSize: 13 },
   // Night: the gold-tinted card as before. Day: a white card with a gold rim.
   vaultCarry:
     ui.scheme === 'dark'

@@ -39,6 +39,8 @@ export interface IWalletRepository {
     giftId: TableGiftId,
     expectedGems: number,
   ): Promise<WalletSnapshot>;
+  /** Exchanges a fixed bundle of gems (10, 50 or 250) for coins at GEM_COIN_RATE. */
+  convertGems(gems: number): Promise<WalletSnapshot>;
   /**
    * Pays the guest vault onto this account: capped server-side, once per
    * account ever. A replay returns the wallet unchanged.

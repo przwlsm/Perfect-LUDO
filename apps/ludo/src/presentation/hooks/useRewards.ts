@@ -113,6 +113,15 @@ export function useRewards() {
           void load();
         },
       ),
+    doubleUp: (matchId: string) =>
+      run(
+        'ad:double',
+        () => rewardsRepository!.claimDoubleUp(matchId),
+        async (wallet) => {
+          await adoptWallet(wallet);
+          void load();
+        },
+      ),
   };
 }
 

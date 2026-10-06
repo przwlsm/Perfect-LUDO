@@ -57,7 +57,7 @@
   },
   "gemAd": {
     "title": "Watch an ad, earn a gem",
-    "reward": "+1 gem",
+    "reward": "+{{gems}} gems",
     "caption": "About 30 seconds. Always your choice.",
     "done": "All collected for today — back tomorrow."
   },
@@ -103,5 +103,20 @@
     "daysHours": "{{days}}d {{hours}}h",
     "hoursMinutes": "{{hours}}h {{minutes}}m",
     "minutes": "{{minutes}}m"
+  },
+  "coinAd": {
+    "title": "Watch an ad, earn coins",
+    "reward": "+{{coins}} coins",
+    "caption": "The best ad in the game: {{coins}} coins, four times a day.",
+    "done": "All collected for today — back tomorrow."
+  },
+  "exchange": {
+    "label": "GEM EXCHANGE",
+    "title": "Turn gems into coins",
+    "body": "{{rate}} coins per gem, in bundles. One way: coins never become gems.",
+    "bundle": "{{gems}} gems → {{coins}} coins",
+    "a11y": "Exchange {{gems}} gems for {{coins}} coins",
+    "done": "Exchanged! +{{coins}} coins.",
+    "short": "Not enough gems for that bundle yet."
   }
 }

@@ -144,7 +144,10 @@
     "you": "{{name}} (நீங்கள்)",
     "homeCount": "{{home}}/{{goal}} வீட்டில்",
     "minutesSeconds": "{{minutes}}நிமி {{seconds}}வி",
-    "seconds": "{{seconds}}வி"
+    "seconds": "{{seconds}}வி",
+    "doubleIt": "இருமடங்கு · விளம்பரம் பாருங்கள்",
+    "doubling": "இருமடங்காகிறது…",
+    "doubled": "இருமடங்கானது! +{{coins}} நாணயங்கள்"
   },
   "result": {
     "playerWins": "{{name}} வென்றார்!",

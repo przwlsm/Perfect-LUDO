@@ -15,6 +15,7 @@ import {
   type PlayerColor,
   type TableGiftId,
   countryFlag,
+  WalletRefusedError,
 } from '@/domain';
 import { useTranslation } from 'react-i18next';
 import { useCatalogText } from '../i18n/useCatalogText';
@@ -27,6 +28,7 @@ import { VictoryScreen } from '../game/VictoryScreen';
 import { useMotionEnabled } from '../hooks/useMotionEnabled';
 import { useOnlineMatch } from '../hooks/useOnlineMatch';
 import { useConnectivity } from '../state/ConnectivityProvider';
+import { rewardedAds, rewardsRepository } from '@/config/container';
 import { useProfile } from '../state/ProfileProvider';
 import { useAtBoardPresence } from '../state/SocialProvider';
 import { numberLocale } from '../i18n/format';
@@ -42,16 +44,27 @@ function goalKey(state: Pick<GameState, 'goal' | 'teams'>) {
 }
 
 export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
-  const { profile, theme, recordOnlineMatch, creditGuestVault, member, ready, sendTableGift } =
-    useProfile();
+  const {
+    profile,
+    theme,
+    recordOnlineMatch,
+    creditGuestVault,
+    member,
+    ready,
+    sendTableGift,
+    adoptWallet,
+  } = useProfile();
   useAtBoardPresence();
   const { width, height } = useWindowDimensions();
   const [menu, setMenu] = useState(false);
   const [rules, setRules] = useState(false);
   const [tableArea, setTableArea] = useState({ width: 0, height: 0 });
-  const { t } = useTranslation(['online', 'common']);
+  const { t } = useTranslation(['online', 'common', 'rewards']);
   const { variantTitle, variantShort } = useCatalogText();
   const [notice, setNotice] = useState<'leaveFailed' | 'saveFailed' | null>(null);
+  const [doubled, setDoubled] = useState(false);
+  const [doubling, setDoubling] = useState(false);
+  const [doubleError, setDoubleError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const focused = useIsFocused();
   const motionEnabled = useMotionEnabled(
@@ -159,6 +172,36 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
       ? standings(match.state).indexOf(myColor) + 1
       : 0;
   const placePay = !match ? 0 : game.teams ? (won ? 100 : 0) : placementCoins(myRank, seatCount);
+
+  // "Double it": a rewarded ad pays a free-table win again. The result is
+  // recorded first (once per match on the server), then the ad, then the
+  // server doubles the recorded pay.
+  const canDouble =
+    game.status === 'FINISHED' &&
+    won &&
+    member &&
+    game.stake === 0 &&
+    placePay > 0 &&
+    rewardsRepository !== null &&
+    rewardedAds.supported();
+  async function doubleUp() {
+    if (!match || doubling || doubled || !rewardsRepository) return;
+    setDoubling(true);
+    setDoubleError(null);
+    try {
+      await recordOnlineMatch(match.id, game.getStats());
+      if (!(await rewardedAds.show())) {
+        setDoubleError(t('rewards:errors.adNotFinished'));
+        return;
+      }
+      await adoptWallet(await rewardsRepository.claimDoubleUp(match.id));
+      setDoubled(true);
+    } catch (e) {
+      setDoubleError(e instanceof WalletRefusedError ? e.message : t('rewards:errors.claimFailed'));
+    } finally {
+      setDoubling(false);
+    }
+  }
 
   async function finish(home: boolean) {
     if (!match || saving) return;
@@ -386,10 +429,15 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
                 game.status === 'FINISHED' && member
                   ? {
                       // Placement pay, plus the winners' share of any stake pool.
-                      coins: placePay + (won ? Math.floor(game.prize / (game.teams ? 2 : 1)) : 0),
+                      coins:
+                        placePay * (doubled ? 2 : 1) +
+                        (won ? Math.floor(game.prize / (game.teams ? 2 : 1)) : 0),
                       xp: won ? REWARDS.online.win.xp : REWARDS.online.played.xp,
                     }
                   : null
+              }
+              doubleUp={
+                canDouble ? { done: doubled, busy: doubling, onPress: () => void doubleUp() } : null
               }
               note={
                 game.status === 'FINISHED' && !member
@@ -412,7 +460,7 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
               shareMessage={
                 won ? t('match.share', { mode: variantTitle(variantOf(match.state)) }) : undefined
               }
-              error={notice && t(`errors.${notice}`)}
+              error={doubleError ?? (notice && t(`errors.${notice}`))}
               motionEnabled={motionEnabled}
             />
           )

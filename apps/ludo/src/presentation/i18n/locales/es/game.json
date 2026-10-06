@@ -149,7 +149,10 @@
     "you": "{{name}} (Tú)",
     "homeCount": "{{home}}/{{goal}} en la meta",
     "minutesSeconds": "{{minutes}} min {{seconds}} s",
-    "seconds": "{{seconds}} s"
+    "seconds": "{{seconds}} s",
+    "doubleIt": "Duplícalo · mira un anuncio",
+    "doubling": "Duplicando…",
+    "doubled": "¡Duplicado! +{{coins}} monedas"
   },
   "result": {
     "playerWins": "¡Gana {{name}}!",

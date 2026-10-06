@@ -57,7 +57,7 @@
   },
   "gemAd": {
     "title": "Veja um anúncio, ganhe uma gema",
-    "reward": "+1 gema",
+    "reward": "+{{gems}} gemas",
     "caption": "Cerca de 30 segundos. Sempre opcional.",
     "done": "Tudo resgatado por hoje — volte amanhã."
   },
@@ -103,5 +103,20 @@
     "daysHours": "{{days}}d {{hours}}h",
     "hoursMinutes": "{{hours}}h {{minutes}}min",
     "minutes": "{{minutes}}min"
+  },
+  "coinAd": {
+    "title": "Assista a um anúncio, ganhe moedas",
+    "reward": "+{{coins}} moedas",
+    "caption": "O melhor anúncio do jogo: {{coins}} moedas, quatro vezes por dia.",
+    "done": "Tudo coletado por hoje — volte amanhã."
+  },
+  "exchange": {
+    "label": "TROCA DE GEMAS",
+    "title": "Transforme gemas em moedas",
+    "body": "{{rate}} moedas por gema, em pacotes. Só em um sentido: moedas nunca viram gemas.",
+    "bundle": "{{gems}} gemas → {{coins}} moedas",
+    "a11y": "Trocar {{gems}} gemas por {{coins}} moedas",
+    "done": "Trocado! +{{coins}} moedas.",
+    "short": "Ainda não há gemas suficientes para esse pacote."
   }
 }

@@ -24,6 +24,8 @@ export interface IRewardsRepository {
   claimTournamentPrize(): Promise<TournamentView>;
   /** Reports a finished rewarded ad view; the server grants within daily caps. */
   claimAdReward(kind: AdRewardKind): Promise<WalletSnapshot>;
+  /** "Double it": after a free online win, an ad pays the match's coins again. */
+  claimDoubleUp(matchId: string): Promise<WalletSnapshot>;
   /** The player's league standing; reading it also settles a finished week. */
   getLeague(): Promise<LeagueView>;
 }

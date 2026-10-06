@@ -69,6 +69,11 @@ export class MemberWallet {
     );
   }
 
+  /** Turns a bundle of gems into coins; only this account's balances change. */
+  async convertGems(gems: number): Promise<Profile> {
+    return this.profiles.mirrorWallet(await this.wallet.convertGems(gems));
+  }
+
   /** Pays the guest vault onto the account, then starts the vault again. */
   async claimVault(): Promise<Profile> {
     const local = await this.profiles.load();

@@ -87,6 +87,10 @@ export class SupabaseWalletRepository implements IWalletRepository {
     });
   }
 
+  convertGems(gems: number): Promise<WalletSnapshot> {
+    return this.call('convert_gems', { p_gems: gems });
+  }
+
   claimVault(coins: number): Promise<WalletSnapshot> {
     return this.call('claim_vault', { p_coins: coins });
   }

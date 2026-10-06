@@ -89,6 +89,26 @@
     "ludo.club": {
       "name": "Ludo Club",
       "blurb": "Giros extra gratis y 10 gemas con cada regalo diario."
+    },
+    "ludo.coins.40k": {
+      "name": "Bolsa de monedas",
+      "blurb": "40.000 monedas."
+    },
+    "ludo.coins.100k": {
+      "name": "Cofre de monedas",
+      "blurb": "100.000 monedas: aquí empieza el Camino Real."
+    },
+    "ludo.coins.275k": {
+      "name": "Bóveda de monedas",
+      "blurb": "275.000 monedas, con bono por el paquete grande."
+    },
+    "ludo.coins.600k": {
+      "name": "Tesoro de monedas",
+      "blurb": "600.000 monedas: el Trono de Leyendas a tu alcance."
+    },
+    "ludo.coins.1300k": {
+      "name": "Tesoro real",
+      "blurb": "1.300.000 monedas, la mejor tarifa de todas."
     }
   },
   "preview": {

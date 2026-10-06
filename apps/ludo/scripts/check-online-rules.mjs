@@ -761,13 +761,13 @@ try {
   const adClaim = async (kind) =>
     (await db.query('select public.claim_ad_reward($1) as w', [kind])).rows[0].w;
   await assert.rejects(db.query("select public.claim_ad_reward('nope')"), /not available/);
-  for (let i = 1; i <= 5; i++) assert.equal((await adClaim('gem')).gems, 20 + i, 'one gem per ad');
+  for (let i = 1; i <= 5; i++) assert.equal((await adClaim('gem')).gems, 20 + 2 * i, 'two gems per ad (0033)');
   await assert.rejects(adClaim('gem'), /tomorrow/);
   // The rescue boost needs today's rescue claimed first, then pays once.
   await assert.rejects(adClaim('rescue-boost'), /rescue first/);
   await db.query('update public.profiles set coins = 40 where uid=$1', [adUser]);
   assert.equal((await db.query('select public.claim_rescue() as w')).rows[0].w.coins, 340);
-  assert.equal((await adClaim('rescue-boost')).coins, 640);
+  assert.equal((await adClaim('rescue-boost')).coins, 840, 'the rescue boost is 500 (0033)');
   await assert.rejects(adClaim('rescue-boost'), /tomorrow/);
   // A spin credit pays the next extra spin instead of gems.
   const adSpin = async () => (await db.query('select public.spin_daily() as s')).rows[0].s;
@@ -784,6 +784,54 @@ try {
   assert.equal(adsView.gem, 5);
   assert.equal(adsView.spin, 1);
   assert.equal(adsView['rescue-boost'], 1);
+
+  // Economy tuning (0033): a coin ad pays 500 four times a day; a free online
+  // win doubles once by ad, three a day, never a staked pot; gems exchange one
+  // way at 200 in fixed bundles; the five coin packs exist.
+  {
+    const before = (await db.query('select coins from public.profiles where uid=$1', [adUser])).rows[0].coins;
+    for (let i = 1; i <= 4; i++) assert.equal((await adClaim('coin')).coins, before + 500 * i, 'a coin ad pays 500');
+    await assert.rejects(adClaim('coin'), /tomorrow/, 'four coin ads a day');
+    await assert.rejects(adClaim('double'), /not available/, "'double' needs a match: claim_double_up");
+    assert.equal((await db.query('select public.get_rewards() as r')).rows[0].r.ads.coin, 4);
+    // Spins: three ad spins a day now.
+    await adClaim('spin'); await adClaim('spin');
+    await assert.rejects(adClaim('spin'), /tomorrow/, 'three spin ads a day');
+
+    const dLobby = randomUUID(), dMatch = randomUUID(), dLoser = randomUUID();
+    await db.query("insert into auth.users(id,email) values ($1,'dloser@example.test')", [dLoser]);
+    await login(dLoser); await db.query('select public.get_wallet()');
+    await login(adUser);
+    await db.query("insert into public.lobbies(id,host_id,max_players,status) values ($1,$2,2,'STARTED')", [dLobby, adUser]);
+    await db.query("insert into public.matches(id,lobby_id,player_count,status,winner_seat,finished_at) values ($1,$2,2,'FINISHED',0,now())", [dMatch, dLobby]);
+    await db.query('insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0),($1,$3,1)', [dMatch, adUser, dLoser]);
+    await assert.rejects(db.query('select public.claim_double_up($1)', [dMatch]), /no win to double/, 'nothing to double before the result is recorded');
+    const paid = (await db.query('select public.award_online_match($1) as w', [dMatch])).rows[0].w.coins;
+    const doubled = (await db.query('select public.claim_double_up($1) as w', [dMatch])).rows[0].w.coins;
+    assert.equal(doubled, paid + 100, 'the free-table win pay (100) is paid again');
+    await assert.rejects(db.query('select public.claim_double_up($1)', [dMatch]), /already doubled/);
+    await login(dLoser);
+    await db.query('select public.award_online_match($1)', [dMatch]);
+    await assert.rejects(db.query('select public.claim_double_up($1)', [dMatch]), /no win to double/, 'a loss cannot be doubled');
+    await login(adUser);
+    const sLobby = randomUUID(), sMatch = randomUUID();
+    await db.query("insert into public.lobbies(id,host_id,max_players,status,stake) values ($1,$2,2,'STARTED',500)", [sLobby, adUser]);
+    await db.query("insert into public.matches(id,lobby_id,player_count,status,winner_seat,finished_at,stake,pool) values ($1,$2,2,'FINISHED',0,now(),500,1000)", [sMatch, sLobby]);
+    await db.query('insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0),($1,$3,1)', [sMatch, adUser, dLoser]);
+    await db.query('select public.award_online_match($1)', [sMatch]);
+    await assert.rejects(db.query('select public.claim_double_up($1)', [sMatch]), /free-table/, 'a staked pot is never doubled');
+
+    await db.query('update public.profiles set gems = 60 where uid=$1', [adUser]);
+    const c0 = (await db.query('select coins from public.profiles where uid=$1', [adUser])).rows[0].coins;
+    const ex = (await db.query('select public.convert_gems(10) as w')).rows[0].w;
+    assert.equal(ex.gems, 50); assert.equal(ex.coins, c0 + 2000, '10 gems become 2,000 coins');
+    const ex2 = (await db.query('select public.convert_gems(50) as w')).rows[0].w;
+    assert.equal(ex2.gems, 0); assert.equal(ex2.coins, c0 + 12000);
+    await assert.rejects(db.query('select public.convert_gems(10)'), /Not enough gems/);
+    await assert.rejects(db.query('select public.convert_gems(7)'), /bundles/, 'only the fixed bundles');
+    const packs = (await db.query("select id, coins from public.iap_products where id like 'ludo.coins.%' and id not in ('ludo.coins.small','ludo.coins.large') order by coins")).rows;
+    assert.deepEqual(packs.map((p) => p.coins), [40000, 100000, 275000, 600000, 1300000], 'the five coin packs');
+  }
 
   // Leagues (0022): weekly settlement, promotion pays only a first arrival.
   const lgUser = randomUUID();
@@ -1173,8 +1221,8 @@ try {
   await db.query('select public.get_wallet()');
   const vaultClaim = async (n) =>
     (await db.query('select public.claim_vault($1) as w', [n])).rows[0].w;
-  assert.equal((await vaultClaim(99999)).coins, 6000, 'the claim is capped at 5,000');
-  assert.equal((await vaultClaim(500)).coins, 6000, 'and pays once per account');
+  assert.equal((await vaultClaim(99999)).coins, 11000, 'the claim is capped at 10,000 (0033)');
+  assert.equal((await vaultClaim(500)).coins, 11000, 'and pays once per account');
 
   // Guests have none of this.
   await login(ghost2, true);

@@ -144,7 +144,10 @@
     "you": "{{name}} (আপনি)",
     "homeCount": "{{home}}/{{goal}} ঘরে",
     "minutesSeconds": "{{minutes}} মি. {{seconds}} সে.",
-    "seconds": "{{seconds}} সে."
+    "seconds": "{{seconds}} সে.",
+    "doubleIt": "দ্বিগুণ করুন · বিজ্ঞাপন দেখুন",
+    "doubling": "দ্বিগুণ হচ্ছে…",
+    "doubled": "দ্বিগুণ হয়েছে! +{{coins}} কয়েন"
   },
   "result": {
     "playerWins": "{{name}} জিতেছে!",

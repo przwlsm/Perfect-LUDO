@@ -87,6 +87,26 @@
     "ludo.club": {
       "name": "Ludo Club",
       "blurb": "Free extra spins and 10 gems with every daily gift."
+    },
+    "ludo.coins.40k": {
+      "name": "Pocket of Coins",
+      "blurb": "40,000 coins."
+    },
+    "ludo.coins.100k": {
+      "name": "Chest of Coins",
+      "blurb": "100,000 coins: the Royal Road starts here."
+    },
+    "ludo.coins.275k": {
+      "name": "Vault of Coins",
+      "blurb": "275,000 coins, with a bonus for the bigger pack."
+    },
+    "ludo.coins.600k": {
+      "name": "Treasury of Coins",
+      "blurb": "600,000 coins: the Throne of Legends is in reach."
+    },
+    "ludo.coins.1300k": {
+      "name": "Royal Treasury",
+      "blurb": "1,300,000 coins, the best rate of all."
     }
   },
   "preview": {

@@ -44,14 +44,27 @@ export interface SeasonState {
  * Opt-in rewarded ads. The server enforces the same caps per UTC day; the
  * counts in the snapshot say how many of each were already claimed today.
  */
-export type AdRewardKind = 'gem' | 'spin' | 'rescue-boost';
+export type AdRewardKind = 'gem' | 'spin' | 'rescue-boost' | 'coin' | 'double';
 export const AD_REWARD_CAPS: Readonly<Record<AdRewardKind, number>> = {
   gem: 5,
-  spin: 2,
+  spin: 3,
   'rescue-boost': 1,
+  coin: 4,
+  double: 3,
 };
-export const AD_GEM_AMOUNT = 1;
-export const AD_RESCUE_BOOST_COINS = 300;
+export const AD_GEM_AMOUNT = 2;
+export const AD_RESCUE_BOOST_COINS = 500;
+/** The plain coin ad: the best single ad in the game, by design. */
+export const AD_COIN_AMOUNT = 500;
+
+/**
+ * Gems exchange for coins one way, in fixed bundles. 200 a gem keeps a gem
+ * ad (2 gems) below the coin ad and far below a coin pack's rate, so no
+ * route undercuts another. Mirrors the server's gem_coin_rate.
+ */
+export const GEM_COIN_RATE = 200;
+export const GEM_BUNDLES = [10, 50, 250] as const;
+export type GemBundle = (typeof GEM_BUNDLES)[number];
 export type AdRewardCounts = Readonly<Record<AdRewardKind, number>>;
 
 export interface RewardsSnapshot {
@@ -207,7 +220,13 @@ export function parseRewards(v: unknown): RewardsSnapshot {
     missions: Array.isArray(r.missions) ? r.missions.map(parseMission) : [],
     missionsResetAt: str(r.missionsResetAt),
     spinsToday: int(r.spinsToday),
-    ads: { gem: adCount('gem'), spin: adCount('spin'), 'rescue-boost': adCount('rescue-boost') },
+    ads: {
+      gem: adCount('gem'),
+      spin: adCount('spin'),
+      'rescue-boost': adCount('rescue-boost'),
+      coin: adCount('coin'),
+      double: adCount('double'),
+    },
     season: {
       number: int(season.number),
       endsAt: str(season.endsAt),

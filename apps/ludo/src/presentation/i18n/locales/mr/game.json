@@ -144,7 +144,10 @@
     "you": "{{name}} (तुम्ही)",
     "homeCount": "{{home}}/{{goal}} घरी",
     "minutesSeconds": "{{minutes}} मि {{seconds}} से",
-    "seconds": "{{seconds}} से"
+    "seconds": "{{seconds}} से",
+    "doubleIt": "दुप्पट करा · जाहिरात पाहा",
+    "doubling": "दुप्पट होत आहे…",
+    "doubled": "दुप्पट झाले! +{{coins}} नाणी"
   },
   "result": {
     "playerWins": "{{name}} जिंकला!",

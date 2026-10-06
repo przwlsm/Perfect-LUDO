@@ -144,7 +144,10 @@
     "you": "{{name}} (તમે)",
     "homeCount": "{{home}}/{{goal}} ઘરે",
     "minutesSeconds": "{{minutes}} મિ. {{seconds}} સે.",
-    "seconds": "{{seconds}} સે."
+    "seconds": "{{seconds}} સે.",
+    "doubleIt": "બમણું કરો · જાહેરાત જુઓ",
+    "doubling": "બમણું થઈ રહ્યું છે…",
+    "doubled": "બમણું થયું! +{{coins}} સિક્કા"
   },
   "result": {
     "playerWins": "{{name}} જીત્યા!",

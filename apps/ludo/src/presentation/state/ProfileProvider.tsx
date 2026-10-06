@@ -51,6 +51,8 @@ interface ProfileContextValue {
   giftItem(toUserId: string, id: string): Promise<void>;
   /** Sends a table gift at another seat of an online match (gems). */
   sendTableGift(matchId: string, toSeat: number, giftId: TableGiftId): Promise<void>;
+  /** Exchanges a bundle of gems for coins. */
+  convertGems(gems: number): Promise<void>;
   /** Pays the guest vault onto the signed-in account, once ever. */
   claimVault(): Promise<void>;
   /** A guest's watch-an-ad vault bonus (device-side, capped per day). */
@@ -298,6 +300,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   async function sendTableGift(matchId: string, toSeat: number, giftId: TableGiftId) {
     await spend((account) => account.sendTableGift(matchId, toSeat, giftId));
   }
+  async function convertGems(gems: number) {
+    await spend((account) => account.convertGems(gems));
+  }
   async function claimVault() {
     await spend((account) => account.claimVault());
   }
@@ -373,6 +378,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         claimRescue,
         giftItem,
         sendTableGift,
+        convertGems,
         claimVault,
         claimGuestAd,
         creditGuestVault,

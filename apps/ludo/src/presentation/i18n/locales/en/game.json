@@ -144,7 +144,10 @@
     "you": "{{name}} (You)",
     "homeCount": "{{home}}/{{goal}} home",
     "minutesSeconds": "{{minutes}}m {{seconds}}s",
-    "seconds": "{{seconds}}s"
+    "seconds": "{{seconds}}s",
+    "doubleIt": "Double it · watch an ad",
+    "doubling": "Doubling…",
+    "doubled": "Doubled! +{{coins}} coins"
   },
   "result": {
     "playerWins": "{{name}} wins!",
