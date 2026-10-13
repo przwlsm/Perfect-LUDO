@@ -387,6 +387,8 @@ export function useOnlineMatch(lobbyId: string, paused: boolean) {
     lifelines: snapshot?.match.lifelines ?? 5,
     /** 2 v 2: opposite seats are partners. */
     teams: snapshot?.match.teams ?? false,
+    /** The cup bracket this table belongs to, if any. */
+    cupBracketId: snapshot?.match.cupBracketId ?? null,
     busy: activity !== null,
     activity,
     feedback,

@@ -103,7 +103,8 @@
     "info3d_one": "{{count}} player / 3D table",
     "info3d_other": "{{count}} players / 3D table",
     "infoClassic_one": "{{count}} player / Classic table",
-    "infoClassic_other": "{{count}} players / Classic table"
+    "infoClassic_other": "{{count}} players / Classic table",
+    "points": "Round {{done}} of {{total}}"
   },
   "dice": {
     "rollA11y": "{{name}}: roll dice",
@@ -147,7 +148,8 @@
     "seconds": "{{seconds}}s",
     "doubleIt": "Double it · watch an ad",
     "doubling": "Doubling…",
-    "doubled": "Doubled! +{{coins}} coins"
+    "doubled": "Doubled! +{{coins}} coins",
+    "points": "{{score}} pts"
   },
   "result": {
     "playerWins": "{{name}} wins!",
@@ -175,7 +177,8 @@
     "partners": "Both partners reached {{goal}} home",
     "first": "First coin home",
     "two": "Two coins home",
-    "allFour": "All four coins home"
+    "allFour": "All four coins home",
+    "points": "Most points after {{turns}} turns each"
   },
   "piece": {
     "label": "{{color}} piece",

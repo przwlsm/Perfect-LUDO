@@ -30,6 +30,12 @@ export interface GameState {
   readonly killToEnter?: boolean;
   /** Kill & Go: colours that have captured at least once, in the order they first did. */
   readonly hunters?: readonly PlayerColor[];
+  /** Points: turns each player gets; the game ends once everyone has had theirs. */
+  readonly turnLimit?: number;
+  /** Points: turns completed so far (bonus rolls stay inside one turn). */
+  readonly turns?: number;
+  /** Points: each seat's score, by player index. */
+  readonly scores?: readonly number[];
 }
 
 /** Whether this board is played in partnerships. */

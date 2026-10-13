@@ -46,6 +46,7 @@ function snapshot(
       variant: 'classic',
       lifelines: 5,
       teams: false,
+      cupBracketId: null,
     },
   };
 }

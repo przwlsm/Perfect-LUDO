@@ -1,0 +1,21 @@
+{
+  "label": "CONVIDE AMIGOS",
+  "title": "Traga um amigo e os dois ganham {{coins}} moedas",
+  "body": "Compartilhe seu ID de usuário. Quando um amigo criar a conta, digitá-lo aqui e terminar a primeira partida online, vocês dois ganham {{coins}} moedas.",
+  "yourId": "Seu ID de usuário · {{id}}",
+  "share": "Compartilhar meu convite",
+  "shareMessage": "Jogue Ludo Rumble comigo! Digite meu ID de usuário {{id}} em Recompensas → Convide amigos e nós dois ganhamos {{coins}} moedas. {{url}}",
+  "stats_one": "{{count}} amigo entrou · {{coins}} moedas ganhas",
+  "stats_many": "{{count}} amigos entraram · {{coins}} moedas ganhas",
+  "stats_other": "{{count}} amigos entraram · {{coins}} moedas ganhas",
+  "enter": {
+    "title": "Foi convidado?",
+    "hint": "Digite o ID de usuário de 8 dígitos do seu amigo. Dá para fazer isso até você ter jogado 20 partidas.",
+    "placeholder": "ID de usuário do amigo",
+    "a11y": "ID de usuário do amigo",
+    "button": "Vincular",
+    "linking": "Vinculando…",
+    "linked": "Vinculado a @{{username}}. Termine uma partida online e vocês dois ganham {{coins}} moedas.",
+    "paid": "Bônus de convite pago: +{{coins}} moedas, graças a @{{username}}."
+  }
+}

@@ -106,6 +106,41 @@ export const BOARD_THEMES: readonly BoardTheme[] = [
     YELLOW: '#ffc94d',
     BLUE: '#7d8bff',
   }),
+  // Holi: a white board splashed with gulal, vivid player colours.
+  theme('holi', '#2a1a3a', '#3d2654', '#ff5fa2', '#b3407a', '#fffaf2', {
+    RED: '#ff3d7f',
+    GREEN: '#2ad17e',
+    YELLOW: '#ffb000',
+    BLUE: '#3f8cff',
+  }),
+  // Onam: banana-leaf green with marigold and jasmine.
+  theme('onam', '#15301f', '#1b3826', '#ffc24b', '#9c7a2a', '#fbf6e4', {
+    RED: '#e8533f',
+    GREEN: '#39b06f',
+    YELLOW: '#ffcf3f',
+    BLUE: '#3d7bd9',
+  }),
+  // Pongal: terracotta and turmeric, a kolam on the tiles.
+  theme('pongal', '#3a1d10', '#46261a', '#ffb547', '#b86a2b', '#fff1dc', {
+    RED: '#d8452f',
+    GREEN: '#4caa5b',
+    YELLOW: '#f5b82e',
+    BLUE: '#3b6fd8',
+  }),
+  // Eid: emerald night with gold and a pale moonlit tile.
+  theme('eid', '#0f2a24', '#153129', '#e9cf6a', '#9a7f36', '#f4f8f0', {
+    RED: '#e5556b',
+    GREEN: '#35c48f',
+    YELLOW: '#f4c74f',
+    BLUE: '#5b8cf0',
+  }),
+  // Christmas: midnight blue, holly red and green, snow-white tiles.
+  theme('christmas', '#0e1a33', '#1b2b4f', '#ff5a5f', '#a63a3e', '#f7fbff', {
+    RED: '#e63946',
+    GREEN: '#2fa360',
+    YELLOW: '#f6c54c',
+    BLUE: '#5aa9ff',
+  }),
 ];
 export function getBoardTheme(id: string): BoardTheme {
   return BOARD_THEMES.find((t) => t.id === id) ?? BOARD_THEMES[0]!;
@@ -168,6 +203,11 @@ const SIGNATURE_DICE: Record<
   candy: { face: '#f5cee9', pip: '#9a548d', edge: '#d299c7', radius: 19 },
   obsidian: { face: '#292b2e', pip: '#ebcc86', edge: '#a48c57', radius: 3 },
   diwali: { face: '#3b2358', pip: '#ffd9a1', edge: '#c98f3f', radius: 12, glow: '#ffcf6f50' },
+  holi: { face: '#fff5fb', pip: '#ff3d7f', edge: '#ffb000', radius: 14 },
+  onam: { face: '#f8efc9', pip: '#2f6b44', edge: '#ffc24b', radius: 16 },
+  pongal: { face: '#f5d8a8', pip: '#7a3b1a', edge: '#d88a3a', radius: 8 },
+  eid: { face: '#1b3f36', pip: '#f1c860', edge: '#9a7f36', radius: 12, glow: '#f1c86050' },
+  christmas: { face: '#f7fbff', pip: '#e63946', edge: '#2fa360', radius: 10 },
 };
 for (const [id, finish] of Object.entries(SIGNATURE_DICE)) DICE_FINISHES[id + '-dice'] = finish;
 
@@ -190,6 +230,11 @@ export function getCardDesign(id?: string | null) {
     candy: 30,
     obsidian: 2,
     diwali: 16,
+    holi: 24,
+    onam: 20,
+    pongal: 8,
+    eid: 18,
+    christmas: 12,
   };
   return {
     borderRadius: radii[key] ?? 14,

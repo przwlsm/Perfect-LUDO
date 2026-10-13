@@ -5,6 +5,7 @@ import { ALL_PLAYER_COLORS, isSafeSquare } from '@/domain';
 import type { Board2DProps } from './Board2D';
 import { getBoardTheme } from '../theme/themes';
 import { AnimatedPiece2D } from './AnimatedPiece2D';
+import { SafeStar } from './SafeStar';
 import { TurnGlow, TurnGlowTriangle, turnColorOf } from './TurnGlow';
 import {
   radialGrid,
@@ -25,6 +26,7 @@ export function RadialBoard2D({
   motionEnabled = false,
   homeStyle = 'triangle',
   showTurn = false,
+  contrast = 'normal',
   onSelectMove,
 }: Board2DProps) {
   const { t } = useTranslation('game');
@@ -40,6 +42,7 @@ export function RadialBoard2D({
   );
   const occupied = new Map<string, number>();
   const round = homeStyle === 'round';
+  const high = contrast === 'high';
   const turnColor = showTurn ? turnColorOf(state) : null;
   // Triangle homes light up their whole triangle; round homes get a halo around the yard.
   const glow = (() => {
@@ -240,15 +243,27 @@ export function RadialBoard2D({
             ],
             backgroundColor:
               index % 13 === 0 ? theme.colors[colors[Math.floor(index / 13)]!] : theme.tile,
-            borderWidth: 1,
-            borderColor: theme.line,
+            borderWidth: high ? 1.5 : 1,
+            borderColor: high ? '#0f172a99' : theme.line,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Text style={{ fontSize: cell * 0.58, color: index % 13 === 0 ? '#ffffff' : '#596271' }}>
-            {index % 13 === 0 ? '\u2193' : isSafeSquare(index, count) ? '\u2606' : ''}
-          </Text>
+          {index % 13 === 0 ? (
+            <Text
+              style={{
+                fontSize: cell * 0.8,
+                fontWeight: '900',
+                color: '#ffffff',
+                textShadowColor: '#00000066',
+                textShadowRadius: 2,
+              }}
+            >
+              {'\u2193'}
+            </Text>
+          ) : isSafeSquare(index, count) ? (
+            <SafeStar size={cell} high={high} />
+          ) : null}
         </View>
       ))}
       {colors.flatMap((color) =>

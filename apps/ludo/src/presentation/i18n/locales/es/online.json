@@ -201,7 +201,8 @@
       "teams": "Ambos compañeros llevaron {{goal}} a la meta",
       "one": "Primera ficha en la meta",
       "two": "Dos fichas en la meta",
-      "all": "Las cuatro fichas en la meta"
+      "all": "Las cuatro fichas en la meta",
+      "points": "Más puntos tras {{turns}} turnos cada uno"
     },
     "note": {
       "vault": "+{{amount}} monedas te esperan en tu bóveda: inicia sesión cuando quieras para reclamar todo lo que hay.",

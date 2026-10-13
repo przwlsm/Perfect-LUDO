@@ -83,6 +83,11 @@
       "title": "Mata e Vai",
       "short": "MATA E VAI",
       "description": "Capture pelo menos um peão adversário antes que qualquer peão seu possa entrar no caminho de casa."
+    },
+    "points": {
+      "title": "Pontos · 12 turnos",
+      "short": "PONTOS",
+      "description": "Todos têm 12 turnos. Cada passo vale 1, uma captura 10, uma peça em casa 20. A maior pontuação vence."
     }
   },
   "rarity": {
@@ -191,6 +196,26 @@
       "round-homes": {
         "name": "Bases Redondas",
         "description": "As bases redondas originais para mesas de 5 e 6 jogadores."
+      },
+      "holi": {
+        "name": "Holi de cores",
+        "description": "Cor por todo lado. Cada jogada cai numa nuvem de gulal."
+      },
+      "onam": {
+        "name": "Pookalam de Onam",
+        "description": "Flores frescas sobre verde de folha de bananeira. Pétalas flutuam sobre o tabuleiro."
+      },
+      "pongal": {
+        "name": "Colheita de Pongal",
+        "description": "Sol, cana-de-açúcar e um kolam sobre terracota. A panela transborda."
+      },
+      "eid": {
+        "name": "Lanternas de Eid",
+        "description": "Uma lua crescente sobre esmeralda e ouro, lanternas balançando nos cantos."
+      },
+      "christmas": {
+        "name": "Neve de Natal",
+        "description": "Neve num tabuleiro azul-meia-noite, e o Papai Noel passa de trenó por cima."
       }
     }
   },

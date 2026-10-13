@@ -83,6 +83,11 @@
       "title": "Kill & Go",
       "short": "KILL & GO",
       "description": "Capture at least one opponent coin before any of your coins can enter your home path."
+    },
+    "points": {
+      "title": "Points · 12 turns",
+      "short": "POINTS",
+      "description": "Everyone gets 12 turns. Each step scores 1, a capture 10, a coin home 20. Highest score wins."
     }
   },
   "rarity": {
@@ -191,6 +196,26 @@
       "round-homes": {
         "name": "Round Homes",
         "description": "The original round yards for 5 and 6 player tables."
+      },
+      "holi": {
+        "name": "Holi Splash",
+        "description": "Colour everywhere. Every move lands in a cloud of gulal."
+      },
+      "onam": {
+        "name": "Onam Pookalam",
+        "description": "Fresh flowers on a banana-leaf green. Petals drift over the board."
+      },
+      "pongal": {
+        "name": "Pongal Harvest",
+        "description": "Sun, sugarcane and a kolam on terracotta. The pot is boiling over."
+      },
+      "eid": {
+        "name": "Eid Lanterns",
+        "description": "A crescent moon over emerald and gold, lanterns swaying at the corners."
+      },
+      "christmas": {
+        "name": "Christmas Snow",
+        "description": "Snow on a midnight-blue board, and Santa sleighs across the top."
       }
     }
   },

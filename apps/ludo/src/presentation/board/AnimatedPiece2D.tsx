@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Animated, {
   cancelAnimation,
@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import type { Move, Piece } from '@/domain';
 import { PieceToken } from '../components/PieceToken';
+import { Text } from '../components/AppText';
 import { getCellForPiece } from './getCellForPiece';
 import { getPieceWaypoints, PIECE_JUMP_MS, PIECE_STEP_MS } from './pieceMotion';
 
@@ -164,6 +165,30 @@ export function AnimatedPiece2D({
         hitSize={hitSize}
         onPress={move ? () => onSelectMove(move) : undefined}
       />
+      {stackCount >= 3 && stackIndex === stackCount - 1 && (
+        // Three or more coins on one square: the top one carries the count.
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: hitSize * 0.06,
+            right: hitSize * 0.06,
+            minWidth: cellSize * 0.44,
+            height: cellSize * 0.44,
+            paddingHorizontal: 3,
+            borderRadius: cellSize,
+            backgroundColor: '#111827',
+            borderWidth: 1,
+            borderColor: '#ffffffcc',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ color: '#ffffff', fontSize: cellSize * 0.28, fontWeight: '900' }}>
+            {stackCount}
+          </Text>
+        </View>
+      )}
     </Animated.View>
   );
 }

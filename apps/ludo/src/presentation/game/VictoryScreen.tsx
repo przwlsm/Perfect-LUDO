@@ -47,6 +47,8 @@ export interface Standing {
   readonly color: string;
   readonly you: boolean;
   readonly coinsHome: number;
+  /** Points mode: the seat's score. */
+  readonly score?: number;
   /** Online players have an account avatar. */
   readonly userId?: string;
   readonly avatar?: string | null;
@@ -471,7 +473,11 @@ function PodiumColumn({
             <Text style={s.rewardXp}>+{reward.xp} XP</Text>
           </>
         ) : (
-          <Text style={s.homeText}>{t('victory.homeCount', { home: entry.coinsHome, goal })}</Text>
+          <Text style={s.homeText}>
+            {entry.score === undefined
+              ? t('victory.homeCount', { home: entry.coinsHome, goal })
+              : t('victory.points', { score: entry.score })}
+          </Text>
         )}
       </View>
     </View>

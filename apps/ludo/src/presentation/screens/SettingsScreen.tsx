@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { profileService, rewardedAds } from '@/config/container';
 import { Body, Button, Card, Label, Screen, Sheet, useShared } from '../components/Kit';
 import { SupportCard } from '../components/SupportCard';
+import { FairDiceButton } from '../components/FairDice';
 import { useProfile } from '../state/ProfileProvider';
 import { useAppUpdate, type OtaCheckResult } from '../state/AppUpdateProvider';
 import { Walkthrough } from '../components/Walkthrough';
@@ -21,7 +22,7 @@ import {
   type AppearancePreference,
 } from '../theme/AppearanceProvider';
 
-const TOGGLES = ['board3d', 'reducedMotion', 'soundEnabled'] as const;
+const TOGGLES = ['board3d', 'reducedMotion', 'soundEnabled', 'highContrast'] as const;
 
 export default function SettingsScreen() {
   const { profile, theme, perform, ready } = useProfile();
@@ -112,6 +113,7 @@ export default function SettingsScreen() {
           {t('about.feedback')}
         </Button>
         <HowToPlayButton />
+        <FairDiceButton />
         <AdPrivacyButton />
       </Card>
       <UpdatesCard />

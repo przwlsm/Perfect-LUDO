@@ -103,7 +103,8 @@
     "info3d_one": "{{count}} खिलाड़ी / 3D टेबल",
     "info3d_other": "{{count}} खिलाड़ी / 3D टेबल",
     "infoClassic_one": "{{count}} खिलाड़ी / क्लासिक टेबल",
-    "infoClassic_other": "{{count}} खिलाड़ी / क्लासिक टेबल"
+    "infoClassic_other": "{{count}} खिलाड़ी / क्लासिक टेबल",
+    "points": "दौर {{done}}/{{total}}"
   },
   "dice": {
     "rollA11y": "{{name}}: पासा फेंकें",
@@ -147,7 +148,8 @@
     "seconds": "{{seconds}} से",
     "doubleIt": "दोगुना करें · विज्ञापन देखें",
     "doubling": "दोगुना हो रहा है…",
-    "doubled": "दोगुना हो गया! +{{coins}} सिक्के"
+    "doubled": "दोगुना हो गया! +{{coins}} सिक्के",
+    "points": "{{score}} अंक"
   },
   "result": {
     "playerWins": "{{name}} की जीत!",
@@ -175,7 +177,8 @@
     "partners": "दोनों पार्टनर की {{goal}} गोटियाँ घर पहुँचीं",
     "first": "पहली गोटी घर पहुँची",
     "two": "दो गोटियाँ घर पहुँचीं",
-    "allFour": "चारों गोटियाँ घर पहुँचीं"
+    "allFour": "चारों गोटियाँ घर पहुँचीं",
+    "points": "हर एक की {{turns}} बारियों के बाद सबसे ज़्यादा अंक"
   },
   "piece": {
     "label": "{{color}} गोटी",

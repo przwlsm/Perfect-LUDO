@@ -11,6 +11,7 @@ const ICONS: Record<GameVariant, keyof typeof Ionicons.glyphMap> = {
   quick1: 'flash',
   quick2: 'timer',
   kill: 'skull',
+  points: 'podium',
 };
 
 /** Classic, Quick 1, Quick 2 or Kill & Go, with what the chosen one means. */

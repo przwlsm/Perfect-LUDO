@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import { displayNameOf, type Friend } from '@/domain';
@@ -40,6 +41,7 @@ export function FriendList({
             emoji={friend.avatar}
             presence={friend.presence}
             publicId={friend.publicId}
+            onOpen={() => router.push({ pathname: '/collection/[id]', params: { id: friend.id } })}
           >
             {/* Friends mid-game stay challengeable: the invite simply waits
                 for them as a notification. */}

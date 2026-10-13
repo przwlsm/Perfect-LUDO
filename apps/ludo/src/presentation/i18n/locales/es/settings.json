@@ -36,6 +36,10 @@
     "soundEnabled": {
       "title": "Sonidos del juego",
       "hint": "Dados rodando suavemente, golpes de madera, capturas y campanas al llegar a la meta."
+    },
+    "highContrast": {
+      "title": "Tablero de alto contraste",
+      "hint": "Líneas más gruesas, estrellas y flechas más marcadas y bordes de ficha más fuertes en el tablero 2D."
     }
   },
   "saved": "Preferencias guardadas.",

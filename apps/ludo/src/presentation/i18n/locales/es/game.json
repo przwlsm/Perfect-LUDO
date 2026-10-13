@@ -107,7 +107,8 @@
     "info3d_other": "{{count}} jugadores / mesa 3D",
     "infoClassic_one": "{{count}} jugador / mesa clásica",
     "infoClassic_many": "{{count}} jugadores / mesa clásica",
-    "infoClassic_other": "{{count}} jugadores / mesa clásica"
+    "infoClassic_other": "{{count}} jugadores / mesa clásica",
+    "points": "Ronda {{done}} de {{total}}"
   },
   "dice": {
     "rollA11y": "{{name}}: tirar el dado",
@@ -152,7 +153,8 @@
     "seconds": "{{seconds}} s",
     "doubleIt": "Duplícalo · mira un anuncio",
     "doubling": "Duplicando…",
-    "doubled": "¡Duplicado! +{{coins}} monedas"
+    "doubled": "¡Duplicado! +{{coins}} monedas",
+    "points": "{{score}} pts"
   },
   "result": {
     "playerWins": "¡Gana {{name}}!",
@@ -182,7 +184,8 @@
     "partners": "Ambos compañeros llevaron {{goal}} a la meta",
     "first": "Primera ficha en la meta",
     "two": "Dos fichas en la meta",
-    "allFour": "Las cuatro fichas en la meta"
+    "allFour": "Las cuatro fichas en la meta",
+    "points": "Más puntos tras {{turns}} turnos cada uno"
   },
   "piece": {
     "label": "Ficha de {{color}}",

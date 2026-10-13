@@ -210,6 +210,7 @@ function toLobby(value: unknown): Lobby {
     teams: row.teams === true,
     seeking: row.seeking === true,
     movedTo: typeof row.movedTo === 'string' ? row.movedTo : null,
+    cupBracketId: typeof row.cupBracketId === 'string' ? row.cupBracketId : null,
   };
 }
 
@@ -333,6 +334,7 @@ export function toMatchSnapshot(value: unknown): OnlineMatchSnapshot {
       prize: match.prize == null ? 0 : int(match.prize),
       turnDeadline: optionalStr(match.turnDeadline),
       variant: isGameVariant(match.variant) ? match.variant : 'classic',
+      cupBracketId: typeof match.cupBracketId === 'string' ? match.cupBracketId : null,
       lifelines: match.lifelines == null ? 5 : int(match.lifelines),
       teams: match.teams === true,
     },

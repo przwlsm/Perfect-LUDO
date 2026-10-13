@@ -103,7 +103,8 @@
     "info3d_one": "{{count}} জন খেলোয়াড় / 3D টেবিল",
     "info3d_other": "{{count}} জন খেলোয়াড় / 3D টেবিল",
     "infoClassic_one": "{{count}} জন খেলোয়াড় / ক্লাসিক টেবিল",
-    "infoClassic_other": "{{count}} জন খেলোয়াড় / ক্লাসিক টেবিল"
+    "infoClassic_other": "{{count}} জন খেলোয়াড় / ক্লাসিক টেবিল",
+    "points": "রাউন্ড {{done}}/{{total}}"
   },
   "dice": {
     "rollA11y": "{{name}}: ছক্কা চালুন",
@@ -147,7 +148,8 @@
     "seconds": "{{seconds}} সে.",
     "doubleIt": "দ্বিগুণ করুন · বিজ্ঞাপন দেখুন",
     "doubling": "দ্বিগুণ হচ্ছে…",
-    "doubled": "দ্বিগুণ হয়েছে! +{{coins}} কয়েন"
+    "doubled": "দ্বিগুণ হয়েছে! +{{coins}} কয়েন",
+    "points": "{{score}} পয়েন্ট"
   },
   "result": {
     "playerWins": "{{name}} জিতেছে!",
@@ -175,7 +177,8 @@
     "partners": "দুই পার্টনারেরই {{goal}}টা গুটি ঘরে",
     "first": "প্রথম গুটি ঘরে",
     "two": "দুটো গুটি ঘরে",
-    "allFour": "চারটে গুটিই ঘরে"
+    "allFour": "চারটে গুটিই ঘরে",
+    "points": "প্রত্যেকের {{turns}} পালার পর সর্বোচ্চ পয়েন্ট"
   },
   "piece": {
     "label": "{{color}} গুটি",

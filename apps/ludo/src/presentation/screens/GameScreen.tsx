@@ -7,6 +7,7 @@ import {
   mayEnterHome,
   coinsHome,
   coinsToWin,
+  isPointsGame,
   standings,
   variantOf,
   type GameVariant,
@@ -254,8 +255,11 @@ function MatchScreen({
   }
 
   /** How the board was won, e.g. "All four coins home" (the domain's winLine, translated). */
-  function winLineText(state: Parameters<typeof coinsToWin>[0] & { teams?: boolean }): string {
+  function winLineText(
+    state: Parameters<typeof coinsToWin>[0] & { teams?: boolean; turnLimit?: number },
+  ): string {
     const goal = coinsToWin(state);
+    if (isPointsGame(state)) return t('winLine.points', { turns: state.turnLimit });
     if (state.teams) return goal === 4 ? t('winLine.allEight') : t('winLine.partners', { goal });
     return goal === 1 ? t('winLine.first') : goal === 2 ? t('winLine.two') : t('winLine.allFour');
   }
@@ -322,6 +326,7 @@ function MatchScreen({
               color: theme.colors[color],
               you: match.options.mode === 'ai' && color === 'RED',
               coinsHome: coinsHome(match.state, color),
+              score: match.state.scores?.[match.state.players.findIndex((p) => p.color === color)],
             }))}
             reward={
               match.options.mode === 'ai' && member

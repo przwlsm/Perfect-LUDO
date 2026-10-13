@@ -30,6 +30,7 @@ import { UserAvatar } from '../social/UserAvatar';
 import { useSocial } from '../state/SocialProvider';
 import { ConnectionPill } from '../components/ConnectionPill';
 import { GuestAdOffer } from '../components/GuestAdOffer';
+import { NewTrophyCard } from '../collection/CollectionCard';
 import { Body, Button, Card, Label, Screen, Sheet, useShared } from '../components/Kit';
 import { useConnectivity } from '../state/ConnectivityProvider';
 import { useProfile } from '../state/ProfileProvider';
@@ -137,6 +138,7 @@ export default function LobbyScreen() {
 
       {/* Guests learn first thing that ads can fill their coin vault. */}
       {!member && <GuestAdOffer />}
+      {member && <NewTrophyCard />}
 
       {/* Daily lucky spin */}
       <Pressable
@@ -384,6 +386,24 @@ export default function LobbyScreen() {
           onPress={() => openAi({ variant: 'quick1' })}
         />
         <ModeCard
+          icon="timer"
+          tones={MODE_TONES.quick2}
+          accent={night ? ui.green : DARK.green}
+          title={variantTitle('quick2')}
+          subtitle={t('computer.quick2.subtitle')}
+          pill={t('computer.quick2.pill')}
+          onPress={() => openAi({ variant: 'quick2' })}
+        />
+        <ModeCard
+          icon="podium"
+          tones={MODE_TONES.points}
+          accent={night ? ui.violet : DARK.gem}
+          title={variantTitle('points')}
+          subtitle={t('computer.points.subtitle')}
+          pill={t('computer.points.pill')}
+          onPress={() => openAi({ variant: 'points' })}
+        />
+        <ModeCard
           icon="skull"
           tones={MODE_TONES.kill}
           accent="#f472b6"
@@ -559,7 +579,8 @@ export default function LobbyScreen() {
         </View>
         <Label>{t('setup.gameMode')}</Label>
         <VariantPicker value={variant} onChange={setVariant} />
-        {players === 4 && (
+        {/* Points is scored per seat, so it is never played in pairs. */}
+        {players === 4 && variant !== 'points' && (
           <>
             <Label>{t('setup.teams')}</Label>
             <View style={shared.row}>
@@ -663,7 +684,7 @@ export default function LobbyScreen() {
                 players: String(players),
                 difficulty,
                 session: String(Date.now()),
-                ...(teams && players === 4 ? { teams: '1' } : {}),
+                ...(teams && players === 4 && variant !== 'points' ? { teams: '1' } : {}),
                 ...(variant !== 'classic' ? { variant } : {}),
                 ...(selectedMode === 'local'
                   ? { names: JSON.stringify(cleanSeatNames(names, players)) }
@@ -950,6 +971,8 @@ const MODE_TONES = {
   classic: { dark: ['#4a1d1d', '#221a26'], light: ['#fadbdb', '#f7eff2'] },
   quick: { dark: ['#4a3510', '#241d14'], light: ['#fae5bf', '#f9f3e8'] },
   kill: { dark: ['#3d1530', '#211726'], light: ['#f8dbeb', '#f6eff4'] },
+  quick2: { dark: ['#123b2c', '#16222a'], light: ['#d8f2e6', '#eef4f2'] },
+  points: { dark: ['#2a1f4a', '#1c1a2e'], light: ['#e4ddfa', '#f2f1f9'] },
   teams: { dark: ['#1d2b52', '#191f33'], light: ['#dce4f9', '#eff1f8'] },
 } as const satisfies Record<string, Tones>;
 

@@ -101,6 +101,8 @@ export interface Lobby {
   readonly seeking: boolean;
   /** Set when this room's pair was moved to another table to play. */
   readonly movedTo: string | null;
+  /** Set when this table is a round of a cup bracket. */
+  readonly cupBracketId: string | null;
 }
 
 /**

@@ -11,6 +11,7 @@ import { useAuthSession } from '../state/useAuthSession';
 import { Text } from '../components/AppText';
 import { Body, Button, Card, Label, Screen, useShared } from '../components/Kit';
 import { SupportCard } from '../components/SupportCard';
+import { CollectionCard } from '../collection/CollectionCard';
 import { CoinIcon, GemIcon } from '../components/Currency';
 import { Dice } from '../components/Dice';
 import { ProgressBar } from '../components/Progress';
@@ -166,6 +167,8 @@ export default function ProfileScreen() {
           </Button>
         </Card>
       )}
+
+      {member && <CollectionCard />}
 
       {/* ---- The look ---- */}
       <Card>

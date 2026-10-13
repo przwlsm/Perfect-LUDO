@@ -116,7 +116,8 @@
     "infoClassic_two": "لاعبان / طاولة كلاسيكية",
     "infoClassic_few": "{{count}} لاعبين / طاولة كلاسيكية",
     "infoClassic_many": "{{count}} لاعبًا / طاولة كلاسيكية",
-    "infoClassic_other": "{{count}} لاعب / طاولة كلاسيكية"
+    "infoClassic_other": "{{count}} لاعب / طاولة كلاسيكية",
+    "points": "الجولة {{done}} من {{total}}"
   },
   "dice": {
     "rollA11y": "{{name}}: ارمِ النرد",
@@ -164,7 +165,8 @@
     "seconds": "{{seconds}} ث",
     "doubleIt": "ضاعفها · شاهد إعلانًا",
     "doubling": "جارٍ المضاعفة…",
-    "doubled": "تمت المضاعفة! +{{coins}} عملة"
+    "doubled": "تمت المضاعفة! +{{coins}} عملة",
+    "points": "{{score}} نقطة"
   },
   "result": {
     "playerWins": "{{name}} يفوز!",
@@ -198,7 +200,8 @@
     "partners": "وصل الشريكان إلى {{goal}} في البيت",
     "first": "أول حجر في البيت",
     "two": "حجران في البيت",
-    "allFour": "الأحجار الأربعة كلها في البيت"
+    "allFour": "الأحجار الأربعة كلها في البيت",
+    "points": "أكثر النقاط بعد {{turns}} دورًا لكل لاعب"
   },
   "piece": {
     "label": "حجر {{color}}",

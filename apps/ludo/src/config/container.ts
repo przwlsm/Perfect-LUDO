@@ -3,6 +3,9 @@ import type {
   IAccountAuthProvider,
   IAppVersionRepository,
   IChallengeRepository,
+  ICollectionRepository,
+  ICupsRepository,
+  IReferralRepository,
   IConnectivityService,
   IFeedbackRepository,
   IFriendsRepository,
@@ -38,6 +41,9 @@ import { SupabaseUserProgressRepository } from '@/infrastructure/supabase/Supaba
 import { SupabaseWalletRepository } from '@/infrastructure/supabase/SupabaseWalletRepository';
 import { SupabaseFeedbackRepository } from '@/infrastructure/supabase/SupabaseFeedbackRepository';
 import { SupabaseRewardsRepository } from '@/infrastructure/supabase/SupabaseRewardsRepository';
+import { SupabaseCollectionRepository } from '@/infrastructure/supabase/SupabaseCollectionRepository';
+import { SupabaseCupsRepository } from '@/infrastructure/supabase/SupabaseCupsRepository';
+import { SupabaseReferralRepository } from '@/infrastructure/supabase/SupabaseReferralRepository';
 import { SupabaseReactionChannel } from '@/infrastructure/supabase/SupabaseReactionChannel';
 import { SupabaseChallengeRepository } from '@/infrastructure/supabase/SupabaseChallengeRepository';
 import { SupabaseFriendsRepository } from '@/infrastructure/supabase/SupabaseFriendsRepository';
@@ -86,6 +92,18 @@ export const walletRepository: IWalletRepository | null = supabase
  * require an account. Null only when this build has no Supabase project
  * configured at all, in which case the feedback screen falls back to email.
  */
+/** Invite a friend: both sides paid after the friend's first online game (0036). */
+export const referralRepository: IReferralRepository | null = supabase
+  ? new SupabaseReferralRepository(supabase)
+  : null;
+/** The Royal Road cups: four-player knockouts for coins and thrones (0035). */
+export const cupsRepository: ICupsRepository | null = supabase
+  ? new SupabaseCupsRepository(supabase)
+  : null;
+/** The Collection Room: achievements, thrones and the showcase (0034). */
+export const collectionRepository: ICollectionRepository | null = supabase
+  ? new SupabaseCollectionRepository(supabase)
+  : null;
 /** Daily spin, missions, season pass and tournament: members only, server-owned. */
 export const rewardsRepository: IRewardsRepository | null = supabase
   ? new SupabaseRewardsRepository(supabase)

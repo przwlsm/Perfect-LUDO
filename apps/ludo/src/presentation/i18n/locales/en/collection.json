@@ -1,0 +1,135 @@
+{
+  "title": "Collection Room",
+  "subtitle": "THRONES · MEDALS · SHOWCASE",
+  "visiting": "{{name}}’s room",
+  "visit": "Visit collection room",
+  "loading": "Opening the room…",
+  "signIn": {
+    "title": "Your trophies need a home",
+    "body": "Sign in and every win, capture and gift starts counting toward medals. Thrones come from the cups.",
+    "button": "Sign in"
+  },
+  "closed": {
+    "title": "This room is closed",
+    "body": "{{name}} keeps their collection private."
+  },
+  "stats": {
+    "cups": "Cups won",
+    "thrones": "Thrones",
+    "medals": "Medals",
+    "level": "Level"
+  },
+  "showcase": {
+    "label": "SHOWCASE",
+    "empty": "Pick up to three trophies to show on your player card.",
+    "emptyVisitor": "Nothing on show yet.",
+    "edit": "Choose showcase",
+    "sheetTitle": "Your showcase",
+    "hint": "Tap up to three. Rivals at the table, friends and the leaderboard see these first.",
+    "nothingYet": "Unlock a medal or win a throne first.",
+    "save": "Save showcase",
+    "count": "{{n}} of 3 chosen"
+  },
+  "thrones": {
+    "label": "THRONE HALL",
+    "title": "The Royal Road",
+    "body": "Win a cup and its throne is yours, lit for everyone to see.",
+    "won_one": "Won {{count}} time",
+    "won_other": "Won {{count}} times",
+    "locked": "Not yet won",
+    "entry": "Entry {{coins}} coins",
+    "free": "Free entry"
+  },
+  "halls": {
+    "village": "Village Green",
+    "merchant": "Merchant’s Square",
+    "knight": "Knight’s Hall",
+    "baron": "Baron’s Court",
+    "duke": "Duke’s Chamber",
+    "king": "King’s Court",
+    "emperor": "Emperor’s Palace",
+    "legends": "Hall of Legends"
+  },
+  "throneNames": {
+    "village": "Wooden Throne",
+    "merchant": "Bronze Throne",
+    "knight": "Silver Throne",
+    "baron": "Golden Throne",
+    "duke": "Sapphire Throne",
+    "king": "Ruby Throne",
+    "emperor": "Diamond Throne",
+    "legends": "Legend’s Throne"
+  },
+  "medals": {
+    "label": "MEDALS",
+    "unlocked": "{{done}} of {{total}} unlocked",
+    "groups": {
+      "play": "At the table",
+      "arena": "In the arena",
+      "club": "In the club",
+      "royal": "The Royal Road"
+    }
+  },
+  "tiers": {
+    "locked": "Locked",
+    "bronze": "Bronze",
+    "silver": "Silver",
+    "gold": "Gold",
+    "platinum": "Platinum"
+  },
+  "detail": {
+    "progress": "{{progress}} / {{target}}",
+    "next": "Next: {{tier}} at {{target}}",
+    "maxed": "Platinum — the top tier",
+    "unlockedOn": "Unlocked {{date}}",
+    "tiersTitle": "The four tiers"
+  },
+  "privacy": {
+    "title": "Visible to other players",
+    "hint": "Friends, rivals at the table and the leaderboard can visit your room."
+  },
+  "new": {
+    "label": "NEW TROPHY",
+    "one": "{{name}} · {{tier}}",
+    "more_one": "and {{count}} more",
+    "more_other": "and {{count}} more",
+    "open": "See it shine",
+    "gotIt": "Got it"
+  },
+  "profileCard": {
+    "label": "COLLECTION ROOM",
+    "title": "Your thrones and medals",
+    "body": "Every win, capture and gift counts toward a medal. Thrones come from the cups.",
+    "open": "Enter the room",
+    "newBadge": "{{count}} NEW"
+  },
+  "achievements": {
+    "first-blood": { "name": "First Blood", "goal": "Capture {{n}} rival coins" },
+    "six-appeal": { "name": "Six Appeal", "goal": "Roll {{n}} sixes" },
+    "homecoming": { "name": "Homecoming", "goal": "Bring {{n}} coins home" },
+    "veteran": { "name": "Veteran", "goal": "Finish {{n}} games" },
+    "hot-streak": { "name": "Hot Streak", "goal": "Win {{n}} games in a row" },
+    "marathon": { "name": "Marathon", "goal": "Play {{n}} games in one day" },
+    "champion": { "name": "Champion", "goal": "Win {{n}} online games" },
+    "bot-buster": { "name": "Bot Buster", "goal": "Beat the computer {{n}} times" },
+    "full-house": { "name": "Full House", "goal": "Win {{n}} games at a six-seat table" },
+    "speed-demon": { "name": "Speed Demon", "goal": "Win {{n}} Quick 1 games" },
+    "hunter": { "name": "Hunter", "goal": "Win {{n}} Kill & Go games" },
+    "team-player": { "name": "Team Player", "goal": "Win {{n}} 2 v 2 games" },
+    "high-roller": { "name": "High Roller", "goal": "Win {{n}} staked games" },
+    "podium-regular": {
+      "name": "Podium Regular",
+      "goal": "Finish {{n}} weekly tournaments in the top 10"
+    },
+    "diamond-hands": { "name": "Diamond Hands", "goal": "Reach league division {{n}}" },
+    "crowd-favourite": { "name": "Crowd Favourite", "goal": "Receive {{n}} table gifts" },
+    "generous-heart": { "name": "Generous Heart", "goal": "Send {{n}} table gifts" },
+    "social-butterfly": { "name": "Social Butterfly", "goal": "Have {{n}} friends" },
+    "lucky-star": { "name": "Lucky Star", "goal": "Spin the lucky wheel {{n}} times" },
+    "daily-devotion": { "name": "Daily Devotion", "goal": "Claim {{n}} daily rewards" },
+    "rising-star": { "name": "Rising Star", "goal": "Reach level {{n}}" },
+    "collector": { "name": "Collector", "goal": "Own {{n}} boards and dice" },
+    "throne-collector": { "name": "Throne Collector", "goal": "Hold {{n}} different thrones" },
+    "kingmaker": { "name": "Kingmaker", "goal": "Win {{n}} cups" }
+  }
+}

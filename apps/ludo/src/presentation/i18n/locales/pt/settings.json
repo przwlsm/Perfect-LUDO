@@ -36,6 +36,10 @@
     "soundEnabled": {
       "title": "Sons do jogo",
       "hint": "Dados rolando suaves, toques de madeira, capturas e sinos de chegada em casa."
+    },
+    "highContrast": {
+      "title": "Tabuleiro de alto contraste",
+      "hint": "Linhas mais grossas, estrelas e setas mais marcadas e bordas de peça mais fortes no tabuleiro 2D."
     }
   },
   "saved": "Preferências salvas.",

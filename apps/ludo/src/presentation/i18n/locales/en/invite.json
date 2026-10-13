@@ -1,0 +1,20 @@
+{
+  "label": "INVITE FRIENDS",
+  "title": "Bring a friend, you both get {{coins}} coins",
+  "body": "Share your User ID. When a friend signs up, enters it here and finishes their first online game, you both get {{coins}} coins.",
+  "yourId": "Your User ID · {{id}}",
+  "share": "Share my invite",
+  "shareMessage": "Play Ludo Rumble with me! Enter my User ID {{id}} under Rewards → Invite friends and we both get {{coins}} coins. {{url}}",
+  "stats_one": "{{count}} friend joined · {{coins}} coins earned",
+  "stats_other": "{{count}} friends joined · {{coins}} coins earned",
+  "enter": {
+    "title": "Got invited?",
+    "hint": "Enter your friend’s 8-digit User ID. You can do this until you have played 20 games.",
+    "placeholder": "Friend’s User ID",
+    "a11y": "Friend’s User ID",
+    "button": "Link",
+    "linking": "Linking…",
+    "linked": "Linked to @{{username}}. Finish an online game and you both get {{coins}} coins.",
+    "paid": "Invite bonus paid: +{{coins}} coins, thanks to @{{username}}."
+  }
+}

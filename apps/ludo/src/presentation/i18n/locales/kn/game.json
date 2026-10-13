@@ -103,7 +103,8 @@
     "info3d_one": "{{count}} ಆಟಗಾರ / 3D ಟೇಬಲ್",
     "info3d_other": "{{count}} ಆಟಗಾರರು / 3D ಟೇಬಲ್",
     "infoClassic_one": "{{count}} ಆಟಗಾರ / ಕ್ಲಾಸಿಕ್ ಟೇಬಲ್",
-    "infoClassic_other": "{{count}} ಆಟಗಾರರು / ಕ್ಲಾಸಿಕ್ ಟೇಬಲ್"
+    "infoClassic_other": "{{count}} ಆಟಗಾರರು / ಕ್ಲಾಸಿಕ್ ಟೇಬಲ್",
+    "points": "ಸುತ್ತು {{done}}/{{total}}"
   },
   "dice": {
     "rollA11y": "{{name}}: ದಾಳ ಉರುಳಿಸಿ",
@@ -147,7 +148,8 @@
     "seconds": "{{seconds}}ಸೆ",
     "doubleIt": "ಎರಡು ಪಟ್ಟು · ಜಾಹೀರಾತು ನೋಡಿ",
     "doubling": "ಎರಡು ಪಟ್ಟಾಗುತ್ತಿದೆ…",
-    "doubled": "ಎರಡು ಪಟ್ಟಾಯಿತು! +{{coins}} ನಾಣ್ಯಗಳು"
+    "doubled": "ಎರಡು ಪಟ್ಟಾಯಿತು! +{{coins}} ನಾಣ್ಯಗಳು",
+    "points": "{{score}} ಅಂಕ"
   },
   "result": {
     "playerWins": "{{name}} ಗೆದ್ದರು!",
@@ -175,7 +177,8 @@
     "partners": "ಇಬ್ಬರೂ ಪಾರ್ಟ್ನರ್‌ಗಳು {{goal}} ಮನೆ ತಲುಪಿದರು",
     "first": "ಮೊದಲ ಕಾಯಿ ಮನೆಗೆ",
     "two": "ಎರಡು ಕಾಯಿಗಳು ಮನೆಗೆ",
-    "allFour": "ನಾಲ್ಕೂ ಕಾಯಿಗಳು ಮನೆಗೆ"
+    "allFour": "ನಾಲ್ಕೂ ಕಾಯಿಗಳು ಮನೆಗೆ",
+    "points": "ತಲಾ {{turns}} ಸರದಿಗಳ ನಂತರ ಹೆಚ್ಚು ಅಂಕ"
   },
   "piece": {
     "label": "{{color}} ಕಾಯಿ",

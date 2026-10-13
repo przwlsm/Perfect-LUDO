@@ -11,6 +11,7 @@ import {
   type PlayerColor,
 } from '@/domain';
 import { AnimatedPiece2D } from './AnimatedPiece2D';
+import { SafeStar } from './SafeStar';
 import { TurnGlow, turnColorOf } from './TurnGlow';
 import { getBoardTheme, type BoardTheme } from '../theme/themes';
 import {
@@ -45,6 +46,8 @@ export interface Board2DProps {
   readonly homeStyle?: 'triangle' | 'round';
   /** At a live table: glow around the home of the player whose turn it is. */
   readonly showTurn?: boolean;
+  /** High contrast: thicker, darker lines and bolder markers for low vision. */
+  readonly contrast?: 'normal' | 'high';
   onSelectMove(move: Move): void;
 }
 
@@ -69,6 +72,7 @@ export function Board2D({
   flip = false,
   homeStyle = 'triangle',
   showTurn = false,
+  contrast = 'normal',
 }: Board2DProps): React.JSX.Element {
   if (state.players.length > 4)
     return (
@@ -80,10 +84,14 @@ export function Board2D({
         motionEnabled={motionEnabled}
         homeStyle={homeStyle}
         showTurn={showTurn}
+        contrast={contrast}
         onSelectMove={onSelectMove}
       />
     );
   const cellSize = size / GRID_SIZE;
+  const high = contrast === 'high';
+  // Grid lines: a clear hairline, and a darker, thicker one in high contrast.
+  const line = { borderWidth: high ? 1.5 : 1, borderColor: high ? '#0f172a99' : theme.line };
   const turnColor = showTurn ? turnColorOf(state) : null;
   const turnBlock = turnColor ? yardBlock(turnColor as ClassicColor, flip) : null;
   const validMoveByPieceId = new Map((validMoves ?? []).map((move) => [move.pieceId, move]));
@@ -237,30 +245,37 @@ export function Board2D({
                     : theme.wood
                       ? `${theme.tile}d9`
                       : theme.tile,
-                borderColor: theme.line,
+                ...line,
               },
             ]}
           >
-            <Text
-              style={{
-                fontSize: cellSize * 0.65,
-                lineHeight: cellSize,
-                textAlign: 'center',
-                color: index % 13 === 0 ? '#ffffff' : '#8190a5',
-              }}
-            >
-              {isSafeSquare(index)
-                ? index % 13 === 0
-                  ? ENTRY_ARROWS[Math.floor(entryIndex / 13)]
-                  : '☆'
-                : ''}
-            </Text>
+            {index % 13 === 0 ? (
+              // The entry square: a bold arrow in the colour's own square.
+              <Text
+                style={{
+                  fontSize: cellSize * 0.82,
+                  lineHeight: cellSize,
+                  textAlign: 'center',
+                  fontWeight: '900',
+                  color: '#ffffff',
+                  textShadowColor: '#00000066',
+                  textShadowRadius: 2,
+                }}
+              >
+                {ENTRY_ARROWS[Math.floor(entryIndex / 13)]}
+              </Text>
+            ) : isSafeSquare(index) ? (
+              <SafeStar size={cellSize} high={high} />
+            ) : null}
           </View>
         );
       })}
 
-      {PLAYER_COLORS.map((color) =>
-        homeColumnCells(color, flip).map(([row, col], step) => (
+      {PLAYER_COLORS.map((color) => {
+        const lane = homeColumnCells(color, flip);
+        // A lane runs along a row or a column; its stripe follows it.
+        const horizontal = lane.length > 1 && lane[0]![0] === lane[1]![0];
+        return lane.map(([row, col], step) => (
           <View
             key={`home-${color}-${step}`}
             style={[
@@ -271,12 +286,23 @@ export function Board2D({
                 width: cellSize,
                 height: cellSize,
                 backgroundColor: theme.colors[color],
-                borderColor: theme.line,
+                ...line,
+                alignItems: 'center',
+                justifyContent: 'center',
               },
             ]}
-          />
-        )),
-      )}
+          >
+            <View
+              pointerEvents="none"
+              style={{
+                width: horizontal ? '100%' : '38%',
+                height: horizontal ? '38%' : '100%',
+                backgroundColor: high ? '#ffffff66' : '#ffffff30',
+              }}
+            />
+          </View>
+        ));
+      })}
 
       <View
         style={{
@@ -368,7 +394,7 @@ const styles = StyleSheet.create({
   },
   cell: {
     position: 'absolute',
-    borderWidth: 0.5,
+    borderWidth: 1,
     borderColor: '#cbd5e1',
   },
 });

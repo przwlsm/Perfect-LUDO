@@ -104,7 +104,8 @@ export function useQuickMatch(): QuickMatchState {
       playerCount.current = count;
       stake.current = entry;
       variant.current = mode;
-      teams.current = pairs && count === 4;
+      // Points is scored per seat, never in pairs.
+      teams.current = pairs && count === 4 && mode !== 'points';
       searching.current = true;
       setError(null);
       setTicket(null);

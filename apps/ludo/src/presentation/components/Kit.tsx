@@ -82,6 +82,10 @@ export function Button({
   const off = Boolean(disabled);
   return (
     <Pressable
+      // Remounted when it switches between enabled and disabled: on Android the
+      // gradient and label added on enabling were otherwise left unpainted,
+      // leaving a blank button (seen on "Continue as guest" after launch).
+      key={off ? 'off' : 'on'}
       accessibilityRole="button"
       accessibilityState={{ disabled: off }}
       disabled={disabled}

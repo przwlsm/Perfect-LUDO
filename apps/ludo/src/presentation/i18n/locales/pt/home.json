@@ -104,6 +104,14 @@
       "title": "Equipes 2x2",
       "subtitle": "Você e um parceiro contra dois.",
       "pill": "Em dupla"
+    },
+    "quick2": {
+      "subtitle": "Vence quem levar duas peças para casa. Partida curta.",
+      "pill": "Curta"
+    },
+    "points": {
+      "subtitle": "12 turnos cada. A maior pontuação vence.",
+      "pill": "Pontos"
     }
   },
   "progress": {

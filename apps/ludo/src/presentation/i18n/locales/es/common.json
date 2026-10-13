@@ -83,6 +83,11 @@
       "title": "Come y Corre",
       "short": "COME Y CORRE",
       "description": "Come al menos una ficha rival antes de que tus fichas puedan entrar en tu camino a la meta."
+    },
+    "points": {
+      "title": "Puntos · 12 turnos",
+      "short": "PUNTOS",
+      "description": "Todos tienen 12 turnos. Cada paso vale 1, una captura 10, una ficha en casa 20. Gana la puntuación más alta."
     }
   },
   "rarity": {
@@ -191,6 +196,26 @@
       "round-homes": {
         "name": "Casas Redondas",
         "description": "Las casas redondas originales para mesas de 5 y 6 jugadores."
+      },
+      "holi": {
+        "name": "Holi de colores",
+        "description": "Color por todas partes. Cada movimiento cae en una nube de gulal."
+      },
+      "onam": {
+        "name": "Pookalam de Onam",
+        "description": "Flores frescas sobre verde hoja de plátano. Los pétalos flotan sobre el tablero."
+      },
+      "pongal": {
+        "name": "Cosecha de Pongal",
+        "description": "Sol, caña de azúcar y un kolam sobre terracota. La olla rebosa."
+      },
+      "eid": {
+        "name": "Faroles de Eid",
+        "description": "Una luna creciente sobre esmeralda y oro, faroles meciéndose en las esquinas."
+      },
+      "christmas": {
+        "name": "Nieve de Navidad",
+        "description": "Nieve sobre un tablero azul medianoche, y Papá Noel cruza en trineo por arriba."
       }
     }
   },

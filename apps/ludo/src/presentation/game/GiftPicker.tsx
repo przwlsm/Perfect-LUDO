@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { TABLE_GIFTS, WalletRefusedError, type PlayerColor, type TableGiftId } from '@/domain';
 import { Text } from '../components/AppText';
@@ -18,6 +19,7 @@ export function GiftPicker({
   target,
   targetName,
   targetColor,
+  targetUserId = null,
   gems,
   onClose,
   onSend,
@@ -25,12 +27,14 @@ export function GiftPicker({
   target: PlayerColor | null;
   targetName: string;
   targetColor: string;
+  /** The opponent's account, for a visit to their Collection Room. */
+  targetUserId?: string | null;
   /** The sender's gem balance, to grey out what they cannot afford. */
   gems: number;
   onClose(): void;
   onSend(color: PlayerColor, gift: TableGiftId): Promise<void>;
 }) {
-  const { t } = useTranslation('game');
+  const { t } = useTranslation(['game', 'collection']);
   const s = useStyles();
   const ui = useUi();
   const [busy, setBusy] = useState<TableGiftId | null>(null);
@@ -104,6 +108,18 @@ export function GiftPicker({
       ) : gems < Math.min(...TABLE_GIFTS.map((g) => g.gems)) ? (
         <Text style={s.note}>{t('gift.needGems')}</Text>
       ) : null}
+      {targetUserId && (
+        <Button
+          secondary
+          compact
+          onPress={() => {
+            onClose();
+            router.push({ pathname: '/collection/[id]', params: { id: targetUserId } });
+          }}
+        >
+          {t('collection:visit')}
+        </Button>
+      )}
       <Button secondary compact onPress={onClose}>
         {t('gift.cancel')}
       </Button>

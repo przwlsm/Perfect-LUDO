@@ -52,6 +52,8 @@ export interface Board3DProps {
   readonly homeStyle?: 'triangle' | 'round';
   /** See Board2DProps.showTurn. In 3D the rim is lit steadily, without pulsing. */
   readonly showTurn?: boolean;
+  /** See Board2DProps.contrast; the 3D board keeps its own materials. */
+  readonly contrast?: 'normal' | 'high';
   onSelectMove(move: Move): void;
 }
 

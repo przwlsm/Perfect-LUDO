@@ -194,7 +194,8 @@
       "teams": "Both partners reached {{goal}} home",
       "one": "First coin home",
       "two": "Two coins home",
-      "all": "All four coins home"
+      "all": "All four coins home",
+      "points": "Most points after {{turns}} turns each"
     },
     "note": {
       "vault": "+{{amount}} coins are waiting in your vault — sign in any time to claim everything in it.",

@@ -40,6 +40,8 @@ export interface Profile {
   readonly board3d: boolean;
   readonly reducedMotion: boolean;
   readonly soundEnabled: boolean;
+  /** Thicker lines and bolder stars, arrows and coin rims on the 2D board. */
+  readonly highContrast: boolean;
   readonly games: number;
   readonly wins: number;
   /** Consecutive wins right now; any loss resets it to zero. */
@@ -86,6 +88,7 @@ export const INITIAL_PROFILE: Profile = {
   board3d: false,
   reducedMotion: false,
   soundEnabled: true,
+  highContrast: false,
   games: 0,
   wins: 0,
   streak: 0,
@@ -146,6 +149,7 @@ export function parseProfile(raw: string): Profile {
     typeof p.board3d !== 'boolean' ||
     typeof p.reducedMotion !== 'boolean' ||
     (p.soundEnabled !== undefined && typeof p.soundEnabled !== 'boolean') ||
+    (p.highContrast !== undefined && typeof p.highContrast !== 'boolean') ||
     !Number.isSafeInteger(p.games) ||
     p.games < 0 ||
     !Number.isSafeInteger(p.wins) ||
@@ -173,6 +177,7 @@ export function parseProfile(raw: string): Profile {
   return {
     ...p,
     soundEnabled: p.soundEnabled ?? true,
+    highContrast: p.highContrast ?? false,
     pack: p.pack ?? null,
     streak: p.streak ?? 0,
     bestStreak: p.bestStreak ?? 0,
@@ -265,7 +270,9 @@ export interface IProfileService {
   purchase(id: string): Promise<Profile>;
   equip(id: string): Promise<Profile>;
   update(
-    settings: Partial<Pick<Profile, 'name' | 'board3d' | 'reducedMotion' | 'soundEnabled'>>,
+    settings: Partial<
+      Pick<Profile, 'name' | 'board3d' | 'reducedMotion' | 'soundEnabled' | 'highContrast'>
+    >,
   ): Promise<Profile>;
   claimGift(now?: Date): Promise<Profile>;
   recordMatch(id: string, won: boolean, rewardEligible: boolean): Promise<Profile>;
@@ -340,7 +347,9 @@ export class ProfileService implements IProfileService {
     });
   }
   update(
-    settings: Partial<Pick<Profile, 'name' | 'board3d' | 'reducedMotion' | 'soundEnabled'>>,
+    settings: Partial<
+      Pick<Profile, 'name' | 'board3d' | 'reducedMotion' | 'soundEnabled' | 'highContrast'>
+    >,
   ): Promise<Profile> {
     return this.transact((p) => ({
       ...p,

@@ -1,0 +1,21 @@
+{
+  "label": "INVITA A AMIGOS",
+  "title": "Trae a un amigo y ambos reciben {{coins}} monedas",
+  "body": "Comparte tu ID de usuario. Cuando un amigo se registre, lo introduzca aquí y termine su primera partida en línea, ambos recibirán {{coins}} monedas.",
+  "yourId": "Tu ID de usuario · {{id}}",
+  "share": "Compartir mi invitación",
+  "shareMessage": "¡Juega Ludo Rumble conmigo! Introduce mi ID de usuario {{id}} en Recompensas → Invita a amigos y ambos recibimos {{coins}} monedas. {{url}}",
+  "stats_one": "{{count}} amigo se unió · {{coins}} monedas ganadas",
+  "stats_many": "{{count}} amigos se unieron · {{coins}} monedas ganadas",
+  "stats_other": "{{count}} amigos se unieron · {{coins}} monedas ganadas",
+  "enter": {
+    "title": "¿Te invitaron?",
+    "hint": "Introduce el ID de usuario de 8 dígitos de tu amigo. Puedes hacerlo hasta haber jugado 20 partidas.",
+    "placeholder": "ID de usuario del amigo",
+    "a11y": "ID de usuario del amigo",
+    "button": "Vincular",
+    "linking": "Vinculando…",
+    "linked": "Vinculado a @{{username}}. Termina una partida en línea y ambos recibirán {{coins}} monedas.",
+    "paid": "Bono de invitación pagado: +{{coins}} monedas, gracias a @{{username}}."
+  }
+}

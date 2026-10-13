@@ -102,6 +102,14 @@
       "title": "Team 2v2",
       "subtitle": "You and a partner against two.",
       "pill": "Pair up"
+    },
+    "quick2": {
+      "subtitle": "Two coins home wins. A short game.",
+      "pill": "Short"
+    },
+    "points": {
+      "subtitle": "12 turns each. Highest score wins.",
+      "pill": "Score"
     }
   },
   "progress": {

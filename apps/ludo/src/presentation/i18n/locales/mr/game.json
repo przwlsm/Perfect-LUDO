@@ -103,7 +103,8 @@
     "info3d_one": "{{count}} खेळाडू / 3D टेबल",
     "info3d_other": "{{count}} खेळाडू / 3D टेबल",
     "infoClassic_one": "{{count}} खेळाडू / क्लासिक टेबल",
-    "infoClassic_other": "{{count}} खेळाडू / क्लासिक टेबल"
+    "infoClassic_other": "{{count}} खेळाडू / क्लासिक टेबल",
+    "points": "फेरी {{done}}/{{total}}"
   },
   "dice": {
     "rollA11y": "{{name}}: फासा टाका",
@@ -147,7 +148,8 @@
     "seconds": "{{seconds}} से",
     "doubleIt": "दुप्पट करा · जाहिरात पाहा",
     "doubling": "दुप्पट होत आहे…",
-    "doubled": "दुप्पट झाले! +{{coins}} नाणी"
+    "doubled": "दुप्पट झाले! +{{coins}} नाणी",
+    "points": "{{score}} गुण"
   },
   "result": {
     "playerWins": "{{name}} जिंकला!",
@@ -175,7 +177,8 @@
     "partners": "दोन्ही पार्टनरच्या {{goal}} सोंगट्या घरी पोहोचल्या",
     "first": "पहिली सोंगटी घरी",
     "two": "दोन सोंगट्या घरी",
-    "allFour": "चारही सोंगट्या घरी"
+    "allFour": "चारही सोंगट्या घरी",
+    "points": "प्रत्येकी {{turns}} पाळ्यांनंतर सर्वाधिक गुण"
   },
   "piece": {
     "label": "{{color}} सोंगटी",

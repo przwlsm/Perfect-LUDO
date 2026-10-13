@@ -1,0 +1,16 @@
+{
+  "badge": "DADOS DEL SERVIDOR",
+  "badgeA11y": "Dados tirados en el servidor. Cómo funcionan nuestros dados",
+  "title": "Cómo funcionan nuestros dados",
+  "settings": {
+    "label": "JUEGO LIMPIO",
+    "title": "Dados que nadie puede tocar",
+    "body": "Las tiradas en línea se hacen en el servidor del juego, nunca en un teléfono, y cada movimiento se comprueba contra las reglas.",
+    "button": "Cómo funcionan nuestros dados"
+  },
+  "p1": "En línea, cada tirada se hace en el servidor del juego con aleatoriedad criptográficamente segura y muestreo por rechazo, para que cada cara tenga exactamente la misma probabilidad. La tirada queda registrada antes de que ningún jugador la vea.",
+  "p2": "Ningún teléfono, ningún jugador y nadie en Ludo Rumble puede elegir un número. No hay ayuda para remontar, ni rachas cortadas, ni ventajas ocultas para nadie. Los jugadores de computadora tiran los mismos dados que tú.",
+  "p3": "Las partidas sin conexión tiran en tu teléfono con su generador aleatorio seguro, el mismo que se usa para contraseñas, nunca una simple llamada a random().",
+  "p4": "El servidor comprueba cada movimiento contra las reglas, así que una app modificada no puede mover una ficha más de lo que marca el dado. Una prueba automática repite miles de partidas para demostrar que el servidor y la app coinciden en cada regla.",
+  "close": "Entendido"
+}

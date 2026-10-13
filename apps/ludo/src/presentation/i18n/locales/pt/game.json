@@ -107,7 +107,8 @@
     "info3d_other": "{{count}} jogadores / mesa 3D",
     "infoClassic_one": "{{count}} jogador / mesa clássica",
     "infoClassic_many": "{{count}} de jogadores / mesa clássica",
-    "infoClassic_other": "{{count}} jogadores / mesa clássica"
+    "infoClassic_other": "{{count}} jogadores / mesa clássica",
+    "points": "Rodada {{done}} de {{total}}"
   },
   "dice": {
     "rollA11y": "{{name}}: jogar o dado",
@@ -152,7 +153,8 @@
     "seconds": "{{seconds}}s",
     "doubleIt": "Dobrar · assista a um anúncio",
     "doubling": "Dobrando…",
-    "doubled": "Dobrado! +{{coins}} moedas"
+    "doubled": "Dobrado! +{{coins}} moedas",
+    "points": "{{score}} pts"
   },
   "result": {
     "playerWins": "{{name}} venceu!",
@@ -182,7 +184,8 @@
     "partners": "Os dois parceiros com {{goal}} em casa",
     "first": "Primeiro peão em casa",
     "two": "Dois peões em casa",
-    "allFour": "Os quatro peões em casa"
+    "allFour": "Os quatro peões em casa",
+    "points": "Mais pontos após {{turns}} turnos cada"
   },
   "piece": {
     "label": "Peão {{color}}",

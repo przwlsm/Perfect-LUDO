@@ -54,6 +54,8 @@ export interface OnlineMatch {
   readonly lifelines: number;
   /** 2 v 2: opposite seats are partners and win together. */
   readonly teams: boolean;
+  /** Set when this table is a round of a cup bracket. */
+  readonly cupBracketId: string | null;
 }
 
 export interface OnlineMatchSnapshot {

@@ -1,0 +1,87 @@
+{
+  "title": "Camino Real",
+  "subtitle": "COPAS · TRONOS · GLORIA",
+  "card": {
+    "a11y": "Copas del Camino Real. Abrir los salones",
+    "title": "Copas del Camino Real",
+    "body": "Cuatro jugadores, dos rondas, un trono. Gana una copa y llévate su trono a casa."
+  },
+  "intro": "Cuatro jugadores, dos rondas. El ganador se lleva tres entradas y el trono del salón; el subcampeón recupera su entrada.",
+  "signIn": {
+    "title": "Los salones son para miembros",
+    "body": "Inicia sesión para entrar en una copa. Las entradas se pagan en monedas y los tronos van a tu sala de colección.",
+    "button": "Iniciar sesión"
+  },
+  "botCap": "Los cuadros con jugadores de computadora pagan monedas {{cap}} veces al día · {{used}} usadas hoy.",
+  "hall": {
+    "free": "Entrada gratis",
+    "entry": "Entrada {{coins}}",
+    "prize": "Ganador {{coins}}",
+    "runnerUp": "Subcampeón {{coins}}",
+    "waiting_one": "{{count}} esperando",
+    "waiting_many": "{{count}} esperando",
+    "waiting_other": "{{count}} esperando",
+    "won_one": "Ganada {{count}} vez",
+    "won_many": "Ganada {{count}} veces",
+    "won_other": "Ganada {{count}} veces",
+    "mode": {
+      "quick1": "Rápida · 1 ficha en casa",
+      "quick2": "Rápida · 2 fichas en casa",
+      "classic": "Clásica · las cuatro en casa"
+    },
+    "enter": "Entrar",
+    "entering": "Entrando…",
+    "continue": "Volver a tu cuadro",
+    "short": "Faltan {{coins}} monedas"
+  },
+  "bracket": {
+    "title": "Cuadro",
+    "loading": "Abriendo el cuadro…",
+    "waitingTitle": "Llenando los asientos",
+    "waitingBody": "Los asientos que sigan libres tras un minuto los ocupan jugadores de computadora.",
+    "fillIn": "Los jugadores de computadora llegan en {{time}}",
+    "leave": "Salir y recuperar la entrada",
+    "semis": "Semifinales",
+    "final": "Final",
+    "openSeat": "Asiento libre",
+    "vs": "vs",
+    "pending": "Esperando",
+    "playing": "Jugando…",
+    "won": "Ganó",
+    "lost": "Perdió",
+    "tableReady": "Tu mesa está lista",
+    "goToTable": "Ir a tu mesa",
+    "knockedOut": "Eliminado esta vez. El trono espera a la próxima copa.",
+    "champion": "¡{{name}} se lleva el trono!",
+    "youWon": "¡El {{throne}} es tuyo!",
+    "prize": "+{{coins}} monedas",
+    "runnerUpPrize": "Subcampeón · entrada devuelta",
+    "capReached": "Se agotó la asignación de monedas de hoy para cuadros con jugadores de computadora. El trono sigue siendo tuyo.",
+    "backToCups": "Volver a los salones",
+    "seeRoom": "Verlo en tu sala de colección",
+    "you": "Tú"
+  },
+  "match": {
+    "backToBracket": "Volver al cuadro"
+  },
+  "private": {
+    "button": "Con amigos",
+    "codeTitle": "¿TIENES UN CÓDIGO DE COPA?",
+    "codePlaceholder": "Código de copa",
+    "codeButton": "Unirse",
+    "waitingTitle": "ESPERANDO A LOS AMIGOS",
+    "waitingBody": "Comparte el código. De dos a cuatro jugadores; el anfitrión inicia la copa cuando todos están.",
+    "code": "CÓDIGO DE COPA {{code}}",
+    "share": "Compartir invitación",
+    "start_one": "Empezar con {{count}} jugador",
+    "start_many": "Empezar con {{count}} jugadores",
+    "start_other": "Empezar con {{count}} jugadores",
+    "hostStarts": "El anfitrión inicia la copa cuando todos están.",
+    "potRule": "Copas con amigos: el ganador se lleva todo el bote. El trono requiere una mesa completa de cuatro.",
+    "joining": "Tomando tu asiento…",
+    "joinFailed": "No se pudo entrar en esa copa.",
+    "invalid": "Eso no es un código de copa.",
+    "shareMessage": "¡Únete a mi copa de Ludo Rumble! Código {{code}} · {{link}}",
+    "cancel": "Cancelar la copa y devolver a todos"
+  }
+}

@@ -201,7 +201,8 @@
       "teams": "Os dois parceiros com {{goal}} em casa",
       "one": "Primeiro peão em casa",
       "two": "Dois peões em casa",
-      "all": "Os quatro peões em casa"
+      "all": "Os quatro peões em casa",
+      "points": "Mais pontos após {{turns}} turnos cada"
     },
     "note": {
       "vault": "+{{amount}} moedas estão esperando no seu cofre — entre na sua conta quando quiser para resgatar tudo o que está nele.",

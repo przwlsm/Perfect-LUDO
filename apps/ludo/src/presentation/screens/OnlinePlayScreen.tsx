@@ -54,7 +54,7 @@ const problemFrom = (e: unknown, key: Extract<Problem, { key: unknown }>['key'])
  */
 export default function OnlinePlayScreen() {
   const { theme, profile } = useProfile();
-  const { t } = useTranslation(['online', 'common']);
+  const { t } = useTranslation(['online', 'common', 'cups']);
   const { variantTitle } = useCatalogText();
   const connectivity = useConnectivity();
   const { enabled, signedIn, account, identity } = useSocial();
@@ -326,6 +326,22 @@ export default function OnlinePlayScreen() {
           color={day ? ui.text : ui.subtle}
         />
       </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('cups:card.a11y')}
+        onPress={() => router.push('/cups')}
+        android_ripple={{ color: `${theme.accent}30` }}
+        style={[s.cups, { borderColor: day ? ui.line : `${ui.gem}55` }]}
+      >
+        <View style={[s.tourneyIcon, { backgroundColor: `${ui.gem}22` }]}>
+          <Ionicons name="ribbon" size={22} color={ui.gem} />
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={s.tourneyTitle}>{t('cups:card.title')}</Text>
+          <Text style={shared.small}>{t('cups:card.body')}</Text>
+        </View>
+        <Ionicons name="chevron-forward" style={mirrorInRtl} size={20} color={ui.subtle} />
+      </Pressable>
 
       <View style={shared.section}>
         <Text style={shared.sectionTitle}>{t('play.quick.title')}</Text>
@@ -534,7 +550,9 @@ export default function OnlinePlayScreen() {
           ))}
         </View>
         <VariantPicker value={privateVariant} onChange={setPrivateVariant} />
-        {privateSeats === 4 && <TeamsToggle value={privateTeams} onChange={setPrivateTeams} />}
+        {privateSeats === 4 && privateVariant !== 'points' && (
+          <TeamsToggle value={privateTeams} onChange={setPrivateTeams} />
+        )}
         <StakePicker
           value={privateStake}
           players={privateSeats}
@@ -665,7 +683,7 @@ function QuickPlayBody({
       </View>
       <Label>{t('play.gameMode')}</Label>
       <VariantPicker value={variant} onChange={onVariant} />
-      {seats === 4 && <TeamsToggle value={teams} onChange={onTeams} />}
+      {seats === 4 && variant !== 'points' && <TeamsToggle value={teams} onChange={onTeams} />}
       <Label>{t('play.entry')}</Label>
       <StakePicker value={stake} players={seats} onChange={onStake} />
       {quick.error && (
@@ -694,6 +712,17 @@ const useStyles = makeStyles((ui) => ({
     overflow: ui.scheme === 'dark' ? 'visible' : 'hidden',
     // Night: a warm gold wash. Day: marigold, drawn by a gradient behind the content.
     backgroundColor: ui.scheme === 'dark' ? '#2a2210' : MARIGOLD[1],
+    boxShadow: liftByDay(ui),
+  },
+  /** The cups card: a plain card with a violet tile, under the marigold tournament. */
+  cups: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    backgroundColor: ui.scheme === 'dark' ? ui.surfaceLow : '#ffffff',
     boxShadow: liftByDay(ui),
   },
   fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },

@@ -4,6 +4,7 @@ import { router, useIsFocused } from 'expo-router';
 import {
   coinsHome,
   coinsToWin,
+  isPointsGame,
   standings,
   variantOf,
   displayNameOf,
@@ -37,8 +38,9 @@ import { numberLocale } from '../i18n/format';
 const ONLINE_HOME = '/online';
 
 /** The win condition in words: "First coin home", "All four coins home"… */
-function goalKey(state: Pick<GameState, 'goal' | 'teams'>) {
+function goalKey(state: Pick<GameState, 'goal' | 'teams' | 'turnLimit'>) {
   const goal = coinsToWin(state);
+  if (isPointsGame(state)) return 'points' as const;
   if (state.teams) return goal === 4 ? ('teamsAll' as const) : ('teams' as const);
   return goal === 1 ? ('one' as const) : goal === 2 ? ('two' as const) : ('all' as const);
 }
@@ -59,7 +61,7 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
   const [menu, setMenu] = useState(false);
   const [rules, setRules] = useState(false);
   const [tableArea, setTableArea] = useState({ width: 0, height: 0 });
-  const { t } = useTranslation(['online', 'common', 'rewards']);
+  const { t } = useTranslation(['online', 'common', 'rewards', 'cups']);
   const { variantTitle, variantShort } = useCatalogText();
   const [notice, setNotice] = useState<'leaveFailed' | 'saveFailed' | null>(null);
   const [doubled, setDoubled] = useState(false);
@@ -139,7 +141,9 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
     try {
       await game.abandon();
       setConfirmLeave(false);
-      router.replace(ONLINE_HOME);
+      if (game.cupBracketId)
+        router.replace({ pathname: '/cups/[id]', params: { id: game.cupBracketId } });
+      else router.replace(ONLINE_HOME);
     } catch {
       setNotice('leaveFailed');
     } finally {
@@ -216,7 +220,9 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
       if (!member && game.status === 'FINISHED' && placePay > 0) {
         await creditGuestVault(match.id, placePay);
       }
-      router.replace(home ? '/' : ONLINE_HOME);
+      if (game.cupBracketId)
+        router.replace({ pathname: '/cups/[id]', params: { id: game.cupBracketId } });
+      else router.replace(home ? '/' : ONLINE_HOME);
     } catch {
       setNotice('saveFailed');
     } finally {
@@ -316,6 +322,7 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
         {notice && confirmLeave && <Body>{t(`errors.${notice}`)}</Body>}
       </Sheet>
       <GameTable
+        fairDice
         game={game}
         // Everyone sees the same board, so which colour is yours has to be said.
         label={
@@ -379,6 +386,10 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
             const seat = match?.state.players.findIndex((p) => p.color === color) ?? -1;
             return players.find((p) => p.seatIndex === seat)?.avatar ?? null;
           },
+          userIdOf: (color) => {
+            const seat = match?.state.players.findIndex((p) => p.color === color) ?? -1;
+            return players.find((p) => p.seatIndex === seat)?.userId ?? null;
+          },
           send: mySeat === null || !member ? undefined : sendGift,
           gems: profile.gems,
         }}
@@ -401,6 +412,7 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
                       mode: variantShort(variantOf(match.state)),
                       goal: t(`match.goal.${goalKey(match.state)}`, {
                         goal: coinsToWin(match.state),
+                        turns: match.state.turnLimit ?? 0,
                       }),
                     })
                   : winner
@@ -421,6 +433,7 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
                   color: theme.colors[color],
                   you: seat === mySeat,
                   coinsHome: coinsHome(match.state, color),
+                  score: match.state.scores?.[seat],
                   userId: player?.userId,
                   avatar: player?.avatar ?? null,
                 };
@@ -452,7 +465,7 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
               durationMs={durationMs}
               goal={coinsToWin(match.state)}
               primary={{
-                label: t('match.playAgain'),
+                label: game.cupBracketId ? t('cups:match.backToBracket') : t('match.playAgain'),
                 busy: saving,
                 onPress: () => void finish(false),
               }}

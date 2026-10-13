@@ -103,7 +103,8 @@
     "info3d_one": "{{count}} ખેલાડી / 3D ટેબલ",
     "info3d_other": "{{count}} ખેલાડી / 3D ટેબલ",
     "infoClassic_one": "{{count}} ખેલાડી / ક્લાસિક ટેબલ",
-    "infoClassic_other": "{{count}} ખેલાડી / ક્લાસિક ટેબલ"
+    "infoClassic_other": "{{count}} ખેલાડી / ક્લાસિક ટેબલ",
+    "points": "રાઉન્ડ {{done}}/{{total}}"
   },
   "dice": {
     "rollA11y": "{{name}}: પાસો ફેંકો",
@@ -147,7 +148,8 @@
     "seconds": "{{seconds}} સે.",
     "doubleIt": "બમણું કરો · જાહેરાત જુઓ",
     "doubling": "બમણું થઈ રહ્યું છે…",
-    "doubled": "બમણું થયું! +{{coins}} સિક્કા"
+    "doubled": "બમણું થયું! +{{coins}} સિક્કા",
+    "points": "{{score}} પોઇન્ટ"
   },
   "result": {
     "playerWins": "{{name}} જીત્યા!",
@@ -175,7 +177,8 @@
     "partners": "બંને પાર્ટનરની {{goal}} સોગઠી ઘરે",
     "first": "પહેલી સોગઠી ઘરે",
     "two": "બે સોગઠી ઘરે",
-    "allFour": "ચારેય સોગઠી ઘરે"
+    "allFour": "ચારેય સોગઠી ઘરે",
+    "points": "દરેકના {{turns}} વારા પછી સૌથી વધુ પોઇન્ટ"
   },
   "piece": {
     "label": "સોગઠી ({{color}})",

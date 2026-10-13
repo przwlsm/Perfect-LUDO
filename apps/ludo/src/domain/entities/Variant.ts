@@ -7,9 +7,17 @@ import type { PlayerColor } from './PlayerColor';
  * The ways to play. Classic is the full game; Quick ends as soon as one
  * player has 1 (or 2) coins home; Kill & Go keeps each player's coins out
  * of their home path until that player has captured an opponent's coin.
- * Mirrors `valid_variant` / `ludo_opening` in the 0014 migration.
+ * Points gives every player the same number of turns and scores each step,
+ * capture and coin home; the highest score wins.
+ * Mirrors `valid_variant` / `ludo_opening` in the 0014 and 0038 migrations.
  */
-export const GAME_VARIANTS = ['classic', 'quick1', 'quick2', 'kill'] as const;
+
+/** Points mode: turns per player, and what each thing scores. */
+export const POINTS_TURNS = 12;
+export const POINTS_PER_STEP = 1;
+export const POINTS_PER_CAPTURE = 10;
+export const POINTS_PER_HOME = 20;
+export const GAME_VARIANTS = ['classic', 'quick1', 'quick2', 'kill', 'points'] as const;
 export type GameVariant = (typeof GAME_VARIANTS)[number];
 
 export function isGameVariant(value: unknown): value is GameVariant {
@@ -41,12 +49,19 @@ export const VARIANT_INFO: Record<
     description:
       'Capture at least one opponent coin before any of your coins can enter your home path.',
   },
+  points: {
+    title: 'Points · 12 turns',
+    short: 'POINTS',
+    description:
+      'Everyone gets 12 turns. Each step scores 1, a capture 10, a coin home 20. Highest score wins.',
+  },
 };
 
 /** The rule fields a new board starts with for this variant (classic adds none). */
 export function variantRules(
   variant: GameVariant,
-): Pick<GameState, 'goal' | 'killToEnter' | 'hunters'> {
+  playerCount = 4,
+): Pick<GameState, 'goal' | 'killToEnter' | 'hunters' | 'turnLimit' | 'turns' | 'scores'> {
   switch (variant) {
     case 'quick1':
       return { goal: 1 };
@@ -54,13 +69,46 @@ export function variantRules(
       return { goal: 2 };
     case 'kill':
       return { killToEnter: true, hunters: [] };
+    case 'points':
+      return { turnLimit: POINTS_TURNS, turns: 0, scores: Array(playerCount).fill(0) };
     default:
       return {};
   }
 }
 
+/** Whether this board is scored (Points mode). */
+export function isPointsGame(state: Pick<GameState, 'turnLimit'>): boolean {
+  return (state.turnLimit ?? 0) > 0;
+}
+
+/**
+ * Points mode's winner once the turns are spent: the highest score, then
+ * the most coins home, then the furthest coins, then the earlier seat.
+ */
+export function pointsLeader(state: Pick<GameState, 'players' | 'scores'>): PlayerColor {
+  const finish = getFinishProgress(state.players.length);
+  const score = (i: number) => state.scores?.[i] ?? 0;
+  const home = (p: Player) => p.pieces.filter((piece) => piece.progress === finish).length;
+  const total = (p: Player) => p.pieces.reduce((sum, piece) => sum + piece.progress, 0);
+  let best = 0;
+  for (let i = 1; i < state.players.length; i += 1) {
+    const a = state.players[i]!;
+    const b = state.players[best]!;
+    if (
+      score(i) > score(best) ||
+      (score(i) === score(best) &&
+        (home(a) > home(b) || (home(a) === home(b) && total(a) > total(b))))
+    )
+      best = i;
+  }
+  return state.players[best]!.color;
+}
+
 /** Which variant a board is being played as. */
-export function variantOf(state: Pick<GameState, 'goal' | 'killToEnter'>): GameVariant {
+export function variantOf(
+  state: Pick<GameState, 'goal' | 'killToEnter' | 'turnLimit'>,
+): GameVariant {
+  if (isPointsGame(state)) return 'points';
   if (state.killToEnter) return 'kill';
   if (state.goal === 1) return 'quick1';
   if (state.goal === 2) return 'quick2';
@@ -101,8 +149,15 @@ export function standings(state: GameState): PlayerColor[] {
   const partner =
     state.teams && winnerIndex >= 0 ? state.players[(winnerIndex + 2) % 4]?.color : undefined;
   const rank = (c: PlayerColor) => (c === state.winnerColor ? 0 : c === partner ? 1 : 2);
+  const score = (p: Player) => state.scores?.[state.players.indexOf(p)] ?? 0;
   return [...state.players]
-    .sort((a, b) => rank(a.color) - rank(b.color) || home(b) - home(a) || total(b) - total(a))
+    .sort(
+      (a, b) =>
+        rank(a.color) - rank(b.color) ||
+        score(b) - score(a) ||
+        home(b) - home(a) ||
+        total(b) - total(a),
+    )
     .map((p) => p.color);
 }
 

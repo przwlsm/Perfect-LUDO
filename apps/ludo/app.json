@@ -34,6 +34,16 @@
     "plugins": [
       "expo-router",
       "expo-asset",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "# The 3D board (expo-gl): its view is created by reflection and its native\n# library calls back into these classes by name, so R8 must not rename or\n# strip anything in the package. Without this a 3D table crashes the app.\n-keep class expo.modules.gl.** { *; }"
+          }
+        }
+      ],
       "expo-iap",
       [
         "react-native-google-mobile-ads",

@@ -104,6 +104,14 @@
       "title": "Equipos 2vs2",
       "subtitle": "Tú y un compañero contra dos.",
       "pill": "En pareja"
+    },
+    "quick2": {
+      "subtitle": "Gana quien lleve dos fichas a casa. Partida corta.",
+      "pill": "Corta"
+    },
+    "points": {
+      "subtitle": "12 turnos cada uno. Gana la puntuación más alta.",
+      "pill": "Puntos"
     }
   },
   "progress": {

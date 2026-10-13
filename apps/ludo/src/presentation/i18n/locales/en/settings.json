@@ -36,6 +36,10 @@
     "soundEnabled": {
       "title": "Game sounds",
       "hint": "Soft dice rolls, wooden taps, captures, and homecoming chimes."
+    },
+    "highContrast": {
+      "title": "High-contrast board",
+      "hint": "Thicker lines, bolder stars and arrows, and stronger coin rims on the 2D board."
     }
   },
   "saved": "Preferences saved.",

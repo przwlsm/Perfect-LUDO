@@ -15,6 +15,7 @@ import {
   REACTION_COOLDOWN_MS,
   REACTIONS,
   variantOf,
+  festiveEffectOf,
   type DieValue,
   type GameState,
   type Move,
@@ -28,7 +29,9 @@ import { Ionicons } from '@expo/vector-icons';
 import type { ReactionBubble, TableGiftFlight } from '../hooks/useReactions';
 import { GiftFlight, type Point } from './GiftFlight';
 import { GiftPicker } from './GiftPicker';
+import { FairDiceBadge } from '../components/FairDice';
 import { Board2D } from '../board/Board2D';
+import { FestiveEffects } from '../board/FestiveEffects';
 import type { Board3DProps } from '../board/Board3D';
 import { tableArrangement } from '../board/tableLayout';
 import { PlayerPanel } from './PlayerPanel';
@@ -119,6 +122,7 @@ export interface GameSource {
 export function GameTable({
   game,
   label,
+  fairDice = false,
   prize,
   statusLine,
   seatRotation,
@@ -155,11 +159,15 @@ export function GameTable({
   gifts?: {
     readonly flights: readonly TableGiftFlight[];
     readonly avatarOf: (color: PlayerColor) => string | null;
+    /** The account at a seat, for a visit to their Collection Room. */
+    readonly userIdOf?: (color: PlayerColor) => string | null;
     readonly send?: (color: PlayerColor, gift: TableGiftId) => Promise<void>;
     readonly gems: number;
   };
   game: GameSource;
   label: string;
+  /** Online: the "server dice" pill under the label, opening the fairness page. */
+  fairDice?: boolean;
   /** What this table pays, shown under the label, e.g. "1st +100 · 2nd +50". */
   prize?: string;
   /** The name shown on each seat's panel; defaults to the colour. */
@@ -274,6 +282,7 @@ export function GameTable({
     flip: boardFlip,
     homeStyle: profile.style === 'round-homes' ? ('round' as const) : ('triangle' as const),
     showTurn: true,
+    contrast: profile.highContrast ? ('high' as const) : ('normal' as const),
     // Coins sharing a square are the same colour at the same progress, so
     // moving any one of them has exactly the same result: move the one tapped.
     onSelectMove: (selected: Move) => game.move(selected),
@@ -343,6 +352,16 @@ export function GameTable({
   ) : (
     <Board2D {...boardProps} />
   );
+  // A festival board plays its effect over the table, under the pieces' touch layer.
+  const festival = festiveEffectOf(profile.board);
+  const festiveBoard = festival ? (
+    <View style={{ width: boardSize, height: boardSize }}>
+      {board}
+      <FestiveEffects effect={festival} size={boardSize} motion={motionEnabled} />
+    </View>
+  ) : (
+    board
+  );
 
   return (
     <View
@@ -387,6 +406,7 @@ export function GameTable({
         )}
         <View style={{ flex: 1, alignItems: 'center', gap: 3 }}>
           <Label color={theme.accentText}>{label}</Label>
+          {fairDice && <FairDiceBadge />}
           {prize ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Ionicons name="trophy" size={11} color={ui.gold} />
@@ -473,7 +493,7 @@ export function GameTable({
             }}
           >
             <ZoomableBoard size={boardSize} viewport={tableArea}>
-              {board}
+              {festiveBoard}
               <RoundBoardOverlay
                 size={boardSize}
                 colors={match.state.players.map((p) => p.color)}
@@ -517,7 +537,7 @@ export function GameTable({
             >
               {table.before.map((color, i) => panel(color, i, 'before'))}
             </View>
-            <View style={{ width: boardSize, height: boardSize }}>{board}</View>
+            <View style={{ width: boardSize, height: boardSize }}>{festiveBoard}</View>
             <View
               style={{
                 flexDirection: table.orientation === 'portrait' ? 'row' : 'column',
@@ -558,6 +578,7 @@ export function GameTable({
           target={giftAim}
           targetName={giftAim ? nameOf(giftAim) : ''}
           targetColor={giftAim ? theme.colors[giftAim] : ui.text}
+          targetUserId={giftAim ? (gifts.userIdOf?.(giftAim) ?? null) : null}
           gems={gifts.gems}
           onClose={() => setGiftTarget(null)}
           onSend={gifts.send}
@@ -565,6 +586,34 @@ export function GameTable({
       )}
 
       <View style={{ paddingHorizontal: 16, paddingVertical: 8, alignItems: 'center', gap: 4 }}>
+        {match.state.turnLimit ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <Text style={[shared.small, { fontWeight: '800' }]}>
+              {t('table.points', {
+                done: Math.min(
+                  Math.floor((match.state.turns ?? 0) / match.state.players.length) + 1,
+                  match.state.turnLimit,
+                ),
+                total: match.state.turnLimit,
+              })}
+            </Text>
+            {match.state.players.map((p, index) => (
+              <View key={p.color} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: theme.colors[p.color],
+                  }}
+                />
+                <Text style={[shared.small, { color: ui.text, fontWeight: '800' }]}>
+                  {match.state.scores?.[index] ?? 0}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
         <Text
           accessibilityLiveRegion="polite"
           style={[shared.small, { textAlign: 'center', color: ui.text }]}

@@ -116,10 +116,11 @@ export function PieceToken({
               width: size + 7,
               height: size + 7,
               borderRadius: size,
-              borderWidth: 2,
+              borderWidth: 3,
               borderColor: '#fff8df',
               backgroundColor: (fill ?? PLAYER_COLOR_HEX[color]) + '40',
-              boxShadow: '0 0 6px #fff8df90',
+              // A bright glow with a dark edge, so the ring reads on any tile.
+              boxShadow: '0 0 10px #fff8dfcc, 0 0 0 1.5px #00000055',
             }}
           />
         </>
@@ -207,7 +208,7 @@ export function PieceToken({
               height: size,
               borderRadius: size / 2,
               backgroundColor: fill ?? PLAYER_COLOR_HEX[color],
-              boxShadow: isTappable ? '0 0 9px #ffffff' : '0 2px 2px #00000040',
+              boxShadow: isTappable ? '0 0 12px #ffffff' : '0 2px 3px #00000055',
             },
             isTappable && styles.tappable,
             lift,

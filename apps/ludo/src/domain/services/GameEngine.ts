@@ -2,7 +2,17 @@ import { getFinishProgress } from '../board';
 import type { GameState } from '../entities/GameState';
 import { getCurrentPlayer, isTeamGame, partnerOf } from '../entities/GameState';
 import { hasPlayerWon } from '../entities/Player';
-import { coinsToWin, mayEnterHome, variantRules, type GameVariant } from '../entities/Variant';
+import {
+  coinsToWin,
+  isPointsGame,
+  mayEnterHome,
+  POINTS_PER_CAPTURE,
+  POINTS_PER_HOME,
+  POINTS_PER_STEP,
+  pointsLeader,
+  variantRules,
+  type GameVariant,
+} from '../entities/Variant';
 import type { Player } from '../entities/Player';
 import { ALL_PLAYER_COLORS, type DieValue, type PlayerColor } from '../entities/PlayerColor';
 import type { IRandomProvider } from '../ports/IRandomProvider';
@@ -44,9 +54,34 @@ export function createGame(
     consecutiveSixes: 0,
     status: 'IN_PROGRESS',
     winnerColor: null,
-    ...(options.teams && colors.length === 4 ? { teams: true } : {}),
-    ...variantRules(options.variant ?? 'classic'),
+    // Points is scored per seat, so it is never played in pairs.
+    ...(options.teams && colors.length === 4 && options.variant !== 'points'
+      ? { teams: true }
+      : {}),
+    ...variantRules(options.variant ?? 'classic', colors.length),
   };
+}
+
+/**
+ * Points mode: the turn is passing, so one more turn is complete (bonus
+ * rolls stay inside a turn, so everyone gets the same number). Once every
+ * player has had theirs, the highest score takes the game. The finished
+ * board names the winner as the seat on turn, which is how the server reads
+ * a result.
+ */
+function afterTurn(state: GameState): Partial<GameState> {
+  if (!isPointsGame(state)) return {};
+  const turns = (state.turns ?? 0) + 1;
+  if (turns >= state.turnLimit! * state.players.length) {
+    const winnerColor = pointsLeader(state);
+    return {
+      turns,
+      status: 'FINISHED',
+      winnerColor,
+      currentPlayerIndex: state.players.findIndex((p) => p.color === winnerColor),
+    };
+  }
+  return { turns };
 }
 
 /**
@@ -101,7 +136,15 @@ export function getValidMovesForCurrentPlayer(state: GameState): Move[] {
 
 export function endTurnWithoutMove(state: GameState): GameState {
   const nextIndex = (state.currentPlayerIndex + 1) % state.players.length;
-  return { ...state, currentPlayerIndex: nextIndex, lastRoll: null, consecutiveSixes: 0 };
+  const counted = afterTurn(state);
+  if (counted.status === 'FINISHED') return { ...state, ...counted, lastRoll: null };
+  return {
+    ...state,
+    ...counted,
+    currentPlayerIndex: nextIndex,
+    lastRoll: null,
+    consecutiveSixes: 0,
+  };
 }
 
 export function applyMove(state: GameState, move: Move): GameState {
@@ -147,6 +190,21 @@ export function applyMove(state: GameState, move: Move): GameState {
       ? { hunters: [...(state.hunters ?? []), moverColor] }
       : {};
 
+  // Points: every step, capture and coin home scores for the seat on turn.
+  const finish = getFinishProgress(state.players.length);
+  const scored = isPointsGame(state)
+    ? {
+        scores: (state.scores ?? state.players.map(() => 0)).map((score, index) =>
+          index === state.currentPlayerIndex
+            ? score +
+              POINTS_PER_STEP * Math.max(1, move.toProgress - legalMove.fromProgress) +
+              POINTS_PER_CAPTURE * capturedIds.size +
+              (move.toProgress === finish ? POINTS_PER_HOME : 0)
+            : score,
+        ),
+      }
+    : {};
+
   const winnerColor = findWinner(
     players,
     isTeamGame(state),
@@ -154,23 +212,41 @@ export function applyMove(state: GameState, move: Move): GameState {
     coinsToWin(state),
   );
   if (winnerColor) {
-    return { ...state, ...unlocked, players, status: 'FINISHED', winnerColor, lastRoll: null };
+    return {
+      ...state,
+      ...unlocked,
+      ...scored,
+      players,
+      status: 'FINISHED',
+      winnerColor,
+      lastRoll: null,
+    };
   }
 
   const earnedBonusTurn =
     state.consecutiveSixes < MAX_CONSECUTIVE_SIXES &&
-    (rolledSix ||
-      capturedIds.size > 0 ||
-      move.toProgress === getFinishProgress(state.players.length));
+    (rolledSix || capturedIds.size > 0 || move.toProgress === finish);
 
   if (earnedBonusTurn) {
-    return { ...state, ...unlocked, players, lastRoll: null };
+    return {
+      ...state,
+      ...unlocked,
+      ...scored,
+      players,
+      lastRoll: null,
+    };
   }
 
+  const counted = afterTurn({ ...state, ...scored, players });
+  if (counted.status === 'FINISHED') {
+    return { ...state, ...unlocked, ...scored, ...counted, players, lastRoll: null };
+  }
   const nextIndex = (state.currentPlayerIndex + 1) % state.players.length;
   return {
     ...state,
     ...unlocked,
+    ...scored,
+    ...counted,
     players,
     currentPlayerIndex: nextIndex,
     lastRoll: null,

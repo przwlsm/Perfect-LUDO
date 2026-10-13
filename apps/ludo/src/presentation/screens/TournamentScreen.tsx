@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,7 +45,7 @@ const PRIZE_WASH = '#2a2210';
 export default function TournamentScreen() {
   const { theme, member } = useProfile();
   const { identity } = useSocial();
-  const { t } = useTranslation(['online', 'common']);
+  const { t } = useTranslation(['online', 'common', 'collection']);
   const tournament = useTournament();
   const league = useLeague();
   const ui = useUi();
@@ -234,8 +234,18 @@ export default function TournamentScreen() {
           const me = entry.userId === identity?.id;
           const name = entry.displayName || entry.username || t('common:defaultPlayerName');
           return (
-            <View
+            <Pressable
               key={entry.userId}
+              accessibilityRole="button"
+              accessibilityLabel={`${name} · ${t('collection:visit')}`}
+              onPress={() =>
+                router.push(
+                  me
+                    ? '/collection'
+                    : { pathname: '/collection/[id]', params: { id: entry.userId } },
+                )
+              }
+              android_ripple={{ color: ui.ripple }}
               style={[
                 s.row,
                 day && { backgroundColor: theme.surface },
@@ -263,7 +273,7 @@ export default function TournamentScreen() {
               <Text style={{ color: theme.accentText, fontWeight: '900', fontSize: 16 }}>
                 {entry.points}
               </Text>
-            </View>
+            </Pressable>
           );
         })}
       </View>

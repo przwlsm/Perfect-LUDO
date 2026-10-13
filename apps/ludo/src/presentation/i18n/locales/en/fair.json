@@ -1,0 +1,16 @@
+{
+  "badge": "SERVER DICE",
+  "badgeA11y": "Server-rolled dice. How our dice work",
+  "title": "How our dice work",
+  "settings": {
+    "label": "FAIR PLAY",
+    "title": "Dice nobody can touch",
+    "body": "Online rolls are made on the game server, never on a phone, and every move is checked against the rules.",
+    "button": "How our dice work"
+  },
+  "p1": "Online, every roll is made on the game server from cryptographically secure randomness, with rejection sampling so each face has exactly the same chance. The roll is written down before any player sees it.",
+  "p2": "No phone, no player and nobody at Ludo Rumble can choose a number. There is no catch-up help, no streak breaking and no hidden boost for anyone. Computer players roll the same dice as you.",
+  "p3": "Offline games roll on your phone with its secure random generator, the kind used for passwords, never a plain random() call.",
+  "p4": "The server checks every move against the rules, so a modified app cannot move a coin further than its roll. An automated test replays thousands of games to prove the server and the app agree on every rule.",
+  "close": "Got it"
+}

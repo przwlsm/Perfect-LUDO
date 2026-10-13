@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../components/AppText';
 import type { PresenceStatus } from '@/domain';
@@ -18,6 +18,7 @@ export function PlayerRow({
   presence,
   publicId,
   subtitle,
+  onOpen,
   children,
 }: {
   id: string;
@@ -27,32 +28,42 @@ export function PlayerRow({
   /** Shown so a player can confirm they found the right account. */
   publicId?: string | null;
   subtitle?: string;
+  /** Tapping the avatar and name opens the player (their Collection Room). */
+  onOpen?: () => void;
   children?: ReactNode;
 }) {
   const { theme } = useProfile();
-  const { t } = useTranslation('social');
+  const { t } = useTranslation(['social', 'collection']);
   const s = useStyles();
   const shared = useShared();
   return (
     <View style={[s.row, { backgroundColor: theme.surface }]}>
-      <UserAvatar id={id} name={name} emoji={emoji} presence={presence} />
-      <View style={{ flex: 1, gap: 4 }}>
-        <Text style={s.name} numberOfLines={1}>
-          {name}
-        </Text>
-        <View style={s.meta}>
-          {presence ? (
-            <PresenceText status={presence} />
-          ) : (
-            <Text style={shared.small}>{subtitle}</Text>
-          )}
-          {publicId && (
-            <Text style={s.id} accessibilityLabel={t('player.idA11y', { id: publicId })}>
-              {t('player.id', { id: publicId })}
-            </Text>
-          )}
+      <Pressable
+        accessibilityRole={onOpen ? 'button' : undefined}
+        accessibilityLabel={onOpen ? `${name} · ${t('collection:visit')}` : undefined}
+        disabled={!onOpen}
+        onPress={onOpen}
+        style={s.identity}
+      >
+        <UserAvatar id={id} name={name} emoji={emoji} presence={presence} />
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={s.name} numberOfLines={1}>
+            {name}
+          </Text>
+          <View style={s.meta}>
+            {presence ? (
+              <PresenceText status={presence} />
+            ) : (
+              <Text style={shared.small}>{subtitle}</Text>
+            )}
+            {publicId && (
+              <Text style={s.id} accessibilityLabel={t('player.idA11y', { id: publicId })}>
+                {t('player.id', { id: publicId })}
+              </Text>
+            )}
+          </View>
         </View>
-      </View>
+      </Pressable>
       <View style={s.actions}>{children}</View>
     </View>
   );
@@ -70,6 +81,7 @@ const useStyles = makeStyles((ui) => ({
     // A white card lifted off the ivory page by day; night is unchanged.
     boxShadow: liftByDay(ui),
   },
+  identity: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 13 },
   name: { color: ui.text, fontSize: 15.5, fontWeight: '700' },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   id: { color: ui.subtle, fontSize: 10.5, fontWeight: '700', letterSpacing: 0.4 },

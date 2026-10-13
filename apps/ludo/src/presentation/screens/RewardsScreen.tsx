@@ -35,6 +35,7 @@ import { Text } from '../components/AppText';
 import { Body, Button, Card, Label, Screen, Sheet, useShared } from '../components/Kit';
 import { CoinIcon, GemIcon } from '../components/Currency';
 import { AdTile } from '../components/AdTile';
+import { InviteCard } from '../components/InviteCard';
 import { LuckyWheel } from '../components/LuckyWheel';
 import { Shine } from '../components/Live';
 import { ProgressBar, RewardChips, timeLeft } from '../components/Progress';
@@ -350,6 +351,8 @@ export default function RewardsScreen() {
           onPress={() => void watchAd('gem')}
         />
       )}
+
+      {member && <InviteCard />}
 
       {/* ---- Gems to coins, one way, in fixed bundles ---- */}
       <Card>
