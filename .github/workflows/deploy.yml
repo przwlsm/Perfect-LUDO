@@ -13,10 +13,11 @@
 #   main     -> EAS profile/channel "production" (store installs)
 #   app-dev* -> EAS profile/channel "preview" (internal test APKs)
 #
-# An app deploys only once it is linked to EAS (extra.eas.projectId and
-# updates.url in its app.json; run scripts/eas-link-apps.mjs) and the
-# EXPO_TOKEN secret exists. Until then it is checked and skipped with a
-# notice, never failed. Setup: docs/DEPLOY.md.
+# An app ships only when it is in the DEPLOY_APPS repository variable
+# (comma-separated or "all"; empty = none), is linked to EAS (a project id
+# in its app.json; run scripts/eas-link-apps.mjs), and the EXPO_TOKEN
+# secret exists. Otherwise it is checked and skipped with a notice, never
+# failed. Setup: docs/DEPLOY.md.
 name: Deploy
 
 on:
@@ -90,6 +91,12 @@ jobs:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       # main is the store; every other deploy branch is internal testing.
       TARGET: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+      # Repository variable (Settings → Secrets and variables → Actions →
+      # Variables): the apps allowed to ship, comma-separated (e.g.
+      # "diya,kolam"), or "all". Empty means none, so a merge never starts a
+      # store build for an app whose first release (signing key, store
+      # listing, AdMob ids) has not been set up yet.
+      DEPLOY_APPS: ${{ vars.DEPLOY_APPS }}
     steps:
       - uses: actions/checkout@v7
       - name: Is ${{ matrix.app }} ready to deploy?
@@ -103,6 +110,9 @@ jobs:
             echo "go=false" >> "$GITHUB_OUTPUT"
           elif [ "$linked" != "true" ]; then
             echo "::notice title=${{ matrix.app }}::Not linked to EAS yet (run scripts/eas-link-apps.mjs ${{ matrix.app }}), so it was skipped."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          elif [ "$DEPLOY_APPS" != "all" ] && [[ ",${DEPLOY_APPS// /}," != *",${{ matrix.app }},"* ]]; then
+            echo "::notice title=${{ matrix.app }}::Not in the DEPLOY_APPS repository variable, so it was checked but not shipped. See docs/DEPLOY.md."
             echo "go=false" >> "$GITHUB_OUTPUT"
           else
             echo "go=true" >> "$GITHUB_OUTPUT"

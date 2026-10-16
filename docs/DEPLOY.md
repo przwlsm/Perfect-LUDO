@@ -46,8 +46,12 @@ Runs when a pull request is merged into `main` (and on pushes to `app-dev*`).
 Deploy one app by hand: GitHub → Actions → Deploy → _Run workflow_ → type the
 app folder (e.g. `diya`) or `all`.
 
-An app that is not linked to EAS yet, or a run without the `EXPO_TOKEN`
-secret, is **checked and skipped with a notice**, never failed.
+**Which apps may ship** is a switch you control in GitHub: Settings → Secrets
+and variables → Actions → **Variables** → `DEPLOY_APPS`, for example
+`diya,kolam`, or `all`. An app not in that list, not linked to EAS yet, or a
+run without the `EXPO_TOKEN` secret is **checked and skipped with a notice**,
+never failed. Empty (the default) ships nothing, so merging never starts a
+store build for an app whose first release is not set up.
 
 ## One-time setup
 
@@ -72,9 +76,16 @@ secret, is **checked and skipped with a notice**, never failed.
    production builds refuse Google's test IDs), and for Ludo and Bagh-Chal
    their Supabase URL and anon key. Updates are built in CI, not from your
    `.env`, so they must be set there.
-5. **First build per app:** the first deploy of each app starts a build,
-   because there is nothing to update yet. Submit it to Google Play (internal
-   testing is enough to start). From then on, merges arrive over the air.
+5. **Turn an app on**, once per app, when it is ready for the store:
+   1. Set its AdMob IDs in its Expo project (step 4).
+   2. Make its first store build by hand, so EAS can create its signing key
+      (answer yes when asked):
+      `cd apps/diya && npx eas-cli@latest build --platform android --profile production`
+   3. Upload that `.aab` in Google Play Console (Play requires the very first
+      upload by hand), for example to the internal testing track.
+   4. Add the app to `DEPLOY_APPS` in GitHub. From then on a merge into `main`
+      sends small changes over the air (close and reopen the app) and starts
+      a new store build only when native code changes.
 
 ## Good to know
 
