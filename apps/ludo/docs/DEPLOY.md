@@ -1,5 +1,8 @@
 # Continuous deployment
 
+> The workflows now cover every app in the repo; the general guide is
+> [docs/DEPLOY.md](../../../docs/DEPLOY.md). This page keeps the Ludo-specific notes.
+
 `.github/workflows/deploy.yml` runs on every push to `main` or an `app-dev*`
 branch:
 

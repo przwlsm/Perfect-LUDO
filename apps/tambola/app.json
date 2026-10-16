@@ -80,6 +80,13 @@
     "web": {
       "favicon": "./assets/images/favicon.png",
       "output": "single"
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 3000
     }
   }
 }

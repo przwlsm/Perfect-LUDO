@@ -1,38 +1,65 @@
-# Continuous deployment of the Ludo app (apps/ludo) with EAS.
+# Continuous deployment of every app in apps/ with EAS.
 #
-# Every push is checked first (types, lint, tests, database rules). Then:
-#   * JavaScript-only changes ship as an over-the-air update: players get an
-#     "Update ready" popup the next time they open the game.
-#   * Changes that touch native code (a new library, app.json, SDK upgrade)
-#     change the build's fingerprint and cannot ship over the air, so a new
-#     EAS build is started instead, for the store.
+# On every push to main (or an app-dev* branch) it works out which apps the
+# push changed (scripts/ci/changed-apps.mjs), checks them, then for each one:
+#   * JavaScript or asset changes ship as an over-the-air update: installed
+#     phones pick it up when the app is next opened (each app waits up to
+#     3 s at launch for it; on a slow network, the launch after).
+#   * Changes that alter native code (a new native library, app.json plugins,
+#     an SDK upgrade) change the app's fingerprint and cannot ship over the
+#     air, so a new EAS build is started instead, to upload to the store.
 #
 # Branches:
-#   main          -> profile/channel "production" (store players)
-#   app-dev*      -> profile/channel "preview" (internal testers)
+#   main     -> EAS profile/channel "production" (store installs)
+#   app-dev* -> EAS profile/channel "preview" (internal test APKs)
 #
-# Setup (once): apps/ludo/docs/DEPLOY.md. Until the EXPO_TOKEN secret exists, the
-# checks still run and the deploy step is skipped with a notice.
+# An app deploys only once it is linked to EAS (extra.eas.projectId and
+# updates.url in its app.json; run scripts/eas-link-apps.mjs) and the
+# EXPO_TOKEN secret exists. Until then it is checked and skipped with a
+# notice, never failed. Setup: docs/DEPLOY.md.
 name: Deploy
 
 on:
   push:
     branches: [main, 'app-dev*']
-    # Only Ludo's own files (and shared packages) can change the Ludo app.
-    paths: ['apps/ludo/**', 'packages/**', 'package-lock.json', '.github/workflows/deploy.yml']
   workflow_dispatch:
+    inputs:
+      app:
+        description: 'App folder to deploy (e.g. diya), or "all"'
+        required: true
+        default: all
 
 permissions:
   contents: read
 
 concurrency:
+  # One deploy per branch at a time; a newer push waits rather than cutting
+  # an update off half-published.
   group: deploy-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  check:
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    outputs:
+      apps: ${{ steps.pick.outputs.apps }}
+      filters: ${{ steps.pick.outputs.filters }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: pick
+        run: |
+          node scripts/ci/changed-apps.mjs "${{ github.event.before }}" "${{ github.sha }}" "${{ inputs.app }}" >> "$GITHUB_OUTPUT"
+          apps=$(grep '^apps=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)
+          echo "filters=$(node -e "console.log(JSON.parse(process.argv[1]).map(a=>'--filter='+a).join(' '))" "$apps")" >> "$GITHUB_OUTPUT"
+          echo "Apps to deploy: $apps" >> "$GITHUB_STEP_SUMMARY"
+
+  check:
+    needs: plan
+    if: needs.plan.outputs.apps != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -40,46 +67,65 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Typecheck, lint and tests
-        run: npx turbo run typecheck lint test --filter=ludo
-      - name: Database rules
+      - name: Typecheck, lint and tests (changed apps and what they use)
+        run: npx turbo run typecheck lint test ${{ needs.plan.outputs.filters }}
+      - name: Ludo database rules
+        if: contains(fromJSON(needs.plan.outputs.apps), 'ludo')
         run: npm run test:online --workspace ludo
+      - name: Bagh-Chal database rules
+        if: contains(fromJSON(needs.plan.outputs.apps), 'baghchal')
+        run: npm run test:online --workspace baghchal
 
   deploy:
-    needs: check
+    needs: [plan, check]
+    if: needs.plan.outputs.apps != '[]'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        app: ${{ fromJSON(needs.plan.outputs.apps) }}
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       # main is the store; every other deploy branch is internal testing.
       TARGET: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
     steps:
-      - name: Skip until EAS is set up
-        if: env.EXPO_TOKEN == ''
-        run: echo "::notice::EXPO_TOKEN secret is not set, so nothing was deployed. See apps/ludo/docs/DEPLOY.md."
       - uses: actions/checkout@v7
-        if: env.EXPO_TOKEN != ''
+      - name: Is ${{ matrix.app }} ready to deploy?
+        id: ready
+        run: |
+          linked=$(node -e "const e=require('./apps/${{ matrix.app }}/app.json').expo;console.log(Boolean(e.extra?.eas?.projectId&&e.updates?.url))")
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::notice title=${{ matrix.app }}::EXPO_TOKEN secret is not set, so nothing was deployed. See docs/DEPLOY.md."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          elif [ "$linked" != "true" ]; then
+            echo "::notice title=${{ matrix.app }}::Not linked to EAS yet (run scripts/eas-link-apps.mjs ${{ matrix.app }}), so it was skipped."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v7
-        if: env.EXPO_TOKEN != ''
+        if: steps.ready.outputs.go == 'true'
         with:
           node-version: 22
           cache: npm
-      - if: env.EXPO_TOKEN != ''
+      - if: steps.ready.outputs.go == 'true'
         run: npm ci
       - uses: expo/expo-github-action@v9
-        if: env.EXPO_TOKEN != ''
+        if: steps.ready.outputs.go == 'true'
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-      # Publishes an update when a build with the same native fingerprint
-      # exists; otherwise starts that build first. iOS is added once the app
-      # has an Apple developer account (platform: all).
-      - name: Deploy
-        if: env.EXPO_TOKEN != ''
+      # Publishes an over-the-air update when a build with the same native
+      # fingerprint exists; otherwise starts that build first. iOS joins once
+      # there is an Apple developer account (platform: all).
+      - name: Deploy ${{ matrix.app }}
+        if: steps.ready.outputs.go == 'true'
         uses: expo/expo-github-action/continuous-deploy-fingerprint@v9
         with:
           profile: ${{ env.TARGET }}
           branch: ${{ env.TARGET }}
           environment: ${{ env.TARGET }}
           platform: android
-          working-directory: apps/ludo
+          working-directory: apps/${{ matrix.app }}

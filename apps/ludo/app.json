@@ -93,6 +93,10 @@
     },
     "runtimeVersion": {
       "policy": "fingerprint"
+    },
+    "updates": {
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 3000
     }
   }
 }

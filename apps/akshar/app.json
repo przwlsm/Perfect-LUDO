@@ -82,6 +82,13 @@
       "favicon": "./assets/images/favicon.png",
       "output": "single"
     },
-    "description": "Learn to write any Indian script: trace letters, hear them spoken, then write them from memory."
+    "description": "Learn to write any Indian script: trace letters, hear them spoken, then write them from memory.",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 3000
+    }
   }
 }
