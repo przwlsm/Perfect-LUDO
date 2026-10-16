@@ -97,6 +97,12 @@
     "updates": {
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 3000
+    },
+    "owner": "prwlsm-org",
+    "extra": {
+      "eas": {
+        "projectId": "6dba90bf-764b-48b4-ab15-614844011bf9"
+      }
     }
   }
 }

@@ -95,7 +95,9 @@ jobs:
       - name: Is ${{ matrix.app }} ready to deploy?
         id: ready
         run: |
-          linked=$(node -e "const e=require('./apps/${{ matrix.app }}/app.json').expo;console.log(Boolean(e.extra?.eas?.projectId&&e.updates?.url))")
+          # Linked = has an EAS project id; updates.url is in app.json or, like
+          # Ludo, derived from the id by app.config.ts.
+          linked=$(node -e "const fs=require('fs');const d='./apps/${{ matrix.app }}/';const e=require(d+'app.json').expo;const derived=fs.existsSync(d+'app.config.ts')&&fs.readFileSync(d+'app.config.ts','utf8').includes('u.expo.dev');console.log(Boolean(e.extra?.eas?.projectId&&(e.updates?.url||derived)))")
           if [ -z "$EXPO_TOKEN" ]; then
             echo "::notice title=${{ matrix.app }}::EXPO_TOKEN secret is not set, so nothing was deployed. See docs/DEPLOY.md."
             echo "go=false" >> "$GITHUB_OUTPUT"

@@ -94,7 +94,14 @@
     },
     "updates": {
       "checkAutomatically": "ON_LOAD",
-      "fallbackToCacheTimeout": 3000
+      "fallbackToCacheTimeout": 3000,
+      "url": "https://u.expo.dev/915f6714-81a5-40ce-be7b-6992383c72b9"
+    },
+    "owner": "prwlsm-org",
+    "extra": {
+      "eas": {
+        "projectId": "915f6714-81a5-40ce-be7b-6992383c72b9"
+      }
     }
   }
 }
