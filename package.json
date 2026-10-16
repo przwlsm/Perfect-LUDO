@@ -24,7 +24,8 @@
     "diya": "npm run start --workspace diya",
     "kolam": "npm run start --workspace kolam",
     "chaisort": "npm run start --workspace chaisort",
-    "monsoon": "npm run start --workspace monsoon"
+    "monsoon": "npm run start --workspace monsoon",
+    "speaklocal": "npm run start --workspace speaklocal"
   },
   "devDependencies": {
     "husky": "^9.1.7",
