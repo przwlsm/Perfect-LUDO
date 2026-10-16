@@ -16,7 +16,15 @@
     "verify": "turbo run lint typecheck test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "quietatlas": "npm run start --workspace quietatlas",
+    "tambola": "npm run start --workspace tambola",
+    "akshar": "npm run start --workspace akshar",
+    "utsav": "npm run start --workspace utsav",
+    "diya": "npm run start --workspace diya",
+    "kolam": "npm run start --workspace kolam",
+    "chaisort": "npm run start --workspace chaisort",
+    "monsoon": "npm run start --workspace monsoon"
   },
   "devDependencies": {
     "husky": "^9.1.7",
