@@ -1,0 +1,2018 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { randomUUID } from 'node:crypto';
+import ts from 'typescript';
+import { PGlite } from '@electric-sql/pglite';
+
+// Compile the pure domain for this Node-only database parity test.
+const out = path.resolve('.test-artifacts/domain-rules');
+async function compile(dir, target) {
+  await fs.mkdir(target, { recursive: true });
+  for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+    if (entry.isDirectory())
+      await compile(path.join(dir, entry.name), path.join(target, entry.name));
+    else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) {
+      const source = await fs.readFile(path.join(dir, entry.name), 'utf8');
+      await fs.writeFile(
+        path.join(target, entry.name.replace(/\.ts$/, '.js')),
+        ts.transpileModule(source, {
+          compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+        }).outputText,
+      );
+    }
+  }
+}
+await compile('src/domain', out);
+const {
+  createGame,
+  seatColors,
+  rollDice,
+  getValidMovesForCurrentPlayer,
+  applyMove,
+  endTurnWithoutMove,
+  getFinishProgress,
+  getTrackLength,
+} = createRequire(import.meta.url)(path.join(out, 'index.js'));
+const db = new PGlite();
+let compared = 0;
+const normalize = (value) =>
+  JSON.stringify(value, (_, v) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b)))
+      : v,
+  );
+const outcomes = async (base, die) => {
+  const rolled = await rollDice(base, { nextInt: async () => die });
+  const moves = getValidMovesForCurrentPlayer(rolled);
+  return moves.length ? moves.map((m) => applyMove(rolled, m)) : [endTurnWithoutMove(rolled)];
+};
+async function compare(base, die) {
+  const expected = await outcomes(base, die);
+  const { rows } = await db.query('select public.ludo_successors($1::jsonb,$2) as state', [
+    JSON.stringify(base),
+    die,
+  ]);
+  assert.deepEqual(
+    rows.map((r) => normalize(r.state)).sort(),
+    expected.map(normalize).sort(),
+    `Rule mismatch: ${base.players.length} players, die ${die}`,
+  );
+  compared += expected.length;
+  return expected;
+}
+try {
+  // The slice of Supabase's auth schema the migrations touch: the users table
+  // (email, anonymous flag, sign-up metadata) and the two claim helpers.
+  await db.exec(
+    `create role anon;create role authenticated;create schema auth;
+     create table auth.users(id uuid primary key, email text, is_anonymous boolean not null default false, raw_user_meta_data jsonb);
+     create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+     create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb,'{}'::jsonb)$$;`,
+  );
+  for (const file of (await fs.readdir('supabase/migrations'))
+    .filter((f) => f.endsWith('.sql'))
+    .sort())
+    await db.exec(await fs.readFile(path.join('supabase/migrations', file), 'utf8'));
+  let seed = 0x12345678;
+  const random = () => {
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    return seed >>> 0;
+  };
+  for (const count of [2, 3, 4, 5, 6]) {
+    let state = createGame(seatColors(count));
+    assert.deepEqual(
+      (await db.query('select public.ludo_opening($1) as state', [count])).rows[0].state,
+      state,
+    );
+    for (let turn = 0; turn < 350; turn++) {
+      const die = (random() % 6) + 1;
+      if (turn % 10 === 0) for (let check = 1; check <= 6; check++) await compare(state, check);
+      const choices = await compare(state, die);
+      state = choices[random() % choices.length];
+      if (state.status === 'FINISHED') state = createGame(seatColors(count));
+    }
+    const almost = createGame(seatColors(count));
+    const finish = getFinishProgress(count);
+    almost.players[0].pieces.forEach((p, i) => (p.progress = i === 3 ? finish - 1 : finish));
+    for (let die = 1; die <= 6; die++) await compare(almost, die);
+    almost.consecutiveSixes = 2;
+    await compare(almost, 6);
+  }
+  // The same comparison for every variant: Quick 1, Quick 2 and Kill & Go.
+  const classicCompared = compared;
+  for (const variant of ['quick1', 'quick2', 'kill', 'points']) {
+    for (const count of [2, 4, 6]) {
+      const fresh = () => createGame(seatColors(count), { variant });
+      let state = fresh();
+      assert.deepEqual(
+        normalize((await db.query('select public.ludo_opening($1,$2) as state', [count, variant])).rows[0].state),
+        normalize(state),
+        `opening board for ${variant}`,
+      );
+      for (let turn = 0; turn < 300; turn++) {
+        const die = (random() % 6) + 1;
+        if (turn % 10 === 0) for (let check = 1; check <= 6; check++) await compare(state, check);
+        const choices = await compare(state, die);
+        state = choices[random() % choices.length];
+        if (state.status === 'FINISHED') state = fresh();
+      }
+      // Edge boards: one step from the goal, and (Kill & Go) a coin at the
+      // mouth of a still-locked home path, then the same board unlocked.
+      const edge = fresh();
+      const finish = getFinishProgress(count);
+      edge.players[0].pieces.forEach((p, i) => (p.progress = i === 0 ? finish - 2 : i === 1 ? getTrackLength(count) - 2 : 0));
+      for (let die = 1; die <= 6; die++) await compare(edge, die);
+      if (variant === 'kill') {
+        edge.hunters = [edge.players[0].color];
+        for (let die = 1; die <= 6; die++) await compare(edge, die);
+      }
+    }
+  }
+  const beforeTeams = compared;
+  for (const variant of ['classic', 'quick2', 'kill']) {
+    const fresh = () => createGame(seatColors(4), { variant, teams: true });
+    let state = fresh();
+    assert.deepEqual(
+      normalize((await db.query('select public.ludo_opening(4,$1,true) as state', [variant])).rows[0].state),
+      normalize(state),
+      `2 v 2 opening board for ${variant}`,
+    );
+    for (let turn = 0; turn < 400; turn++) {
+      const die = (random() % 6) + 1;
+      if (turn % 10 === 0) for (let check = 1; check <= 6; check++) await compare(state, check);
+      const choices = await compare(state, die);
+      state = choices[random() % choices.length];
+      if (state.status === 'FINISHED') state = fresh();
+    }
+    // A player with all four home moves their partner's coins; partners
+    // sharing a square neither block nor capture each other.
+    const finish = getFinishProgress(4);
+    const edge = fresh();
+    edge.players[0].pieces.forEach((pc) => (pc.progress = finish));
+    edge.players[2].pieces.forEach((pc, i) => (pc.progress = i === 0 ? finish - 3 : i === 1 ? 20 : 0));
+    for (let die = 1; die <= 6; die++) await compare(edge, die);
+    const stack = fresh();
+    stack.players[0].pieces[0].progress = 28;
+    stack.players[2].pieces[0].progress = 5;
+    stack.players[2].pieces[1].progress = 5;
+    stack.players[1].pieces[0].progress = 18;
+    for (let die = 1; die <= 6; die++) await compare(stack, die);
+  }
+  console.log(
+    `PASS: ${classicCompared} PostgreSQL transitions match the domain engine across 2-6 players, plus ${beforeTeams - classicCompared} more for Quick 1, Quick 2, Kill & Go and Points, and ${compared - beforeTeams} for 2 v 2 teams.`,
+  );
+  // Exercise real SQL permissions and RPC contracts with isolated in-memory accounts.
+  const a = randomUUID(),
+    b = randomUUID(),
+    outsider = randomUUID(),
+    lobby = randomUUID(),
+    match = randomUUID();
+  await db.query('insert into auth.users(id) values ($1),($2),($3)', [a, b, outsider]);
+  await db.query(
+    "insert into public.profiles(uid,username) values ($1,'player_a'),($2,'player_b'),($3,'outsider')",
+    [a, b, outsider],
+  );
+  await db.query(
+    "insert into public.lobbies(id,host_id,max_players,status) values ($1,$2,2,'STARTED')",
+    [lobby, a],
+  );
+  await db.query('insert into public.matches(id,lobby_id,player_count) values ($1,$2,2)', [
+    match,
+    lobby,
+  ]);
+  await db.query(
+    'insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0),($1,$3,1)',
+    [match, a, b],
+  );
+  const login = async (uid, guest = false) => {
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [uid]);
+    await db.query("select set_config('request.jwt.claims',$1,false)", [
+      JSON.stringify({ sub: uid, is_anonymous: guest }),
+    ]);
+  };
+  await login(a);
+  const opening = createGame(seatColors(2));
+  await assert.rejects(
+    db.query('select public.submit_match_turn($1,0,$2::jsonb,null)', [
+      match,
+      JSON.stringify(opening),
+    ]),
+    /Roll the dice/,
+  );
+  const rolled = (await db.query('select public.roll_match_dice($1,0) as snapshot', [match]))
+    .rows[0].snapshot;
+  const duplicate = (await db.query('select public.roll_match_dice($1,0) as snapshot', [match]))
+    .rows[0].snapshot;
+  assert.equal(rolled.match.lastRoll, duplicate.match.lastRoll);
+  assert.equal(duplicate.match.version, 1);
+  const forged = structuredClone(opening);
+  forged.players[0].pieces[0].progress = 57;
+  await assert.rejects(
+    db.query('select public.submit_match_turn($1,1,$2::jsonb,null)', [
+      match,
+      JSON.stringify(forged),
+    ]),
+    /not legal/,
+  );
+  const next = (await outcomes(opening, rolled.match.lastRoll))[0];
+  await login(outsider);
+  await assert.rejects(
+    db.query('select public.submit_match_turn($1,1,$2::jsonb,null)', [match, JSON.stringify(next)]),
+    /not in/,
+  );
+  await login(b);
+  await assert.rejects(
+    db.query('select public.submit_match_turn($1,1,$2::jsonb,null)', [match, JSON.stringify(next)]),
+    /not your turn/,
+  );
+  await login(a);
+  const accepted = (
+    await db.query('select public.submit_match_turn($1,1,$2::jsonb,null) as snapshot', [
+      match,
+      JSON.stringify(next),
+    ])
+  ).rows[0].snapshot;
+  const repeated = (
+    await db.query('select public.submit_match_turn($1,1,$2::jsonb,null) as snapshot', [
+      match,
+      JSON.stringify(next),
+    ])
+  ).rows[0].snapshot;
+  assert.equal(accepted.match.version, 2);
+  assert.equal(repeated.match.version, 2);
+  await assert.rejects(db.query('select public.roll_match_dice($1,0)', [match]), /changed|turn/);
+  await db.query('select public.abandon_match($1)', [match]);
+  await db.query('select public.abandon_match($1)', [match]);
+  assert.equal(
+    (
+      await db.query('select count(*)::int as n from notifications where related_lobby_id=$1', [
+        lobby,
+      ])
+    ).rows[0].n,
+    1,
+  );
+  const permissions = (
+    await db.query(
+      "select has_function_privilege('authenticated','public.roll_match_dice(uuid)','EXECUTE') as legacy, has_function_privilege('anon','public.submit_match_turn(uuid,integer,jsonb,integer)','EXECUTE') as anonymous",
+    )
+  ).rows[0];
+  assert.equal(permissions.legacy, false);
+  assert.equal(permissions.anonymous, false);
+  console.log(
+    'PASS: SQL rejects forged boards, moves without rolls, non-members, wrong turns and stale rolls; duplicate requests and abandonment are idempotent; legacy/anonymous write access revoked.',
+  );
+
+  // --- guests, public IDs and quick play (migration 0006) --------------------
+  const guest = randomUUID();
+  await db.query('insert into auth.users(id,is_anonymous) values ($1,true)', [guest]);
+  // `outsider` becomes a fresh sign-up who chose a username at registration.
+  await db.query(
+    "update auth.users set email='alex@example.test', raw_user_meta_data='{\"username\":\"AlexGaming\"}' where id=$1",
+    [outsider],
+  );
+  await db.query('update public.profiles set username=null where uid=$1', [outsider]);
+  await login(outsider);
+  const alex = (await db.query('select public.ensure_social_identity($1) as me', ['Alex'])).rows[0]
+    .me;
+  assert.equal(alex.username, 'alexgaming');
+  assert.match(alex.publicId, /^[1-9][0-9]{7}$/);
+  assert.equal(alex.isGuest, false);
+  assert.equal((await db.query('select public.ensure_social_identity() as me')).rows[0].me.publicId, alex.publicId);
+  await login(a);
+  const playerA = (await db.query('select public.ensure_social_identity() as me')).rows[0].me;
+  assert.match(playerA.publicId, /^[1-9][0-9]{7}$/);
+  assert.notEqual(playerA.publicId, alex.publicId);
+
+  await login(guest, true);
+  const ghost = (await db.query('select public.ensure_social_identity() as me')).rows[0].me;
+  assert.match(ghost.username, /^guest_[0-9]{4}$/);
+  assert.equal(ghost.publicId, null);
+  assert.equal(ghost.isGuest, true);
+  for (const [fn, args] of [
+    ['send_friend_request($1)', [outsider]],
+    ['create_challenge(array[$1]::uuid[])', [outsider]],
+    ["search_users($1)", ['alex']],
+    ["update_social_identity($1, null)", ['ghostrider']],
+  ]) {
+    await assert.rejects(db.query(`select public.${fn}`, args), /Create an account/);
+  }
+  // Avatars are fine for guests; usernames are not.
+  assert.equal(
+    (await db.query("select public.update_social_identity(null,'🦊') as me")).rows[0].me.avatar,
+    '🦊',
+  );
+  await login(outsider);
+  await assert.rejects(db.query('select public.send_friend_request($1)', [guest]), /not be found/);
+  const byId = (await db.query('select * from public.search_users($1)', [playerA.publicId])).rows;
+  assert.equal(byId.length, 1);
+  assert.equal(byId[0].id, a);
+  assert.equal(byId[0].public_id, playerA.publicId);
+  assert.equal((await db.query('select * from public.search_users($1)', ['guest_'])).rows.length, 0);
+  const availability = async (name) =>
+    (await db.query('select public.check_username_available($1) as v', [name])).rows[0].v;
+  assert.equal((await availability('player_a')).available, false);
+  assert.equal((await availability('guest_9999')).available, false);
+  assert.equal((await availability('AlexGaming')).available, true); // the caller's own name
+  assert.equal((await availability('brand_new')).available, true);
+  assert.equal((await availability('no')).available, false);
+
+  // Quick play: two players of the same table size get seated together, a
+  // member and a guest alike, oldest ticket hosting.
+  await login(outsider);
+  const first = (await db.query('select public.join_quick_match(2) as t')).rows[0].t;
+  assert.equal(first.status, 'WAITING');
+  assert.equal(first.waiting, 1);
+  await login(guest, true);
+  const second = (await db.query('select public.join_quick_match(2) as t')).rows[0].t;
+  assert.equal(second.status, 'MATCHED');
+  await login(outsider);
+  const again = (await db.query('select public.join_quick_match(2) as t')).rows[0].t;
+  assert.equal(again.status, 'MATCHED');
+  assert.equal(again.lobbyId, second.lobbyId);
+  const room = (await db.query('select public.get_lobby($1) as l', [second.lobbyId])).rows[0].l;
+  assert.equal(room.lobby.status, 'COUNTDOWN');
+  assert.equal(room.lobby.hostId, outsider);
+  assert.equal(room.challenge.kind, 'QUICK');
+  assert.equal(room.players.length, 2);
+  assert.ok(room.players.every((p) => p.status === 'JOINED' && p.isReady));
+  // A live quick table does not count as "a game waiting" against friend challenges.
+  await db.query('insert into public.friendships(user_id,friend_id) values ($1,$2),($2,$1)', [
+    outsider,
+    a,
+  ]);
+  const friendly = (await db.query('select public.create_challenge(array[$1]::uuid[]) as c', [a]))
+    .rows[0].c;
+  assert.ok(friendly.lobbyId);
+  await db.query('select public.cancel_challenge($1)', [friendly.challengeId]);
+  // A stranger leaving breaks the table up instead of leaving one player waiting forever.
+  await login(guest, true);
+  await db.query('select public.leave_lobby($1)', [second.lobbyId]);
+  assert.equal(
+    (await db.query('select status from public.lobbies where id=$1', [second.lobbyId])).rows[0]
+      .status,
+    'CANCELLED',
+  );
+  assert.equal(
+    (
+      await db.query(
+        "select count(*)::int as n from public.notifications where user_id=$1 and type='CHALLENGE_CANCELLED' and related_lobby_id=$2",
+        [outsider, second.lobbyId],
+      )
+    ).rows[0].n,
+    1,
+  );
+  await db.query('select public.leave_quick_match()');
+  await login(outsider);
+  await db.query('select public.leave_quick_match()');
+
+  // A guest who signs up keeps their uid and gets a real handle and ID.
+  await db.query(
+    "update auth.users set is_anonymous=false, email='ghost@example.test' where id=$1",
+    [guest],
+  );
+  await login(guest);
+  const promoted = (await db.query('select public.ensure_social_identity() as me')).rows[0].me;
+  assert.equal(promoted.id, guest);
+  assert.equal(promoted.isGuest, false);
+  assert.equal(promoted.username, 'ghost');
+  assert.match(promoted.publicId, /^[1-9][0-9]{7}$/);
+  console.log(
+    'PASS: guests get temporary handles and no ID, cannot use friend features or be found, can quick-play; quick tables seat by arrival, break up on leave and never block friend games; sign-up keeps the uid and issues a public ID.',
+  );
+  // --- account wallet (migration 0007) ----------------------------------------
+  const catalog = createRequire(import.meta.url)(path.join(out, 'cosmetics/catalog.js')).COSMETICS;
+  const compareIds = (x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0);
+  const storeRows = (
+    await db.query('select id, kind, price, currency, board, dice from public.store_items')
+  ).rows
+    .map((r) => ({ id: r.id, kind: r.kind, price: r.price, currency: r.currency, board: r.board, dice: r.dice }))
+    .sort(compareIds);
+  assert.deepEqual(
+    storeRows,
+    catalog
+      .map((c) => ({
+        id: c.id,
+        kind: c.kind,
+        price: c.price,
+        currency: c.currency ?? 'coins',
+        board: c.contents?.board ?? null,
+        dice: c.contents?.dice ?? null,
+      }))
+      .sort(compareIds),
+    'store_items must mirror src/domain/cosmetics/catalog.ts (add the item to a migration)',
+  );
+  // The wallet columns are closed to clients even for their own row; only the
+  // display name stays theirs. Inventory and rewards have no write path at all.
+  const privilege = async (sql) => (await db.query(sql)).rows[0].ok;
+  for (const column of ['coins', 'games_played', 'games_won', 'streak', 'best_streak', 'last_gift'])
+    assert.equal(
+      await privilege(
+        `select has_column_privilege('authenticated','public.profiles','${column}','UPDATE') as ok`,
+      ),
+      false,
+      `${column} must not be client-writable`,
+    );
+  assert.equal(
+    await privilege(
+      "select has_column_privilege('authenticated','public.profiles','display_name','UPDATE') as ok",
+    ),
+    true,
+  );
+  for (const table of ['profile_items', 'profile_rewards'])
+    assert.equal(
+      await privilege(`select has_table_privilege('authenticated','public.${table}','INSERT') as ok`),
+      false,
+    );
+  for (const fn of [
+    'get_wallet()',
+    'purchase_item(text,integer)',
+    'claim_daily_gift()',
+    'claim_rescue()',
+    'award_match(text,boolean,boolean,integer,integer,integer)',
+  ])
+    assert.equal(
+      await privilege(`select has_function_privilege('anon','public.${fn}','EXECUTE') as ok`),
+      false,
+    );
+  const walletOf = async () => (await db.query('select public.get_wallet() as w')).rows[0].w;
+  const buy = async (id, price) =>
+    (await db.query('select public.purchase_item($1,$2) as w', [id, price])).rows[0].w;
+  const award = async (id, won, eligible) =>
+    (await db.query('select public.award_match($1,$2,$3) as w', [id, won, eligible])).rows[0].w;
+  await login(a);
+  const fresh = await walletOf();
+  assert.equal(fresh.coins, 1000);
+  assert.deepEqual(fresh.owned, []);
+  await assert.rejects(buy('not-a-thing', 0), /not in the store/);
+  await assert.rejects(buy('royal', 1), /price.*changed/i);
+  // Grind-worthy prices: the starting balance affords nothing paid.
+  await assert.rejects(buy('neon-pack', 9375), /Not enough coins/);
+  await db.query('update public.profiles set coins = 10000 where uid=$1', [a]);
+  const bought = await buy('neon-pack', 9375);
+  assert.equal(bought.coins, 625);
+  assert.deepEqual([...bought.owned].sort(), ['neon', 'neon-dice', 'neon-pack']);
+  assert.equal((await buy('neon-pack', 9375)).coins, 625, 'owned again: no second charge');
+  assert.equal((await buy('neon-dice', 1200)).coins, 625, 'pack contents are already owned');
+  // Legendaries cost gems (0021): the default 20 gems afford none of them.
+  await assert.rejects(buy('royal', 480), /Not enough gems/);
+  assert.equal((await walletOf()).coins, 625, 'a refused purchase changes nothing');
+  await db.query('update public.profiles set gems = 500 where uid=$1', [a]);
+  const gemBought = await buy('midnight', 240);
+  assert.equal(gemBought.gems, 260, 'a gem item charges gems');
+  assert.equal(gemBought.coins, 625, 'and leaves coins alone');
+  // The daily gift climbs a 7-day calendar: day 1 pays 100.
+  const gift = (await db.query('select public.claim_daily_gift() as w')).rows[0].w;
+  assert.equal(gift.coins, 725);
+  assert.equal(gift.giftStreak, 1);
+  assert.match(gift.lastGift, /^\d{4}-\d{2}-\d{2}$/);
+  await assert.rejects(db.query('select public.claim_daily_gift()'), /claimed/);
+  const firstAward = await award('match-1', true, true);
+  assert.deepEqual(
+    [firstAward.coins, firstAward.games, firstAward.wins, firstAward.streak, firstAward.bestStreak],
+    [775, 1, 1, 1, 1],
+  );
+  assert.equal((await award('match-1', true, true)).coins, 775, 'a replayed result pays once');
+  const secondAward = await award('match-2', false, true);
+  assert.deepEqual(
+    [secondAward.coins, secondAward.games, secondAward.streak, secondAward.bestStreak],
+    [775, 2, 0, 1],
+    'a finished loss pays XP, not coins',
+  );
+  assert.equal((await award('match-3', true, false)).coins, 775, 'ineligible: stats only');
+  // The comeback rescue: only while nearly broke, once a day.
+  await assert.rejects(db.query('select public.claim_rescue()'), /nearly out of coins/);
+  await db.query('update public.profiles set coins = 40 where uid=$1', [a]);
+  const rescued = (await db.query('select public.claim_rescue() as w')).rows[0].w;
+  assert.equal(rescued.coins, 340);
+  assert.match(rescued.lastRescue, /^\d{4}-\d{2}-\d{2}$/);
+  await db.query('update public.profiles set coins = 20 where uid=$1', [a]);
+  await assert.rejects(db.query('select public.claim_rescue()'), /rescue is used/);
+  await db.query('update public.profiles set coins = 775 where uid=$1', [a]);
+  await assert.rejects(award('', true, true), /Invalid match id/);
+  await assert.rejects(award('x'.repeat(65), true, true), /Invalid match id/);
+  // Guests have no wallet at all.
+  const ghost2 = randomUUID();
+  await db.query('insert into auth.users(id,is_anonymous) values ($1,true)', [ghost2]);
+  await login(ghost2, true);
+  for (const [fn, args] of [
+    ['get_wallet()', []],
+    ['purchase_item($1,$2)', ['classic-pack', 0]],
+    ['claim_daily_gift()', []],
+    ['claim_rescue()', []],
+    ['award_match($1,$2,$3)', ['g', true, true]],
+  ])
+    await assert.rejects(db.query(`select public.${fn}`, args), /Create an account/);
+  // A member whose profile row does not exist yet gets one, with the default wallet.
+  const newbie = randomUUID();
+  await db.query("insert into auth.users(id,email) values ($1,'new@example.test')", [newbie]);
+  await login(newbie);
+  assert.equal((await walletOf()).coins, 1000);
+  assert.equal((await buy('classic-pack', 0)).coins, 1000);
+  console.log(
+    'PASS: account wallet mirrors the catalog; coins, inventory and rewards change only through their functions; purchases, gifts and rewards are idempotent and refused for guests, stale prices, unknown items and short balances.',
+  );
+  // --- feedback (migration 0008) ----------------------------------------------
+  const sendFeedback = (category, message, email = null) =>
+    db.query('select public.submit_feedback($1,$2,$3,$4,$5)', [category, message, email, 'android', '1.0.0']);
+  const feedbackCount = async () =>
+    (await db.query('select count(*)::int as n from public.feedback')).rows[0].n;
+  // A caller with no session at all can still report a bug.
+  await db.query("select set_config('request.jwt.claim.sub','',false)");
+  await db.query("select set_config('request.jwt.claims','{}',false)");
+  await sendFeedback('bug', '  The dice froze.  ');
+  const anonRow = (await db.query('select uid, message, platform from public.feedback')).rows[0];
+  assert.equal(anonRow.uid, null);
+  assert.equal(anonRow.message, 'The dice froze.', 'message is trimmed server-side');
+  assert.equal(anonRow.platform, 'android');
+  await assert.rejects(sendFeedback('complaint', 'x'), /choose a category/);
+  await assert.rejects(sendFeedback('bug', '   '), /between 1 and 2000/);
+  await assert.rejects(sendFeedback('bug', 'x'.repeat(2001)), /between 1 and 2000/);
+  await assert.rejects(sendFeedback('bug', 'hi', 'not-an-email'), /valid email/);
+  // A signed-in reporter is throttled after five messages in ten minutes.
+  const reporter = randomUUID();
+  await db.query("insert into auth.users(id,email) values ($1,'reporter@example.test')", [reporter]);
+  await login(reporter);
+  for (let i = 0; i < 5; i++) await sendFeedback('suggestion', `idea ${i}`, 'reporter@example.test');
+  await assert.rejects(sendFeedback('suggestion', 'one too many'), /wait a bit/);
+  assert.equal(await feedbackCount(), 6);
+  // Nobody can read feedback back, not even its author, and nothing can write it directly.
+  assert.equal(
+    (await db.query("select count(*)::int as n from pg_policies where tablename='feedback'")).rows[0].n,
+    0,
+    'feedback must have no RLS policies at all',
+  );
+  assert.equal(
+    await privilege("select has_function_privilege('anon','public.submit_feedback(text,text,text,text,text)','EXECUTE') as ok"),
+    true,
+  );
+  console.log(
+    'PASS: feedback accepts reports from anyone, trims and validates server-side, throttles a signed-in reporter, and exposes no read or direct-write path.',
+  );
+
+  // --- account deletion (migration 0009) --------------------------------------
+  const leaving = randomUUID();
+  await db.query("insert into auth.users(id,email) values ($1,'leaving@example.test')", [leaving]);
+  await login(leaving);
+  await walletOf();
+  await buy('classic-pack', 0);
+  await award('leaving-match', true, true);
+  await sendFeedback('bug', 'Before I go: the board flickers.');
+  // Moving in an online match used to pin the account in place (0005's FK had
+  // no ON DELETE action). Seat this player in one and record a submit by them.
+  await db.query('update public.matches set last_submit_user=$1 where id=$2', [leaving, match]);
+  await db.query('select public.delete_own_account()');
+  const remaining = async (sql) => (await db.query(sql, [leaving])).rows[0].n;
+  assert.equal(await remaining('select count(*)::int as n from auth.users where id=$1'), 0);
+  assert.equal(await remaining('select count(*)::int as n from public.profiles where uid=$1'), 0);
+  assert.equal(await remaining('select count(*)::int as n from public.profile_items where uid=$1'), 0);
+  assert.equal(await remaining('select count(*)::int as n from public.profile_rewards where uid=$1'), 0);
+  assert.equal(
+    (await db.query('select last_submit_user from public.matches where id=$1', [match])).rows[0].last_submit_user,
+    null,
+    'the match survives with its bookkeeping column cleared',
+  );
+  assert.equal(
+    (await db.query("select count(*)::int as n from public.feedback where message like 'Before I go%' and uid is null")).rows[0].n,
+    1,
+    'feedback outlives the account, detached from it',
+  );
+  // No session, no deletion; and the function is closed to anon entirely.
+  await db.query("select set_config('request.jwt.claim.sub','',false)");
+  await db.query("select set_config('request.jwt.claims','{}',false)");
+  await assert.rejects(db.query('select public.delete_own_account()'), /sign in again/);
+  assert.equal(
+    await privilege("select has_function_privilege('anon','public.delete_own_account()','EXECUTE') as ok"),
+    false,
+  );
+  console.log(
+    'PASS: deleting an account removes its profile, inventory and rewards, detaches its feedback, no longer trips the match foreign key, and needs a signed-in session.',
+  );
+  // --- invite links (migration 0011) -------------------------------------------
+  const linkHost = randomUUID();
+  const linkGuest = randomUUID();
+  const linkThird = randomUUID();
+  await db.query("insert into auth.users(id,email) values ($1,'host@example.test'),($2,null),($3,'third@example.test')", [linkHost, linkGuest, linkThird]);
+  await db.query('update auth.users set is_anonymous=true where id=$1', [linkGuest]);
+  await login(linkHost);
+  await assert.rejects(db.query('select public.create_link_room(5)'), /2 to 4/);
+  const linkRoom = (await db.query('select public.create_link_room(2) as r')).rows[0].r;
+  assert.match(linkRoom.code, /^[A-HJ-NP-Z2-9]{6}$/);
+  const hostView = (await db.query('select public.get_lobby($1) as l', [linkRoom.lobbyId])).rows[0].l;
+  assert.equal(hostView.lobby.inviteCode, linkRoom.code, 'the host can read the code back');
+  assert.equal(hostView.challenge.kind, 'LINK');
+  assert.equal(hostView.players.length, 1);
+  // A guest can join by code, typed loosely.
+  await login(linkGuest, true);
+  await assert.rejects(db.query('select public.get_lobby($1) as l', [linkRoom.lobbyId]), /./, 'not a member yet');
+  await assert.rejects(db.query('select public.join_link_room($1)', ['nope']), /does not look right/);
+  await assert.rejects(db.query('select public.join_link_room($1)', ['ZZZZZZ']), /No game found/);
+  const looseCode = linkRoom.code.toLowerCase().slice(0, 3) + '-' + linkRoom.code.toLowerCase().slice(3);
+  const linkJoined = (await db.query('select public.join_link_room($1) as r', [looseCode])).rows[0].r;
+  assert.equal(linkJoined.lobbyId, linkRoom.lobbyId);
+  const guestView = (await db.query('select public.get_lobby($1) as l', [linkRoom.lobbyId])).rows[0].l;
+  assert.equal(guestView.players.filter((pl) => pl.status === 'JOINED').length, 2);
+  assert.equal((await db.query('select public.join_link_room($1) as r', [linkRoom.code])).rows[0].r.lobbyId, linkRoom.lobbyId, 'joining twice is harmless');
+  // Full now.
+  await login(linkThird);
+  await assert.rejects(db.query('select public.join_link_room($1)', [linkRoom.code]), /full/);
+  // The guest leaves; the seat frees up for someone else.
+  await login(linkGuest, true);
+  await db.query('select public.leave_lobby($1)', [linkRoom.lobbyId]);
+  await login(linkThird);
+  assert.equal((await db.query('select public.join_link_room($1) as r', [linkRoom.code])).rows[0].r.lobbyId, linkRoom.lobbyId);
+  // A new linkRoom replaces the host's old one, and a closed linkRoom refuses joins.
+  await login(linkHost);
+  const secondRoom = (await db.query('select public.create_link_room(3) as r')).rows[0].r;
+  assert.notEqual(secondRoom.code, linkRoom.code);
+  assert.equal((await db.query('select status from public.lobbies where id=$1', [linkRoom.lobbyId])).rows[0].status, 'CANCELLED');
+  await login(linkGuest, true);
+  await assert.rejects(db.query('select public.join_link_room($1)', [linkRoom.code]), /already started or was closed/);
+  // Expiry closes a linkRoom nobody filled.
+  await db.query("update public.challenges set expires_at = now() - interval '1 minute' where lobby_id=$1", [secondRoom.lobbyId]);
+  await assert.rejects(db.query('select public.join_link_room($1)', [secondRoom.code]), /already started or was closed/);
+  for (const fn of ['create_link_room(integer,integer,text,boolean)', 'join_link_room(text)'])
+    assert.equal(
+      await privilege(`select has_function_privilege('anon','public.${fn}','EXECUTE') as ok`),
+      false,
+    );
+  console.log(
+    'PASS: invite links create a coded room, let members and guests join by code (loosely typed, idempotent), refuse full, closed, expired and malformed codes, free a seat when someone leaves, and show the code only to people in the room.',
+  );
+  // --- progression (migration 0012) --------------------------------------------
+  const levelOf = async (xp) => (await db.query('select public.level_info($1) as l', [xp])).rows[0].l;
+  assert.deepEqual(await levelOf(0), { level: 1, into: 0, need: 100 });
+  assert.deepEqual(await levelOf(99), { level: 1, into: 99, need: 100 });
+  assert.deepEqual(await levelOf(100), { level: 2, into: 0, need: 140 });
+  assert.deepEqual(await levelOf(240), { level: 3, into: 0, need: 180 });
+
+  // Two members play an online match to the end; the server pays from its own record.
+  const pWin = randomUUID();
+  const pLose = randomUUID();
+  await db.query("insert into auth.users(id,email) values ($1,'winner@example.test'),($2,'loser@example.test')", [pWin, pLose]);
+  const pLobby = randomUUID();
+  const pMatch = randomUUID();
+  await login(pWin);
+  await db.query('select public.get_wallet()');
+  await login(pLose);
+  await db.query('select public.get_wallet()');
+  await db.query("insert into public.challenges(id,creator_id,player_count,status,expires_at) values ($1,$2,2,'IN_LOBBY',now()+interval '1 hour')", [pLobby, pWin]);
+  await db.query("insert into public.lobbies(id,challenge_id,host_id,max_players,status) values ($1,$1,$2,2,'STARTED')", [pLobby, pWin]);
+  await db.query("insert into public.matches(id,lobby_id,player_count,status,winner_seat,finished_at) values ($1,$2,2,'FINISHED',0,now())", [pMatch, pLobby]);
+  await db.query('insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0),($1,$3,1)', [pMatch, pWin, pLose]);
+  await login(pWin);
+  const onlineWon = (await db.query('select public.award_online_match($1,3,2,1) as w', [pMatch])).rows[0].w;
+  assert.equal(onlineWon.coins, 1240, 'online win pays 100, plus 140 for reaching level 2');
+  assert.equal(onlineWon.xp, 120);
+  assert.equal(onlineWon.level.level, 2);
+  assert.equal(onlineWon.gems, 25, 'levelling up to 2 paid 5 gems');
+  assert.equal((await db.query('select public.award_online_match($1) as w', [pMatch])).rows[0].w.coins, 1240, 'paid once');
+  await login(pLose);
+  // The loser never collects; loading the wallet collects for them.
+  const collectedWallet = (await db.query('select public.get_wallet() as w')).rows[0].w;
+  assert.equal(collectedWallet.coins, 1000, 'the loser earns XP only, collected on wallet load');
+  const outsiderTry = randomUUID();
+  await db.query("insert into auth.users(id,email) values ($1,'nosy@example.test')", [outsiderTry]);
+  await login(outsiderTry);
+  await assert.rejects(db.query('select public.award_online_match($1)', [pMatch]), /not in that match/);
+  await assert.rejects(db.query("select public.award_match('online:x', true, true)"), /Invalid match id/, 'cannot claim an online reward as a bot game');
+
+  // Computer games pay 50 / 15, and only 25 paid games a day.
+  await login(pLose);
+  for (let i = 0; i < 25; i++) await db.query("select public.award_match($1, true, true)", [`bot-${i}`]);
+  const cappedAward = (await db.query("select public.award_match('bot-25', true, true) as w")).rows[0].w;
+  const paidRows = (await db.query("select count(*)::int as n from public.profile_rewards where uid=$1 and coins > 0 and match_id like 'bot-%'", [pLose])).rows[0].n;
+  assert.equal(paidRows, 25, 'the 26th bot game of the day pays no coins');
+  assert.equal(cappedAward.games, 27);
+
+  // Tournament: the online win scored 3, the finish 1.
+  await login(pWin);
+  const tourney = (await db.query('select public.get_tournament() as t')).rows[0].t;
+  assert.equal(tourney.me.points, 3);
+  assert.equal(tourney.me.rank, 1);
+  assert.equal(tourney.top[0].userId, pWin);
+  assert.equal(tourney.top[1].points, 1);
+  await assert.rejects(db.query('select public.claim_tournament_prize()'), /did not play/);
+  // Last week's standings pay by rank, once.
+  await db.query("insert into public.tournament_scores(uid,week,points,wins,games) values ($1, public.current_week()-7, 9, 3, 3), ($2, public.current_week()-7, 4, 1, 3)", [pWin, pLose]);
+  const prizeBefore = (await db.query('select coins, gems from public.profiles where uid=$1', [pWin])).rows[0];
+  const claimedTour = (await db.query('select public.claim_tournament_prize() as t')).rows[0].t;
+  assert.equal(claimedTour.lastWeek.rank, 1);
+  assert.equal(claimedTour.lastWeek.claimed, true);
+  const prizeAfter = (await db.query('select coins, gems from public.profiles where uid=$1', [pWin])).rows[0];
+  assert.equal(prizeAfter.coins - prizeBefore.coins, 3000);
+  assert.equal(prizeAfter.gems - prizeBefore.gems, 60);
+  await db.query('select public.claim_tournament_prize()');
+  assert.equal((await db.query('select coins from public.profiles where uid=$1', [pWin])).rows[0].coins, prizeAfter.coins, 'claimed once');
+
+  // Daily doSpin: one free, three paid with gems, then done.
+  const doSpin = async () => (await db.query('select public.spin_daily() as s')).rows[0].s;
+  const firstSpin = await doSpin();
+  assert.ok(['coins', 'gems', 'xp'].includes(firstSpin.reward.kind));
+  assert.equal(firstSpin.spinsToday, 1);
+  const gemsBefore = (await db.query('select gems from public.profiles where uid=$1', [pWin])).rows[0].gems;
+  const secondSpin = await doSpin();
+  const gemsAfter = secondSpin.wallet.gems;
+  assert.equal(gemsAfter, gemsBefore - 10 + (secondSpin.reward.kind === 'gems' ? secondSpin.reward.amount : 0), 'extra spins cost 10 gems');
+  await doSpin();
+  await doSpin();
+  await assert.rejects(doSpin(), /all the spins for today/);
+
+  // Missions: three a day; progress from real events; claim once when done.
+  const rewardsView = (await db.query('select public.get_rewards() as r')).rows[0].r;
+  assert.equal(rewardsView.missions.length, 3);
+  const spinMission = rewardsView.missions.find((m) => m.id === 'spin-1');
+  if (spinMission) assert.equal(spinMission.progress, 1, 'the spin counted toward the spin mission');
+  const unfinished = rewardsView.missions.find((m) => m.progress < m.target);
+  if (unfinished) await assert.rejects(db.query('select public.claim_mission($1)', [unfinished.id]), /Finish the mission first/);
+  // Force one mission complete and claim it.
+  const missionTarget = rewardsView.missions[0];
+  await db.query("insert into public.mission_progress(uid,day,mission_id,progress) values ($1, public.utc_today(), $2, $3) on conflict (uid,day,mission_id) do update set progress = excluded.progress", [pWin, missionTarget.id, missionTarget.target]);
+  const coinsPre = (await db.query('select coins from public.profiles where uid=$1', [pWin])).rows[0].coins;
+  const afterClaim = (await db.query('select public.claim_mission($1) as r', [missionTarget.id])).rows[0].r;
+  assert.ok(afterClaim.missions.find((m) => m.id === missionTarget.id).claimed);
+  assert.ok(afterClaim.wallet.coins >= coinsPre + missionTarget.coins);
+  await db.query('select public.claim_mission($1)', [missionTarget.id]);
+  await assert.rejects(db.query("select public.claim_mission('not-today')"), /not one of today/);
+
+  // Season pass: tiers unlock with season XP; premium costs 250 gems.
+  const seasonView = (await db.query('select public.get_rewards() as r')).rows[0].r.season;
+  assert.ok(seasonView.xp >= 120, 'match XP also counts toward the season');
+  await assert.rejects(db.query('select public.claim_season_tier(30, false)'), /more season XP/);
+  await assert.rejects(db.query('select public.claim_season_tier(0, false)'), /no such tier/);
+  const tierCoins = (await db.query('select coins from public.profiles where uid=$1', [pWin])).rows[0].coins;
+  await db.query('select public.claim_season_tier(1, false)');
+  assert.equal((await db.query('select coins from public.profiles where uid=$1', [pWin])).rows[0].coins, tierCoins + 90);
+  await db.query('select public.claim_season_tier(1, false)');
+  assert.equal((await db.query('select coins from public.profiles where uid=$1', [pWin])).rows[0].coins, tierCoins + 90, 'a tier pays once');
+  await assert.rejects(db.query('select public.claim_season_tier(1, true)'), /premium pass/);
+  await db.query('update public.profiles set gems = 300 where uid=$1', [pWin]);
+  await db.query('select public.buy_season_premium()');
+  assert.equal((await db.query('select gems from public.profiles where uid=$1', [pWin])).rows[0].gems, 50);
+  await db.query('select public.claim_season_tier(1, true)');
+
+  // Rewarded ads (0020): small grants, capped per UTC day, all opt-in.
+  const adUser = randomUUID();
+  await db.query("insert into auth.users(id,email) values ($1,'ads@example.test')", [adUser]);
+  await login(adUser);
+  const adClaim = async (kind) =>
+    (await db.query('select public.claim_ad_reward($1) as w', [kind])).rows[0].w;
+  await assert.rejects(db.query("select public.claim_ad_reward('nope')"), /not available/);
+  for (let i = 1; i <= 5; i++) assert.equal((await adClaim('gem')).gems, 20 + 2 * i, 'two gems per ad (0033)');
+  await assert.rejects(adClaim('gem'), /tomorrow/);
+  // The rescue boost needs today's rescue claimed first, then pays once.
+  await assert.rejects(adClaim('rescue-boost'), /rescue first/);
+  await db.query('update public.profiles set coins = 40 where uid=$1', [adUser]);
+  assert.equal((await db.query('select public.claim_rescue() as w')).rows[0].w.coins, 340);
+  assert.equal((await adClaim('rescue-boost')).coins, 840, 'the rescue boost is 500 (0033)');
+  await assert.rejects(adClaim('rescue-boost'), /tomorrow/);
+  // A spin credit pays the next extra spin instead of gems.
+  const adSpin = async () => (await db.query('select public.spin_daily() as s')).rows[0].s;
+  await adSpin(); // the free one
+  await adClaim('spin');
+  const gemsHeld = (await db.query('select gems from public.profiles where uid=$1', [adUser])).rows[0].gems;
+  const credited = await adSpin();
+  assert.equal(
+    credited.wallet.gems,
+    gemsHeld + (credited.reward.kind === 'gems' ? credited.reward.amount : 0),
+    'an ad credit paid the extra spin, not gems',
+  );
+  const adsView = (await db.query('select public.get_rewards() as r')).rows[0].r.ads;
+  assert.equal(adsView.gem, 5);
+  assert.equal(adsView.spin, 1);
+  assert.equal(adsView['rescue-boost'], 1);
+
+  // Economy tuning (0033): a coin ad pays 500 four times a day; a free online
+  // win doubles once by ad, three a day, never a staked pot; gems exchange one
+  // way at 200 in fixed bundles; the five coin packs exist.
+  {
+    const before = (await db.query('select coins from public.profiles where uid=$1', [adUser])).rows[0].coins;
+    for (let i = 1; i <= 4; i++) assert.equal((await adClaim('coin')).coins, before + 500 * i, 'a coin ad pays 500');
+    await assert.rejects(adClaim('coin'), /tomorrow/, 'four coin ads a day');
+    await assert.rejects(adClaim('double'), /not available/, "'double' needs a match: claim_double_up");
+    assert.equal((await db.query('select public.get_rewards() as r')).rows[0].r.ads.coin, 4);
+    // Spins: three ad spins a day now.
+    await adClaim('spin'); await adClaim('spin');
+    await assert.rejects(adClaim('spin'), /tomorrow/, 'three spin ads a day');
+
+    const dLobby = randomUUID(), dMatch = randomUUID(), dLoser = randomUUID();
+    await db.query("insert into auth.users(id,email) values ($1,'dloser@example.test')", [dLoser]);
+    await login(dLoser); await db.query('select public.get_wallet()');
+    await login(adUser);
+    await db.query("insert into public.lobbies(id,host_id,max_players,status) values ($1,$2,2,'STARTED')", [dLobby, adUser]);
+    await db.query("insert into public.matches(id,lobby_id,player_count,status,winner_seat,finished_at) values ($1,$2,2,'FINISHED',0,now())", [dMatch, dLobby]);
+    await db.query('insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0),($1,$3,1)', [dMatch, adUser, dLoser]);
+    await assert.rejects(db.query('select public.claim_double_up($1)', [dMatch]), /no win to double/, 'nothing to double before the result is recorded');
+    const paid = (await db.query('select public.award_online_match($1) as w', [dMatch])).rows[0].w.coins;
+    const doubled = (await db.query('select public.claim_double_up($1) as w', [dMatch])).rows[0].w.coins;
+    assert.equal(doubled, paid + 100, 'the free-table win pay (100) is paid again');
+    await assert.rejects(db.query('select public.claim_double_up($1)', [dMatch]), /already doubled/);
+    await login(dLoser);
+    await db.query('select public.award_online_match($1)', [dMatch]);
+    await assert.rejects(db.query('select public.claim_double_up($1)', [dMatch]), /no win to double/, 'a loss cannot be doubled');
+    await login(adUser);
+    const sLobby = randomUUID(), sMatch = randomUUID();
+    await db.query("insert into public.lobbies(id,host_id,max_players,status,stake) values ($1,$2,2,'STARTED',500)", [sLobby, adUser]);
+    await db.query("insert into public.matches(id,lobby_id,player_count,status,winner_seat,finished_at,stake,pool) values ($1,$2,2,'FINISHED',0,now(),500,1000)", [sMatch, sLobby]);
+    await db.query('insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0),($1,$3,1)', [sMatch, adUser, dLoser]);
+    await db.query('select public.award_online_match($1)', [sMatch]);
+    await assert.rejects(db.query('select public.claim_double_up($1)', [sMatch]), /free-table/, 'a staked pot is never doubled');
+
+    await db.query('update public.profiles set gems = 60 where uid=$1', [adUser]);
+    const c0 = (await db.query('select coins from public.profiles where uid=$1', [adUser])).rows[0].coins;
+    const ex = (await db.query('select public.convert_gems(10) as w')).rows[0].w;
+    assert.equal(ex.gems, 50); assert.equal(ex.coins, c0 + 2000, '10 gems become 2,000 coins');
+    const ex2 = (await db.query('select public.convert_gems(50) as w')).rows[0].w;
+    assert.equal(ex2.gems, 0); assert.equal(ex2.coins, c0 + 12000);
+    await assert.rejects(db.query('select public.convert_gems(10)'), /Not enough gems/);
+    await assert.rejects(db.query('select public.convert_gems(7)'), /bundles/, 'only the fixed bundles');
+    const packs = (await db.query("select id, coins from public.iap_products where id like 'ludo.coins.%' and id not in ('ludo.coins.small','ludo.coins.large') order by coins")).rows;
+    assert.deepEqual(packs.map((p) => p.coins), [40000, 100000, 275000, 600000, 1300000], 'the five coin packs');
+  }
+
+  // Leagues (0022): weekly settlement, promotion pays only a first arrival.
+  const lgUser = randomUUID();
+  await db.query("insert into auth.users(id,email) values ($1,'league@example.test')", [lgUser]);
+  await login(lgUser);
+  const leagueOf = async () => (await db.query('select public.get_league() as l')).rows[0].l;
+  const freshLeague = await leagueOf();
+  assert.equal(freshLeague.division, 1);
+  assert.equal(freshLeague.promoteAt, 15);
+  assert.equal(freshLeague.demoteBelow, null, 'Bronze never relegates');
+  assert.equal(freshLeague.lastResult, null);
+  // A 20-point week promotes Bronze → Silver and pays first-arrival gems.
+  await db.query('update public.league_state set week = public.current_week() - 7 where uid=$1', [lgUser]);
+  await db.query('insert into public.tournament_scores(uid, week, points) values ($1, public.current_week() - 7, 20)', [lgUser]);
+  const lgGems = (await db.query('select gems from public.profiles where uid=$1', [lgUser])).rows[0].gems;
+  const lgPromoted = await leagueOf();
+  assert.equal(lgPromoted.division, 2);
+  assert.deepEqual(
+    { from: lgPromoted.lastResult.from, to: lgPromoted.lastResult.to, gems: lgPromoted.lastResult.gems },
+    { from: 1, to: 2, gems: 15 },
+  );
+  assert.equal((await db.query('select gems from public.profiles where uid=$1', [lgUser])).rows[0].gems, lgGems + 15);
+  // Reading again the same week settles nothing more.
+  const settledLeague = await leagueOf();
+  assert.equal(settledLeague.division, 2);
+  assert.equal(settledLeague.lastResult, null);
+  // A quiet week relegates Silver → Bronze…
+  await db.query('update public.league_state set week = public.current_week() - 7 where uid=$1', [lgUser]);
+  await db.query('delete from public.tournament_scores where uid=$1', [lgUser]);
+  const dropped = await leagueOf();
+  assert.equal(dropped.division, 1);
+  assert.equal(dropped.lastResult.gems, 0);
+  // …and re-climbing a division already reached pays nothing again.
+  await db.query('update public.league_state set week = public.current_week() - 7 where uid=$1', [lgUser]);
+  await db.query('insert into public.tournament_scores(uid, week, points) values ($1, public.current_week() - 7, 20)', [lgUser]);
+  const reclimbed = await leagueOf();
+  assert.equal(reclimbed.division, 2);
+  assert.equal(reclimbed.lastResult.gems, 0, 'a promotion already banked pays once');
+
+  // The gift catalogue the client shows must be the one the server charges.
+  {
+    const { TABLE_GIFTS } = createRequire(import.meta.url)(path.join(out, 'social/tableGifts.js'));
+    const rows = (await db.query('select id, gems from public.table_gifts order by id')).rows;
+    assert.deepEqual(
+      rows,
+      [...TABLE_GIFTS]
+        .map((g) => ({ id: g.id, gems: g.gems }))
+        .sort((x, y) => (x.id < y.id ? -1 : 1)),
+      'table_gifts must mirror src/domain/social/tableGifts.ts (update the migration)',
+    );
+  }
+  // Computer players (0032): a free table fills with bots after the wait, never
+  // before it and never for coins; the server plays their turns legally; they
+  // stay out of search and the weekly ladder.
+  {
+    const bots = (await db.query('select country from public.profiles where is_bot')).rows;
+    assert.equal(bots.length, 30, 'thirty computer players');
+    assert.equal(new Set(bots.map((b) => b.country)).size, 30, 'each from a different country');
+    const solo = randomUUID();
+    await db.query("insert into auth.users(id,email) values ($1,'solo@example.test')", [solo]);
+    await login(solo);
+    await db.query('select public.get_wallet()');
+    let ticket = (await db.query('select public.join_quick_match(3) as t')).rows[0].t;
+    assert.equal(ticket.status, 'WAITING', 'no bots before the wait');
+    await db.query(
+      "update public.matchmaking_queue set joined_at = now() - interval '61 seconds' where user_id=$1",
+      [solo],
+    );
+    ticket = (await db.query('select public.join_quick_match(3) as t')).rows[0].t;
+    assert.equal(ticket.status, 'MATCHED', 'after the wait, computer players fill the free table');
+    const room = (await db.query('select public.get_lobby($1) as l', [ticket.lobbyId])).rows[0].l;
+    assert.equal(room.lobby.status, 'COUNTDOWN');
+    assert.equal(room.lobby.hostId, solo, 'the person hosts');
+    const seatedBots = room.players.filter((p) => p.isBot);
+    assert.equal(seatedBots.length, 2, 'the two empty seats are bots');
+    assert.ok(
+      seatedBots.every((p) => p.presence === 'ONLINE' && p.country && p.avatar && p.isReady),
+      'bots look present and ready',
+    );
+    assert.equal(
+      (await db.query("select * from public.search_users('aarav')")).rows.length,
+      0,
+      'bots are not searchable',
+    );
+
+    await db.query("update public.lobbies set start_at = now() - interval '1 second' where id=$1", [
+      ticket.lobbyId,
+    ]);
+    await db.query('select public.start_match($1)', [ticket.lobbyId]);
+    const botMatch = (
+      await db.query('select id from public.matches where lobby_id=$1', [ticket.lobbyId])
+    ).rows[0].id;
+    await assert.rejects(
+      db.query('select public.play_bot_turn($1,0)', [botMatch]),
+      /not a computer player/,
+      "a person's turn cannot be played for them",
+    );
+    // Hand the turn to the bot in seat 1 and let the server play it.
+    const base = (
+      await db.query(
+        `select public.ludo_opening(3,'classic',false) || '{"currentPlayerIndex":1}'::jsonb as b`,
+      )
+    ).rows[0].b;
+    await db.query('update public.matches set state=$2::jsonb, turn_seat=1 where id=$1', [
+      botMatch,
+      JSON.stringify(base),
+    ]);
+    let snap = (await db.query('select public.play_bot_turn($1,0) as s', [botMatch])).rows[0].s;
+    assert.equal(snap.match.version, 1);
+    assert.ok(
+      snap.match.lastRoll >= 1 && snap.match.lastRoll <= 6,
+      'the first poke rolls for the bot',
+    );
+    const die = snap.match.lastRoll;
+    assert.equal(
+      (await db.query('select public.play_bot_turn($1,0) as s', [botMatch])).rows[0].s.match
+        .version,
+      1,
+      'a stale poke changes nothing',
+    );
+    snap = (await db.query('select public.play_bot_turn($1,1) as s', [botMatch])).rows[0].s;
+    assert.equal(snap.match.version, 2);
+    assert.equal(snap.match.lastRoll, null, 'the second poke moves');
+    const legal = (
+      await db.query(
+        'select exists(select 1 from public.ludo_successors($1::jsonb,$2) s where s = $3::jsonb) as ok',
+        [JSON.stringify(base), die, JSON.stringify(snap.match.state)],
+      )
+    ).rows[0].ok;
+    assert.ok(legal, 'the bot played a legal move for its roll');
+    assert.ok(snap.players.find((p) => p.seatIndex === 1).isBot, 'the snapshot marks the bot');
+    // An expired bot turn is played by the clock, never charged as a lifeline.
+    await db.query('update public.matches set state=$2::jsonb, turn_seat=1, last_roll=null where id=$1', [botMatch, JSON.stringify(base)]);
+    await db.query("update public.matches set turn_deadline = now() - interval '1 second' where id=$1", [botMatch]);
+    const v = (await db.query('select version from public.matches where id=$1', [botMatch])).rows[0].version;
+    await db.query('select public.claim_turn_timeout($1,$2)', [botMatch, v]);
+    // The roll restarts the clock; expire it again for the move.
+    await db.query("update public.matches set turn_deadline = now() - interval '1 second' where id=$1", [botMatch]);
+    const expired = (await db.query('select public.claim_turn_timeout($1,$2) as s', [botMatch, v + 1])).rows[0].s;
+    assert.equal(expired.match.status, 'IN_PROGRESS', 'the table stays open');
+    assert.equal(expired.match.version, v + 2, 'the clock rolled then moved for the bot');
+    assert.equal(expired.match.lastRoll, null);
+    assert.equal(expired.players.find((p) => p.seatIndex === 1).missed, 0, 'a bot keeps all its lifelines');
+    await login(a);
+    await assert.rejects(
+      db.query('select public.play_bot_turn($1,2)', [botMatch]),
+      /not in that match/,
+      'outsiders cannot poke',
+    );
+    await login(solo);
+    // The person wins: the usual free-table coins and XP, but no ladder points.
+    const coinsBefore = (await db.query('select coins from public.profiles where uid=$1', [solo]))
+      .rows[0].coins;
+    await db.query(
+      "update public.matches set status='FINISHED', winner_seat=0, finished_at=now(), state=null where id=$1",
+      [botMatch],
+    );
+    await db.query('select public.award_online_match($1)', [botMatch]);
+    const botReward = (
+      await db.query('select coins, won from public.profile_rewards where uid=$1 and match_id=$2', [
+        solo,
+        'online:' + botMatch,
+      ])
+    ).rows[0];
+    assert.equal(botReward.coins, 100, 'a win over bots pays the free-table coins');
+    assert.equal(botReward.won, true);
+    assert.ok(
+      (await db.query('select coins from public.profiles where uid=$1', [solo])).rows[0].coins >=
+        coinsBefore + 100,
+      'the coins reach the wallet (plus any level-up bonus)',
+    );
+    assert.equal(
+      Number(
+        (await db.query('select count(*) from public.tournament_scores where uid=$1', [solo]))
+          .rows[0].count,
+      ),
+      0,
+      'a bot table scores no tournament points',
+    );
+    // For coins, the table waits for real players however long it takes.
+    const staked = randomUUID();
+    await db.query("insert into auth.users(id,email) values ($1,'staked@example.test')", [staked]);
+    await login(staked);
+    await db.query('select public.get_wallet()');
+    await db.query('select public.join_quick_match(2, 100)');
+    await db.query(
+      "update public.matchmaking_queue set joined_at = now() - interval '120 seconds' where user_id=$1",
+      [staked],
+    );
+    assert.equal(
+      (await db.query('select public.join_quick_match(2, 100) as t')).rows[0].t.status,
+      'WAITING',
+      'no bots at a staked table',
+    );
+    await db.query('select public.leave_quick_match()');
+  }
+
+  // Table gifts (0031): a seat pays gems to send a rose at another seat of
+  // its own live table; nothing reaches the receiver, and outsiders, finished
+  // tables, empty seats and quick repeats are all refused.
+  {
+    const g1 = randomUUID(),
+      g2 = randomUUID(),
+      g3 = randomUUID();
+    await db.query(
+      "insert into auth.users(id,email) values ($1,'g1@example.test'),($2,'g2@example.test'),($3,'g3@example.test')",
+      [g1, g2, g3],
+    );
+    for (const u of [g1, g2, g3]) {
+      await login(u);
+      await db.query('select public.get_wallet()');
+    }
+    await db.query('update public.profiles set gems = 12 where uid=$1', [g1]);
+    await db.query('update public.profiles set gems = 0 where uid=$1', [g2]);
+    const gLobby = randomUUID(),
+      gMatch = randomUUID();
+    await db.query(
+      "insert into public.lobbies(id,host_id,max_players,status) values ($1,$2,2,'STARTED')",
+      [gLobby, g1],
+    );
+    await db.query('insert into public.matches(id,lobby_id,player_count) values ($1,$2,2)', [
+      gMatch,
+      gLobby,
+    ]);
+    await db.query(
+      'insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0),($1,$3,1)',
+      [gMatch, g1, g2],
+    );
+    const gift = async (seat, id, gems) =>
+      (await db.query('select public.send_table_gift($1,$2,$3,$4) as w', [gMatch, seat, id, gems]))
+        .rows[0].w;
+    const cooled = () =>
+      db.query("update public.table_gift_log set sent_at = now() - interval '10 seconds'");
+    await login(g1);
+    assert.equal((await gift(1, 'rose', 5)).gems, 7, 'a rose costs the sender 5 gems');
+    await assert.rejects(
+      gift(1, 'rose', 5),
+      /One gift at a time/,
+      'a second gift within 3 seconds is refused',
+    );
+    await cooled();
+    await assert.rejects(gift(1, 'rose', 4), /price of this gift/, 'a stale price is refused');
+    await assert.rejects(gift(1, 'tank', 5), /no such gift/, 'an unknown gift is refused');
+    await assert.rejects(gift(0, 'rose', 5), /other players/, 'a self-gift is refused');
+    await assert.rejects(gift(3, 'rose', 5), /nobody in that seat/, 'an empty seat is refused');
+    await assert.rejects(
+      gift(1, 'crown', 15),
+      /Not enough gems/,
+      'a crown needs 15 gems; 7 are left',
+    );
+    assert.equal(
+      (await db.query('select gems from public.profiles where uid=$1', [g2])).rows[0].gems,
+      0,
+      'the receiver gains nothing',
+    );
+    assert.equal(
+      (await db.query('select gems from public.profiles where uid=$1', [g1])).rows[0].gems,
+      7,
+      'refusals charge nothing',
+    );
+    await login(g3);
+    await assert.rejects(
+      gift(1, 'rose', 5),
+      /not at that table/,
+      'an outsider cannot gift at a table',
+    );
+    await login(g1);
+    await cooled();
+    await db.query("update public.matches set status='FINISHED', finished_at=now() where id=$1", [
+      gMatch,
+    ]);
+    await assert.rejects(gift(1, 'rose', 5), /game is over/, 'no gifts after the match ends');
+    assert.equal(
+      (
+        await db.query('select count(*)::int as n from public.table_gift_log where from_uid=$1', [
+          g1,
+        ])
+      ).rows[0].n,
+      1,
+      'only the sent gift is logged',
+    );
+  }
+
+  // The Collection Room (0034): achievements count from the paths the game
+  // already writes, tiers unlock at thresholds, the showcase is validated,
+  // and a private room shows visitors only the name card.
+  {
+    const cUser = randomUUID(), cFriend = randomUUID();
+    await db.query("insert into auth.users(id,email) values ($1,'col@example.test'),($2,'colfriend@example.test')", [cUser, cFriend]);
+    for (const u of [cUser, cFriend]) { await login(u); await db.query('select public.get_wallet()'); }
+    await login(cUser);
+    const room = async (who) => (await db.query(who ? 'select public.get_collection($1) as c' : 'select public.get_collection() as c', who ? [who] : [])).rows[0].c;
+    const ach = (c, id) => c.achievements.find((a) => a.id === id);
+    let c = await room();
+    assert.equal(c.achievements.length, 24, 'every achievement is listed, locked or not');
+    assert.ok(c.achievements.every((a) => a.tier === 0 && a.progress === 0));
+    // A won online match: games, champion, first blood, and a 4-player table is no full house.
+    const cLobby = randomUUID(), cMatch = randomUUID();
+    await db.query("insert into public.lobbies(id,host_id,max_players,status) values ($1,$2,2,'STARTED')", [cLobby, cUser]);
+    await db.query("insert into public.matches(id,lobby_id,player_count,status,winner_seat,finished_at,variant) values ($1,$2,2,'FINISHED',0,now(),'quick1')", [cMatch, cLobby]);
+    await db.query('insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0),($1,$3,1)', [cMatch, cUser, cFriend]);
+    await db.query('select public.award_online_match($1, 3, 2, 1)', [cMatch]);
+    c = await room();
+    assert.equal(ach(c, 'champion').tier, 1, 'first online win unlocks Champion bronze');
+    assert.equal(ach(c, 'speed-demon').tier, 1, 'a Quick 1 coin win counts for Speed Demon');
+    assert.equal(ach(c, 'first-blood').progress, 2, 'captures count');
+    assert.equal(ach(c, 'first-blood').tier, 1);
+    assert.equal(ach(c, 'six-appeal').progress, 3);
+    assert.equal(ach(c, 'veteran').progress, 1);
+    assert.equal(ach(c, 'full-house').progress, 0, 'two seats is no full house');
+    assert.equal(c.unseen.length, 3, 'three fresh unlocks wait to be shown');
+    assert.equal((await db.query('select public.mark_unlocks_seen() as c')).rows[0].c.unseen.length, 0);
+    // Gifts, friends and a streak count through their own tables.
+    await db.query('insert into public.table_gift_log(match_id,from_uid,to_uid,gift,gems) values ($1,$2,$3,$4,5)', [cMatch, cUser, cFriend, 'rose']);
+    await db.query('insert into public.friendships(user_id,friend_id) values ($1,$2),($2,$1)', [cUser, cFriend]);
+    await db.query('update public.profiles set games_played = 5, games_won = 5, streak = 5, best_streak = 5 where uid=$1', [cUser]);
+    c = await room();
+    assert.equal(ach(c, 'generous-heart').tier, 1);
+    assert.equal(ach(c, 'social-butterfly').progress, 1);
+    assert.equal(ach(c, 'hot-streak').tier, 2, 'a best streak of 5 is Hot Streak silver');
+    await login(cFriend);
+    assert.equal(ach(await room(), 'crowd-favourite').tier, 1, 'the receiver counts too');
+    // The showcase: only unlocked things, at most three.
+    await login(cUser);
+    await assert.rejects(db.query("select public.set_showcase(array['ach:kingmaker'])"), /unlocked/, 'a locked achievement cannot be shown');
+    await assert.rejects(db.query("select public.set_showcase(array['throne:village'])"), /thrones you have won/);
+    await assert.rejects(db.query("select public.set_showcase(array['ach:champion','ach:first-blood','ach:speed-demon','ach:hot-streak'])"), /three/);
+    c = (await db.query("select public.set_showcase(array['ach:champion','ach:hot-streak']) as c")).rows[0].c;
+    assert.deepEqual(c.showcase, ['ach:champion', 'ach:hot-streak']);
+    // Visitors see the room unless its owner closes it.
+    await login(cFriend);
+    let seen = await room(cUser);
+    assert.equal(seen.public, true); assert.deepEqual(seen.showcase, ['ach:champion', 'ach:hot-streak']);
+    assert.equal(seen.unseen.length, 0, 'unseen unlocks are private');
+    await login(cUser);
+    await db.query('select public.set_collection_public(false)');
+    await login(cFriend);
+    seen = await room(cUser);
+    assert.equal(seen.public, false); assert.equal(seen.achievements.length, 0); assert.equal(seen.stats, null);
+    assert.ok(seen.userId === cUser && seen.displayName !== undefined, 'the name card still shows');
+    await login(cUser);
+    assert.equal((await room()).achievements.length, 24, 'the owner always sees their own room');
+    // Thrones (filled by the cups) count for Throne Collector and Kingmaker.
+    await db.query("insert into public.throne_wins(uid,cup_id,count) values ($1,'village',1)", [cUser]);
+    await db.query("update public.throne_wins set count = 3 where uid=$1 and cup_id='village'", [cUser]);
+    c = await room();
+    assert.equal(ach(c, 'throne-collector').tier, 1); assert.equal(ach(c, 'kingmaker').progress, 3);
+    assert.equal(c.stats.cupsWon, 3); assert.equal(c.stats.thrones, 1);
+    // Computer players never collect.
+    await db.query("insert into public.profile_rewards(uid,match_id,coins,won) values ('b0000000-0000-4000-8000-000000000001','bot:test',50,true)");
+    assert.equal(Number((await db.query("select count(*) from public.achievement_progress where uid='b0000000-0000-4000-8000-000000000001'")).rows[0].count), 0);
+  }
+  console.log(
+    'PASS: the Collection Room counts achievements from results, gifts, friends, streaks, thrones and the rest, unlocks tiers at thresholds, validates the showcase, keeps unseen unlocks private, hides a closed room behind its name card, and never counts a computer player.',
+  );
+
+  // The Royal Road cups (0035): entries are paid and refunded, four seats
+  // start two semi-finals as ordinary tables, computer players fill the
+  // seats after the wait, finished tables decide the rounds, the final pays
+  // the winner three entries and the runner-up one, and lights the throne.
+  {
+    const cupUser = randomUUID(), cupRival = randomUUID();
+    await db.query("insert into auth.users(id,email) values ($1,'cup@example.test'),($2,'cuprival@example.test')", [cupUser, cupRival]);
+    for (const u of [cupUser, cupRival]) { await login(u); await db.query('select public.get_wallet()'); }
+    await db.query('update public.profiles set coins = 5000 where uid = any($1)', [[cupUser, cupRival]]);
+    const coinsOf = async (u) => Number((await db.query('select coins from public.profiles where uid=$1', [u])).rows[0].coins);
+    await login(cupUser);
+    const cups = (await db.query('select public.get_cups() as c')).rows[0].c;
+    assert.equal(cups.cups.length, 8); assert.equal(cups.activeBracket, null);
+    await assert.rejects(db.query("select public.join_cup('legends')"), /coins to enter/, 'a short balance cannot enter');
+    let br = (await db.query("select public.join_cup('merchant') as b")).rows[0].b;
+    assert.equal(br.status, 'WAITING'); assert.equal(br.entries.length, 1); assert.equal(await coinsOf(cupUser), 4750, 'the entry is paid at the door');
+    const again = (await db.query("select public.join_cup('knight') as b")).rows[0].b;
+    assert.equal(again.id, br.id, 'one bracket at a time: a second join returns the open one');
+    assert.equal(await coinsOf(cupUser), 4750);
+    await db.query('select public.leave_cup($1)', [br.id]);
+    assert.equal(await coinsOf(cupUser), 5000, 'leaving before the start refunds the entry');
+    assert.equal(Number((await db.query('select count(*) from public.cup_brackets where id=$1', [br.id])).rows[0].count), 0, 'an empty bracket is gone');
+    // Two humans and, after the wait, two computer players.
+    br = (await db.query("select public.join_cup('merchant') as b")).rows[0].b;
+    await login(cupRival);
+    br = (await db.query("select public.join_cup('merchant') as b")).rows[0].b;
+    assert.equal(br.entries.length, 2);
+    br = (await db.query('select public.get_cup_bracket($1) as b', [br.id])).rows[0].b;
+    assert.equal(br.status, 'WAITING', 'the wait has not ended yet');
+    await db.query("update public.cup_brackets set created_at = now() - interval '2 minutes' where id=$1", [br.id]);
+    br = (await db.query('select public.get_cup_bracket($1) as b', [br.id])).rows[0].b;
+    assert.equal(br.status, 'PLAYING'); assert.equal(br.hasBots, true); assert.equal(br.entries.length, 4);
+    assert.equal(br.entries.filter((e) => e.isBot).length, 2, 'computer players took the empty seats');
+    assert.equal(br.rounds.length, 2, 'two semi-finals');
+    for (const r of br.rounds) {
+      const bots = [r.a, r.b].filter((u) => br.entries.find((e) => e.userId === u).isBot).length;
+      if (bots === 2) assert.ok(r.winner, 'two computer players decide on the spot');
+      else assert.ok(r.lobbyId, 'a human gets a real table');
+    }
+    const mine = br.rounds.find((r) => r.a === cupRival || r.b === cupRival);
+    assert.ok(mine.lobbyId);
+    const lob = (await db.query('select * from public.lobbies where id=$1', [mine.lobbyId])).rows[0];
+    assert.equal(lob.cup_bracket_id, br.id); assert.equal(lob.variant, 'quick1'); assert.equal(lob.stake, 0);
+    assert.equal(lob.status, 'COUNTDOWN');
+    const lsnap = (await db.query('select public.lobby_snapshot($1) as s', [mine.lobbyId])).rows[0].s;
+    assert.equal(lsnap.lobby.cupBracketId, br.id, 'the lobby knows its cup');
+    // Play the semi-final out: the rival wins their table; the other human's
+    // table is decided the same way, by whoever the server records.
+    const finishTable = async (lobbyId, winnerUid) => {
+      await db.query("update public.lobbies set start_at = now() - interval '1 second' where id=$1", [lobbyId]);
+      await db.query('select public.start_match($1)', [lobbyId]);
+      const m = (await db.query('select * from public.matches where lobby_id=$1', [lobbyId])).rows[0];
+      const seat = (await db.query('select seat_index from public.match_players where match_id=$1 and user_id=$2', [m.id, winnerUid])).rows[0].seat_index;
+      await db.query("update public.matches set status='FINISHED', winner_seat=$2, finished_at=now(), turn_deadline=null where id=$1", [m.id, seat]);
+      const snap = (await db.query('select public.match_snapshot($1) as s', [m.id])).rows[0].s;
+      assert.equal(snap.match.cupBracketId, br.id, 'the match knows its cup');
+    };
+    await finishTable(mine.lobbyId, cupRival);
+    const other = br.rounds.find((r) => r !== mine);
+    if (other.lobbyId) { await login(cupUser); await finishTable(other.lobbyId, cupUser); }
+    await login(cupRival);
+    br = (await db.query('select public.get_cup_bracket($1) as b', [br.id])).rows[0].b;
+    assert.equal(br.rounds.length, 3, 'the final is seated once both semi-finals are decided');
+    const fin = br.rounds.find((r) => r.round === 2);
+    assert.ok([fin.a, fin.b].includes(cupRival));
+    const before = await coinsOf(cupRival);
+    if (fin.lobbyId) {
+      await finishTable(fin.lobbyId, cupRival);
+      br = (await db.query('select public.get_cup_bracket($1) as b', [br.id])).rows[0].b;
+    }
+    assert.equal(br.status, 'FINISHED');
+    if (br.winner === cupRival) {
+      assert.equal(br.prizePaid, true);
+      assert.equal(await coinsOf(cupRival), before + 750, 'the winner collects three entries');
+      const throne = (await db.query("select count from public.throne_wins where uid=$1 and cup_id='merchant'", [cupRival])).rows[0];
+      assert.equal(throne.count, 1, 'the throne is lit in the Collection Room');
+    }
+    const col = (await db.query('select public.get_collection() as c')).rows[0].c;
+    assert.ok(col.achievements.find((a) => a.id === 'kingmaker').progress >= (br.winner === cupRival ? 1 : 0));
+    assert.equal((await db.query('select public.get_cups() as c')).rows[0].c.activeBracket, null, 'a finished cup frees the player');
+    // A walk-out loses the round for the one who left.
+    await db.query('update public.profiles set coins = 5000 where uid = any($1)', [[cupUser, cupRival]]);
+    await login(cupUser);
+    let b2 = (await db.query("select public.join_cup('village') as b")).rows[0].b;
+    await db.query("update public.cup_brackets set created_at = now() - interval '2 minutes' where id=$1", [b2.id]);
+    b2 = (await db.query('select public.get_cup_bracket($1) as b', [b2.id])).rows[0].b;
+    const r2 = b2.rounds.find((r) => r.a === cupUser || r.b === cupUser);
+    await db.query('select public.leave_lobby($1)', [r2.lobbyId]);
+    b2 = (await db.query('select public.get_cup_bracket($1) as b', [b2.id])).rows[0].b;
+    const r2b = b2.rounds.find((r) => r.round === 1 && r.slot === r2.slot);
+    assert.ok(r2b.winner && r2b.winner !== cupUser, 'leaving the table loses the round');
+    assert.equal(b2.status, 'FINISHED', 'the rest is between computer players and settles at once');
+    assert.equal(await coinsOf(cupUser), 5000, 'the free cup cost nothing and paid nothing');
+    assert.equal((await db.query('select public.my_cup_bracket() as b')).rows[0].b, null);
+  }
+  console.log(
+    'PASS: Royal Road cups: entries are paid and refunded before the start, one bracket per player, four seats start two semi-finals as ordinary two-seat tables (computer players fill after the wait and decide their own table on the spot), finished tables decide the rounds, the final pays the winner three entries and the runner-up one, lights the throne, and a walk-out loses the round.',
+  );
+
+  // Invite rewards (0036): a new member names the friend who invited them by
+  // User ID (not themselves, not a computer player, only once, only while
+  // new); their first online result pays both sides once.
+  {
+    const inviter = randomUUID(), invitee = randomUUID();
+    await db.query("insert into auth.users(id,email) values ($1,'inv@example.test'),($2,'invitee@example.test')", [inviter, invitee]);
+    for (const u of [inviter, invitee]) { await login(u); await db.query('select public.get_wallet()'); }
+    await db.query("update public.profiles set public_id = '87654321' where uid=$1", [inviter]);
+    await db.query("update public.profiles set public_id = '87654322' where uid=$1", [invitee]);
+    const coinsOf = async (u) => Number((await db.query('select coins from public.profiles where uid=$1', [u])).rows[0].coins);
+    const a0 = await coinsOf(inviter), b0 = await coinsOf(invitee);
+    await login(invitee);
+    let ref = (await db.query('select public.get_referral() as r')).rows[0].r;
+    assert.equal(ref.canEnter, true); assert.equal(ref.inviter, null); assert.equal(ref.reward, 2000);
+    await assert.rejects(db.query("select public.set_referrer('87654322')"), /your own/, 'no self-invites');
+    await assert.rejects(db.query("select public.set_referrer('11111111')"), /No player/, 'unknown ids are refused');
+    await assert.rejects(db.query("select public.set_referrer('abc')"), /not a User ID/);
+    const botId = (await db.query("select public_id from public.profiles where is_bot and public_id is not null limit 1")).rows[0];
+    if (botId) await assert.rejects(db.query('select public.set_referrer($1)', [botId.public_id]), /No player/, 'computer players cannot be named');
+    ref = (await db.query("select public.set_referrer('87654321') as r")).rows[0].r;
+    assert.equal(ref.inviter.publicId, '87654321'); assert.equal(ref.inviter.paid, false); assert.equal(ref.canEnter, false);
+    await assert.rejects(db.query("select public.set_referrer('87654321')"), /already/, 'only once');
+    assert.equal(await coinsOf(invitee), b0, 'nothing is paid at the link');
+    // A computer/pass & play result pays nothing; the first online result pays both.
+    await db.query("insert into public.profile_rewards(uid,match_id,coins,won) values ($1,'local:ref1',0,false)", [invitee]);
+    assert.equal(await coinsOf(invitee), b0);
+    await db.query("insert into public.profile_rewards(uid,match_id,coins,won) values ($1,'online:' || gen_random_uuid()::text,0,false)", [invitee]);
+    assert.equal(await coinsOf(invitee), b0 + 2000, 'the invited friend is paid');
+    assert.equal(await coinsOf(inviter), a0 + 2000, 'the inviter is paid');
+    await db.query("insert into public.profile_rewards(uid,match_id,coins,won) values ($1,'online:' || gen_random_uuid()::text,0,true)", [invitee]);
+    assert.equal(await coinsOf(inviter), a0 + 2000, 'paid once');
+    ref = (await db.query('select public.get_referral() as r')).rows[0].r;
+    assert.equal(ref.inviter.paid, true);
+    await login(inviter);
+    ref = (await db.query('select public.get_referral() as r')).rows[0].r;
+    assert.equal(ref.invited, 1); assert.equal(ref.pending, 0);
+    // Not new any more: the window has closed.
+    await db.query('update public.profiles set games_played = 20 where uid=$1', [inviter]);
+    assert.equal((await db.query('select public.get_referral() as r')).rows[0].r.canEnter, false);
+    await assert.rejects(db.query("select public.set_referrer('87654322')"), /new players/);
+  }
+  console.log(
+    'PASS: invite rewards: a new member names their inviter by User ID once (never themselves, a computer player or an unknown id, and only while under 20 games); the first online result pays both sides 2,000 coins exactly once.',
+  );
+
+  // Cups with friends (0037): a code seats two to four friends, never a
+  // computer player; the host starts it; the winner takes the pot; a bye
+  // carries the third player to the final; the throne needs four seats;
+  // the host leaving refunds everyone; public brackets ignore private ones.
+  {
+    const h = randomUUID(), f1 = randomUUID(), f2 = randomUUID();
+    await db.query("insert into auth.users(id,email) values ($1,'host@example.test'),($2,'f1@example.test'),($3,'f2@example.test')", [h, f1, f2]);
+    for (const u of [h, f1, f2]) { await login(u); await db.query('select public.get_wallet()'); }
+    await db.query('update public.profiles set coins = 5000 where uid = any($1)', [[h, f1, f2]]);
+    const coinsOf = async (u) => Number((await db.query('select coins from public.profiles where uid=$1', [u])).rows[0].coins);
+    await login(h);
+    let pb = (await db.query("select public.create_private_cup('merchant') as b")).rows[0].b;
+    assert.equal(pb.private, true); assert.equal(pb.host, h); assert.match(pb.inviteCode, /^[A-HJ-NP-Z2-9]{6}$/);
+    assert.equal(await coinsOf(h), 4750, 'the host pays the entry too');
+    await assert.rejects(db.query("select public.create_private_cup('village')"), /current cup/, 'one cup at a time');
+    await assert.rejects(db.query('select public.start_private_cup($1)', [pb.id]), /at least two/, 'the host cannot start alone');
+    // Public joiners never land in it.
+    await login(f2);
+    const pub = (await db.query("select public.join_cup('merchant') as b")).rows[0].b;
+    assert.notEqual(pub.id, pb.id, 'a public join never seats a private cup');
+    assert.equal((await db.query('select public.get_cups() as c')).rows[0].c.cups.find((c) => c.id === 'merchant').waiting, 1, 'only the public seat counts as waiting');
+    await db.query('select public.leave_cup($1)', [pub.id]);
+    // Friends join by code (any case, with noise), not a computer player.
+    await login(f1);
+    await assert.rejects(db.query("select public.join_cup_by_code('ZZZZZZ')"), /No cup/);
+    pb = (await db.query('select public.join_cup_by_code($1) as b', [pb.inviteCode.toLowerCase() + ' '])).rows[0].b;
+    assert.equal(pb.entries.length, 2); assert.equal(await coinsOf(f1), 4750);
+    await assert.rejects(db.query('select public.start_private_cup($1)', [pb.id]), /Only the host/);
+    await db.query("update public.cup_brackets set created_at = now() - interval '5 minutes' where id=$1", [pb.id]);
+    pb = (await db.query('select public.get_cup_bracket($1) as b', [pb.id])).rows[0].b;
+    assert.equal(pb.status, 'WAITING'); assert.equal(pb.entries.length, 2, 'no computer players, however long the wait');
+    await login(f2);
+    pb = (await db.query('select public.join_cup_by_code($1) as b', [pb.inviteCode])).rows[0].b;
+    assert.equal(pb.entries.length, 3); assert.equal(pb.pot, 750);
+    // The host leaving refunds all three and closes the cup.
+    await login(h);
+    await db.query('select public.leave_cup($1)', [pb.id]);
+    assert.equal(await coinsOf(h), 5000); assert.equal(await coinsOf(f1), 5000); assert.equal(await coinsOf(f2), 5000);
+    assert.equal(Number((await db.query('select count(*) from public.cup_brackets where id=$1', [pb.id])).rows[0].count), 0);
+    // Three friends: a semi-final, a bye, and a final; the winner takes the pot; no throne.
+    pb = (await db.query("select public.create_private_cup('merchant') as b")).rows[0].b;
+    await login(f1); await db.query('select public.join_cup_by_code($1)', [pb.inviteCode]);
+    await login(f2); await db.query('select public.join_cup_by_code($1)', [pb.inviteCode]);
+    await login(h);
+    pb = (await db.query('select public.start_private_cup($1) as b', [pb.id])).rows[0].b;
+    assert.equal(pb.status, 'PLAYING');
+    const semis = pb.rounds.filter((r) => r.round === 1);
+    assert.equal(semis.length, 2);
+    const bye = semis.find((r) => r.a === r.b), played = semis.find((r) => r.a !== r.b);
+    assert.ok(bye.winner, 'the bye goes straight through'); assert.ok(played.lobbyId, 'the other two get a table');
+    const finishTable = async (lobbyId, winnerUid) => {
+      await db.query("update public.lobbies set start_at = now() - interval '1 second' where id=$1", [lobbyId]);
+      await db.query('select public.start_match($1)', [lobbyId]);
+      const m = (await db.query('select * from public.matches where lobby_id=$1', [lobbyId])).rows[0];
+      const seat = (await db.query('select seat_index from public.match_players where match_id=$1 and user_id=$2', [m.id, winnerUid])).rows[0].seat_index;
+      await db.query("update public.matches set status='FINISHED', winner_seat=$2, finished_at=now(), turn_deadline=null where id=$1", [m.id, seat]);
+    };
+    await login(played.a); await finishTable(played.lobbyId, played.a);
+    pb = (await db.query('select public.get_cup_bracket($1) as b', [pb.id])).rows[0].b;
+    const fin = pb.rounds.find((r) => r.round === 2);
+    assert.ok(fin && fin.lobbyId, 'the final is seated');
+    const before = await coinsOf(fin.a);
+    await login(fin.a); await finishTable(fin.lobbyId, fin.a);
+    pb = (await db.query('select public.get_cup_bracket($1) as b', [pb.id])).rows[0].b;
+    assert.equal(pb.status, 'FINISHED'); assert.equal(pb.winner, fin.a);
+    assert.equal(await coinsOf(fin.a), before + 750, 'the winner takes the whole pot');
+    assert.equal(Number((await db.query("select count(*) from public.throne_wins where uid=$1 and cup_id='merchant'", [fin.a])).rows[0].count), 0, 'no throne without four seats');
+    const f3 = randomUUID();
+    await db.query("insert into auth.users(id,email) values ($1,'f3@example.test')", [f3]);
+    await login(f3); await db.query('select public.get_wallet()');
+    await assert.rejects(db.query('select public.join_cup_by_code($1)', [pb.inviteCode]), /already started/);
+  }
+  console.log(
+    'PASS: cups with friends: a code seats two to four friends and never a computer player, the host alone starts it (not alone), a bye carries a third player through, the winner takes the pot, the throne needs a full table, the host leaving refunds everyone, and public brackets never mix with private ones.',
+  );
+
+  // Real-money grants (0023): a verified order grants exactly once, and the
+  // function is closed to clients entirely (only the Edge Function calls it).
+  const iapUser = randomUUID();
+  await db.query("insert into auth.users(id,email) values ($1,'buyer@example.test')", [iapUser]);
+  await login(iapUser);
+  await db.query('select public.get_wallet()');
+  const grantIap = async (product, order) =>
+    (await db.query('select public.grant_iap($1,$2,$3,$4) as w', [iapUser, product, 'android', order])).rows[0].w;
+  assert.equal((await grantIap('ludo.gems.small', 'order-1')).gems, 180);
+  assert.equal((await grantIap('ludo.gems.small', 'order-1')).gems, 180, 'a replayed order grants once');
+  assert.equal((await grantIap('ludo.gems.small', 'order-2')).gems, 340, 'a new order grants again');
+  const starter = await grantIap('ludo.starter', 'order-3');
+  assert.equal(starter.coins, 6000);
+  assert.equal(starter.gems, 460);
+  assert.equal((await grantIap('ludo.starter', 'order-4')).coins, 6000, 'the starter pack is once per account');
+  // Coffee tips (0030): recorded once, and they change nothing in the game.
+  const beforeTip = await grantIap('ludo.gems.small', 'order-2');
+  const tipped = await grantIap('ludo.tip.coffee', 'tip-1');
+  assert.equal(tipped.coins, beforeTip.coins, 'a tip grants no coins');
+  assert.equal(tipped.gems, beforeTip.gems, 'a tip grants no gems');
+  await grantIap('ludo.tip.coffee', 'tip-1');
+  assert.equal(
+    Number((await db.query("select count(*) from public.iap_receipts where order_id='tip-1'")).rows[0].count),
+    1,
+    'a replayed tip is recorded once',
+  );
+  await grantIap('ludo.pass', 'order-5');
+  assert.equal(
+    (await db.query('select premium from public.season_progress where uid=$1 and season=public.current_season()', [iapUser])).rows[0].premium,
+    true,
+    'the paid pass unlocks the premium track',
+  );
+  await assert.rejects(db.query("select public.grant_iap($1,'nope','android','order-6')", [iapUser]), /Unknown product/);
+  // Piggy bank and Ludo Club (0024).
+  assert.ok(
+    (await db.query('select piggy_coins from public.profiles where uid=$1', [a])).rows[0].piggy_coins > 0,
+    'play fills the piggy through granted XP',
+  );
+  await db.query('update public.profiles set piggy_coins = 4321 where uid=$1', [iapUser]);
+  const coinsBeforePiggy = (await db.query('select coins from public.profiles where uid=$1', [iapUser])).rows[0].coins;
+  const cracked = await grantIap('ludo.piggy', 'order-7');
+  assert.equal(cracked.coins, coinsBeforePiggy + 4321, 'cracking the piggy pays what it held');
+  assert.equal(cracked.piggyCoins, 0, 'and starts it again');
+  const clubbed = await grantIap('ludo.club', 'order-8');
+  assert.ok(new Date(clubbed.clubUntil) > new Date(), 'the club membership runs');
+  const renewed = await grantIap('ludo.club', 'order-9');
+  assert.ok(new Date(renewed.clubUntil) > new Date(clubbed.clubUntil), 'each renewal order adds a month');
+  const clubGift = (await db.query('select public.claim_daily_gift() as w')).rows[0].w;
+  assert.equal(clubGift.gems, renewed.gems + 10, 'a club gift brings 10 gems on top');
+  await db.query('select public.spin_daily()');
+  const clubGems = (await db.query('select gems from public.profiles where uid=$1', [iapUser])).rows[0].gems;
+  const clubSpin = (await db.query('select public.spin_daily() as s')).rows[0].s;
+  assert.equal(
+    clubSpin.wallet.gems,
+    clubGems + (clubSpin.reward.kind === 'gems' ? clubSpin.reward.amount : 0),
+    'a club extra spin charges nothing',
+  );
+  for (const role of ['anon', 'authenticated'])
+    assert.equal(
+      await privilege(`select has_function_privilege('${role}','public.grant_iap(uuid,text,text,text)','EXECUTE') as ok`),
+      false,
+      `grant_iap is closed to ${role}`,
+    );
+
+  // Event windows, gifting and the ledger (0025). Still signed in as the buyer.
+  await db.query('update public.profiles set gems = 500, coins = 5000 where uid=$1', [iapUser]);
+  const eventBuy = (await db.query("select public.purchase_item('diwali', 300) as w")).rows[0].w;
+  assert.ok(eventBuy.owned.includes('diwali'), 'an open event look sells normally');
+  assert.equal(eventBuy.gems, 200);
+  await assert.rejects(
+    db.query("select public.gift_item($1,'diwali-dice',1200)", [lgUser]),
+    /friends/i,
+    'gifts only go to friends',
+  );
+  await db.query('insert into public.friendships(user_id, friend_id) values ($1,$2)', [iapUser, lgUser]);
+  const gifted = (await db.query("select public.gift_item($1,'diwali-dice',1200) as w", [lgUser])).rows[0].w;
+  assert.equal(gifted.coins, 3800, 'the giver pays the price');
+  assert.ok(!gifted.owned.includes('diwali-dice'), 'and does not gain the item');
+  assert.equal(
+    (await db.query("select count(*)::int as n from public.profile_items where uid=$1 and item_id='diwali-dice'", [lgUser])).rows[0].n,
+    1,
+    'the friend owns it',
+  );
+  await assert.rejects(db.query("select public.gift_item($1,'diwali-dice',1200)", [lgUser]), /already owns/);
+  assert.ok(
+    (await db.query("select 1 from public.notifications where user_id=$1 and type='GIFT'", [lgUser])).rows.length >= 1,
+    'the friend hears about it',
+  );
+  await db.query("update public.store_items set available_until = now() - interval '1 day' where id='diwali-pack'");
+  await assert.rejects(db.query("select public.purchase_item('diwali-pack', 375)"), /past event/);
+  await assert.rejects(db.query("select public.gift_item($1,'diwali-pack',375)", [lgUser]), /past event/);
+  await db.query("update public.store_items set available_until = '2026-11-15 23:59:59+00' where id='diwali-pack'");
+  const ledger = (await db.query('select * from public.economy_ledger where day = public.utc_today()')).rows[0];
+  assert.ok(
+    ledger && Number(ledger.coins_in) > 0 && Number(ledger.coins_out) > 0
+      && Number(ledger.gems_in) > 0 && Number(ledger.gems_out) > 0,
+    'the ledger counts every coin and gem, both directions',
+  );
+
+  // The guest vault (0026): capped at 5,000, claimed once per account ever.
+  const vaultUser = randomUUID();
+  await db.query("insert into auth.users(id,email) values ($1,'vault@example.test')", [vaultUser]);
+  await login(vaultUser);
+  await db.query('select public.get_wallet()');
+  const vaultClaim = async (n) =>
+    (await db.query('select public.claim_vault($1) as w', [n])).rows[0].w;
+  assert.equal((await vaultClaim(99999)).coins, 11000, 'the claim is capped at 10,000 (0033)');
+  assert.equal((await vaultClaim(500)).coins, 11000, 'and pays once per account');
+
+  // Guests have none of this.
+  await login(ghost2, true);
+  for (const fn of ['spin_daily()', 'get_rewards()', "claim_mission('play-3')", 'buy_season_premium()', "claim_ad_reward('gem')", 'get_league()', 'claim_vault(1)'])
+    await assert.rejects(db.query(`select public.${fn}`), /Create an account/);
+  for (const fn of [
+    'spin_daily()', 'get_rewards()', 'claim_mission(text)', 'buy_season_premium()',
+    'claim_season_tier(integer,boolean)', 'get_tournament()', 'claim_tournament_prize()',
+    'claim_ad_reward(text)', 'get_league()',
+    'award_online_match(uuid,integer,integer,integer)',
+  ])
+    assert.equal(await privilege(`select has_function_privilege('anon','public.${fn}','EXECUTE') as ok`), false, fn);
+  for (const fn of ['grant_xp(uuid,integer)', 'bump_mission(uuid,text,integer)', 'award_online_for(uuid,uuid)'])
+    assert.equal(await privilege(`select has_function_privilege('authenticated','public.${fn}','EXECUTE') as ok`), false, fn);
+  console.log(
+    'PASS: progression levels up on a rising curve paying coins and gems; online rewards come from the server match record by finishing place (100/50/20, losers 0, once, collected on wallet load, never claimable as a bot game); bot wins pay 50 (losses XP only) capped at 25 paid games a day; the weekly tournament scores and pays last week once by rank; the daily spin allows one free and three gem spins; missions progress from events and claim once; season tiers unlock by XP and premium costs 250 gems; guests and anon are shut out.',
+  );
+  // --- stakes and turn timers (migration 0013) -----------------------------------
+  const coinsOf = async (uid) =>
+    (await db.query('select coins from public.profiles where uid=$1', [uid])).rows[0].coins;
+  const st1 = randomUUID();
+  const st2 = randomUUID();
+  const st3 = randomUUID();
+  await db.query(
+    "insert into auth.users(id,email) values ($1,'st1@example.test'),($2,'st2@example.test'),($3,'st3@example.test')",
+    [st1, st2, st3],
+  );
+  for (const u of [st1, st2, st3]) {
+    await login(u);
+    await db.query('select public.get_wallet()');
+  }
+  await db.query('delete from public.matchmaking_queue');
+  await login(st1);
+  await assert.rejects(db.query('select public.join_quick_match(2, 250)'), /not available/);
+  await db.query('update public.profiles set coins = 50 where uid=$1', [st3]);
+  await login(st3);
+  await assert.rejects(db.query('select public.join_quick_match(2, 100)'), /need 100 coins/);
+  await assert.rejects(db.query('select public.create_link_room(2, 100)'), /need 100 coins/);
+  await login(ghost2, true);
+  await assert.rejects(db.query('select public.join_quick_match(2, 100)'), /Create an account/);
+
+  // The high tables (0021): level-gated, and never in private rooms.
+  await login(st1);
+  await assert.rejects(db.query('select public.join_quick_match(2, 10000)'), /Reach level 10/);
+  await assert.rejects(db.query('select public.create_link_room(2, 10000)'), /up to 2,000/);
+  await db.query('update public.profiles set coins = 60000, xp = 2500 where uid=$1', [st1]);
+  const highTicket = (await db.query('select public.join_quick_match(2, 10000) as t')).rows[0].t;
+  assert.equal(highTicket.status, 'WAITING');
+  assert.equal(highTicket.stake, 10000);
+  await assert.rejects(db.query('select public.join_quick_match(2, 50000)'), /Reach level 20/);
+  await db.query('delete from public.matchmaking_queue where user_id=$1', [st1]);
+  await db.query('update public.profiles set coins = 1000, xp = 0 where uid=$1', [st1]);
+
+  // Different stakes never share a table.
+  await login(st1);
+  const stakeTicket = (await db.query('select public.join_quick_match(2, 500) as t')).rows[0].t;
+  assert.equal(stakeTicket.status, 'WAITING');
+  assert.equal(stakeTicket.stake, 500);
+  await login(st2);
+  const freeTicket = (await db.query('select public.join_quick_match(2, 0) as t')).rows[0].t;
+  assert.equal(freeTicket.status, 'WAITING', 'a free seeker is not seated at a 500 table');
+  const matchedTicket = (await db.query('select public.join_quick_match(2, 500) as t')).rows[0].t;
+  assert.equal(matchedTicket.status, 'MATCHED');
+  const stakeLobby = matchedTicket.lobbyId;
+  assert.equal((await db.query('select stake from public.lobbies where id=$1', [stakeLobby])).rows[0].stake, 500);
+  assert.equal(await coinsOf(st1), 1000, 'nothing is taken in the lobby');
+
+  // Stakes are taken once, when the match is created.
+  await db.query("update public.lobbies set start_at = now() - interval '1 second' where id=$1", [stakeLobby]);
+  await login(st1);
+  await db.query('select public.start_match($1)', [stakeLobby]);
+  await db.query('select public.start_match($1)', [stakeLobby]);
+  const staked = (await db.query('select * from public.matches where lobby_id=$1', [stakeLobby])).rows[0];
+  assert.equal(staked.stake, 500);
+  assert.equal(staked.pool, 1000);
+  assert.ok(staked.turn_deadline, 'the first turn has a clock');
+  assert.equal(await coinsOf(st1), 500);
+  assert.equal(await coinsOf(st2), 500);
+  const stakeSnap = (await db.query('select public.get_match($1) as m', [stakeLobby])).rows[0].m;
+  assert.equal(stakeSnap.match.pool, 1000);
+  assert.equal(stakeSnap.match.prize, 900);
+
+  // A claim before the clock runs out does nothing.
+  await login(st2);
+  const notYet = (await db.query('select public.claim_turn_timeout($1,$2) as m', [staked.id, staked.version])).rows[0].m;
+  assert.equal(notYet.match.version, staked.version);
+  // Once it has, the server plays the idle seat's turn, exactly once.
+  await db.query("update public.matches set turn_deadline = now() - interval '1 second' where id=$1", [staked.id]);
+  const autoPlayed = (await db.query('select public.claim_turn_timeout($1,$2) as m', [staked.id, staked.version])).rows[0].m;
+  assert.equal(autoPlayed.match.version, staked.version + 1, 'the idle turn was played');
+  assert.equal(autoPlayed.match.lastRoll, null);
+  await db.query("update public.matches set turn_deadline = now() - interval '1 second' where id=$1", [staked.id]);
+  const staleClaim = (await db.query('select public.claim_turn_timeout($1,$2) as m', [staked.id, staked.version])).rows[0].m;
+  assert.equal(staleClaim.match.version, staked.version + 1, 'a claim on an old board is ignored');
+  assert.equal(
+    (await db.query('select timeouts from public.match_players where match_id=$1 and seat_index=0', [staked.id])).rows[0].timeouts,
+    1,
+  );
+  await login(outsiderTry);
+  await assert.rejects(db.query('select public.claim_turn_timeout($1,$2)', [staked.id, staked.version + 1]), /not in that match/);
+
+  // Nobody plays: the first seat to miss three turns in a row walks out.
+  let guard = 0;
+  for (;;) {
+    const row = (await db.query('select status, version, turn_seat from public.matches where id=$1', [staked.id])).rows[0];
+    if (row.status !== 'IN_PROGRESS') break;
+    assert.ok(guard++ < 40, 'the idle match ends');
+    await db.query("update public.matches set turn_deadline = now() - interval '1 second' where id=$1", [staked.id]);
+    await login(row.turn_seat === 0 ? st2 : st1);
+    await db.query('select public.claim_turn_timeout($1,$2)', [staked.id, row.version]);
+  }
+  const walked = (await db.query('select status, abandoned_by, version from public.matches where id=$1', [staked.id])).rows[0];
+  assert.equal(walked.status, 'ABANDONED');
+  const keeper = walked.abandoned_by === st1 ? st2 : st1;
+  const walker = walked.abandoned_by;
+  assert.ok([st1, st2].includes(walker));
+  // The one who stayed takes the whole pool; a match this short pays no game reward.
+  await login(keeper);
+  await db.query('select public.get_wallet()');
+  assert.equal(await coinsOf(keeper), 1500, 'keeper gets the 1000 pool back, no 60 for a short game');
+  await login(walker);
+  await db.query('select public.get_wallet()');
+  assert.equal(await coinsOf(walker), 500, 'walking out forfeits the stake');
+
+  // A finished staked match pays the winner 90% of the pool on top of the win.
+  const fLobby = randomUUID();
+  const fMatch = randomUUID();
+  await db.query("insert into public.challenges(id,creator_id,player_count,status,expires_at) values ($1,$2,2,'IN_LOBBY',now()+interval '1 hour')", [fLobby, st1]);
+  await db.query("insert into public.lobbies(id,challenge_id,host_id,max_players,status,stake) values ($1,$1,$2,2,'STARTED',500)", [fLobby, st1]);
+  await db.query("insert into public.matches(id,lobby_id,player_count,status,winner_seat,finished_at,stake,pool) values ($1,$2,2,'FINISHED',0,now(),500,1000)", [fMatch, fLobby]);
+  await db.query('insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0),($1,$3,1)', [fMatch, st1, st2]);
+  await db.query('insert into public.match_stakes(match_id,user_id,amount) values ($1,$2,500),($1,$3,500)', [fMatch, st1, st2]);
+  const st1Before = await coinsOf(st1);
+  const st1Level = (await db.query('select xp from public.profiles where uid=$1', [st1])).rows[0].xp;
+  await login(st1);
+  await db.query('select public.award_online_match($1)', [fMatch]);
+  const levelBonus = st1Level < 100 && st1Level + 120 >= 100 ? 140 : 0;
+  assert.equal(await coinsOf(st1) - st1Before, 100 + 900 + levelBonus, 'win pays 100 plus the 900 prize');
+  const st2Before = await coinsOf(st2);
+  await login(st2);
+  await db.query('select public.get_wallet()');
+  assert.equal(await coinsOf(st2) - st2Before, 0, 'the loser takes no prize');
+
+  // The staked tables are member-only and the helpers are private.
+  assert.equal(await privilege("select has_function_privilege('anon','public.claim_turn_timeout(uuid,integer)','EXECUTE') as ok"), false);
+  assert.equal(await privilege("select has_function_privilege('anon','public.join_quick_match(integer,integer,text,boolean)','EXECUTE') as ok"), false);
+  for (const fn of ['require_stake(uuid,integer)', 'secure_die()', 'create_match_for_lobby(uuid)'])
+    assert.equal(await privilege(`select has_function_privilege('authenticated','public.${fn}','EXECUTE') as ok`), false, fn);
+  assert.equal(await privilege("select has_table_privilege('authenticated','public.match_stakes','SELECT') as ok"), false);
+  console.log(
+    'PASS: staked tables check coins and refuse guests; different stakes never share a table; stakes are taken once at match creation; the winner collects 90% of the pool, a walk-out forfeits to the players who stayed, and short abandoned games pay no game reward; turn clocks let others claim an idle turn, which the server plays once, and three misses in a row end the match.',
+  );
+  // --- game variants (migration 0014) --------------------------------------------
+  await db.query('delete from public.matchmaking_queue');
+  await login(st1);
+  await assert.rejects(db.query("select public.join_quick_match(2, 0, 'turbo')"), /mode is not available/);
+  const killTicket = (await db.query("select public.join_quick_match(2, 0, 'kill') as t")).rows[0].t;
+  assert.equal(killTicket.variant, 'kill');
+  await login(st2);
+  const classicTicket = (await db.query('select public.join_quick_match(2, 0) as t')).rows[0].t;
+  assert.equal(classicTicket.status, 'WAITING', 'a classic seeker is not seated at a Kill & Go table');
+  const killMatched = (await db.query("select public.join_quick_match(2, 0, 'kill') as t")).rows[0].t;
+  assert.equal(killMatched.status, 'MATCHED');
+  await db.query("update public.lobbies set start_at = now() - interval '1 second' where id=$1", [killMatched.lobbyId]);
+  const killLobbySnap = (await db.query('select public.start_match($1) as l', [killMatched.lobbyId])).rows[0].l;
+  assert.equal(killLobbySnap.lobby.variant, 'kill');
+  const killSnap = (await db.query('select public.get_match($1) as m', [killMatched.lobbyId])).rows[0].m;
+  assert.equal(killSnap.match.variant, 'kill');
+  // The first move is validated against the Kill & Go opening board.
+  const killMatch = killSnap.match;
+  await db.query('update public.matches set last_roll = 6, version = version + 1 where id=$1', [killMatch.id]);
+  const killOpening = createGame(seatColors(2), { variant: 'kill' });
+  const [firstMove] = getValidMovesForCurrentPlayer({ ...killOpening, lastRoll: 6, consecutiveSixes: 1 });
+  const afterFirst = applyMove({ ...killOpening, lastRoll: 6, consecutiveSixes: 1 }, firstMove);
+  const seatAtTurn = killMatch.turnSeat;
+  await login(seatAtTurn === 0 ? st1 : st2);
+  const moved = (await db.query('select public.submit_match_turn($1,$2,$3::jsonb,null) as m', [killMatch.id, killMatch.version + 1, JSON.stringify(afterFirst)])).rows[0].m;
+  assert.equal(moved.match.state.killToEnter, true);
+  assert.deepEqual(moved.match.state.hunters, []);
+  // A classic board is refused at a Kill & Go table.
+  await login(st3);
+  await db.query('update public.profiles set coins = 1000 where uid=$1', [st3]);
+  await assert.rejects(db.query("select public.create_link_room(2, 0, 'nope')"), /mode is not available/);
+  const quickRoom = (await db.query("select public.create_link_room(2, 0, 'quick1') as r")).rows[0].r;
+  const quickRoomSnap = (await db.query('select public.get_lobby($1) as l', [quickRoom.lobbyId])).rows[0].l;
+  assert.equal(quickRoomSnap.lobby.variant, 'quick1');
+  assert.equal(await privilege("select has_function_privilege('authenticated','public.require_variant(text)','EXECUTE') as ok"), false);
+  console.log(
+    'PASS: game variants are validated, queue separately, carry through lobby and match snapshots, and the first move is checked against the variant\'s own opening board.',
+  );
+  // --- lifelines (migration 0015) --------------------------------------------------
+  const lf = [randomUUID(), randomUUID(), randomUUID()];
+  await db.query(
+    "insert into auth.users(id,email) values ($1,'lf1@example.test'),($2,'lf2@example.test'),($3,'lf3@example.test')",
+    lf,
+  );
+  for (const u of lf) {
+    await login(u);
+    await db.query('select public.get_wallet()');
+  }
+  const lfLobby = randomUUID();
+  const lfMatch = randomUUID();
+  await db.query("insert into public.challenges(id,creator_id,player_count,status,expires_at) values ($1,$2,3,'IN_LOBBY',now()+interval '1 hour')", [lfLobby, lf[0]]);
+  await db.query("insert into public.lobbies(id,challenge_id,host_id,max_players,status,stake) values ($1,$1,$2,3,'STARTED',100)", [lfLobby, lf[0]]);
+  await db.query("insert into public.matches(id,lobby_id,player_count,stake,pool,turn_deadline) values ($1,$2,3,100,300,now())", [lfMatch, lfLobby]);
+  await db.query('insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0),($1,$3,1),($1,$4,2)', [lfMatch, ...lf]);
+  await db.query('insert into public.match_stakes(match_id,user_id,amount) values ($1,$2,100),($1,$3,100),($1,$4,100)', [lfMatch, ...lf]);
+  // Seat 0 has already missed four turns; one more and they are out.
+  await db.query('update public.match_players set missed = 4 where match_id=$1 and seat_index=0', [lfMatch]);
+  const lfVersion = (await db.query('select version from public.matches where id=$1', [lfMatch])).rows[0].version;
+  await db.query("update public.matches set turn_deadline = now() - interval '1 second' where id=$1", [lfMatch]);
+  await login(lf[1]);
+  const afterOut = (await db.query('select public.claim_turn_timeout($1,$2) as m', [lfMatch, lfVersion])).rows[0].m;
+  assert.equal(afterOut.match.status, 'IN_PROGRESS', 'a 3-player game carries on without them');
+  assert.equal(afterOut.match.lifelines, 5);
+  const outSeat = afterOut.players.find((pl) => pl.seatIndex === 0);
+  assert.equal(outSeat.out, true);
+  assert.equal(outSeat.missed, 5);
+  assert.notEqual(afterOut.match.turnSeat, 0, 'the turn has moved on');
+  // From now on their turns are skipped, whoever plays.
+  for (let i = 0; i < 12; i++) {
+    const row = (await db.query('select status, version, turn_seat from public.matches where id=$1', [lfMatch])).rows[0];
+    if (row.status !== 'IN_PROGRESS') break;
+    assert.notEqual(row.turn_seat, 0, 'an out seat never gets the turn');
+    await db.query("update public.matches set turn_deadline = now() - interval '1 second' where id=$1", [lfMatch]);
+    // Keep the two remaining players from running out themselves.
+    await db.query('update public.match_players set missed = 0 where match_id=$1 and seat_index <> 0', [lfMatch]);
+    await login(row.turn_seat === 1 ? lf[2] : lf[1]);
+    await db.query('select public.claim_turn_timeout($1,$2)', [lfMatch, row.version]);
+  }
+  // Settling now (say it ended): the out player forfeits; the others split the pool.
+  await db.query("update public.matches set status='ABANDONED', finished_at=now(), abandoned_by=null, turn_deadline=null where id=$1", [lfMatch]);
+  const lfBefore = await Promise.all(lf.map(coinsOf));
+  for (const u of lf) {
+    await login(u);
+    await db.query('select public.get_wallet()');
+  }
+  const lfAfter = await Promise.all(lf.map(coinsOf));
+  assert.equal(lfAfter[0] - lfBefore[0], 0, 'out of lifelines forfeits the stake');
+  assert.equal(lfAfter[1] - lfBefore[1], 150, 'the two who stayed split the 300 pool');
+  assert.equal(lfAfter[2] - lfBefore[2], 150);
+  // Two players: the fifth miss is a walk-over.
+  const duoLobby = randomUUID();
+  const duoMatch = randomUUID();
+  await db.query("insert into public.challenges(id,creator_id,player_count,status,expires_at) values ($1,$2,2,'IN_LOBBY',now()+interval '1 hour')", [duoLobby, lf[1]]);
+  await db.query("insert into public.lobbies(id,challenge_id,host_id,max_players,status) values ($1,$1,$2,2,'STARTED')", [duoLobby, lf[1]]);
+  await db.query("insert into public.matches(id,lobby_id,player_count,turn_deadline) values ($1,$2,2,now() - interval '1 second')", [duoMatch, duoLobby]);
+  await db.query('insert into public.match_players(match_id,user_id,seat_index,missed) values ($1,$2,0,4),($1,$3,1,0)', [duoMatch, lf[1], lf[2]]);
+  await login(lf[2]);
+  const walkover = (await db.query('select public.claim_turn_timeout($1,0) as m', [duoMatch])).rows[0].m;
+  assert.equal(walkover.match.status, 'ABANDONED', 'two players: out of lifelines ends the match');
+  assert.equal((await db.query('select abandoned_by from public.matches where id=$1', [duoMatch])).rows[0].abandoned_by, lf[1]);
+  assert.equal(await privilege("select has_function_privilege('authenticated','public.skip_out_seats(uuid,jsonb)','EXECUTE') as ok"), false);
+
+  // Leaving (0028): a bigger table plays on without the leaver…
+  const lvLobby = randomUUID();
+  const lvMatch = randomUUID();
+  await db.query("insert into public.challenges(id,creator_id,player_count,status,expires_at) values ($1,$2,3,'IN_LOBBY',now()+interval '1 hour')", [lvLobby, lf[0]]);
+  await db.query("insert into public.lobbies(id,challenge_id,host_id,max_players,status) values ($1,$1,$2,3,'STARTED')", [lvLobby, lf[0]]);
+  await db.query("insert into public.matches(id,lobby_id,player_count,turn_deadline) values ($1,$2,3,now() + interval '1 minute')", [lvMatch, lvLobby]);
+  await db.query('insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0),($1,$3,1),($1,$4,2)', [lvMatch, ...lf]);
+  await login(lf[0]);
+  const leftBig = (await db.query('select public.abandon_match($1) as m', [lvMatch])).rows[0].m;
+  assert.equal(leftBig.match.status, 'IN_PROGRESS', 'leaving a 3-player table does not end it');
+  assert.equal(leftBig.players.find((pl) => pl.seatIndex === 0).out, true, 'the leaver is out');
+  assert.notEqual(leftBig.match.turnSeat, 0, 'and their turn passes on');
+  const leftAgain = (await db.query('select public.abandon_match($1) as m', [lvMatch])).rows[0].m;
+  assert.equal(leftAgain.match.version, leftBig.match.version, 'leaving twice changes nothing');
+  // …and at a table of two the one who stays wins the walk-over.
+  const woLobby = randomUUID();
+  const woMatch = randomUUID();
+  await db.query("insert into public.challenges(id,creator_id,player_count,status,expires_at) values ($1,$2,2,'IN_LOBBY',now()+interval '1 hour')", [woLobby, lf[1]]);
+  await db.query("insert into public.lobbies(id,challenge_id,host_id,max_players,status) values ($1,$1,$2,2,'STARTED')", [woLobby, lf[1]]);
+  await db.query("insert into public.matches(id,lobby_id,player_count,version,turn_deadline) values ($1,$2,2,45,now() + interval '1 minute')", [woMatch, woLobby]);
+  await db.query('insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0),($1,$3,1)', [woMatch, lf[1], lf[2]]);
+  await login(lf[1]);
+  const quit = (await db.query('select public.abandon_match($1) as m', [woMatch])).rows[0].m;
+  assert.equal(quit.match.status, 'ABANDONED', 'leaving a table of two ends it');
+  const winsBefore = (await db.query('select games_won from public.profiles where uid=$1', [lf[2]])).rows[0].games_won;
+  await login(lf[2]);
+  await db.query('select public.get_wallet()');
+  const stayer = (await db.query("select coins, won from public.profile_rewards where uid=$1 and match_id=$2", [lf[2], `online:${woMatch}`])).rows[0];
+  assert.deepEqual([stayer.coins, stayer.won], [100, true], 'the one who stayed wins +100');
+  assert.equal((await db.query('select games_won from public.profiles where uid=$1', [lf[2]])).rows[0].games_won, winsBefore + 1);
+  await login(lf[1]);
+  await db.query('select public.get_wallet()');
+  const quitter = (await db.query("select coins, won from public.profile_rewards where uid=$1 and match_id=$2", [lf[1], `online:${woMatch}`])).rows[0];
+  assert.deepEqual([quitter.coins, quitter.won], [0, false], 'the one who left gets nothing');
+  // An out seat places last, whatever it had home.
+  const outBoard = {
+    players: [0, 1, 2, 3].map((s) => ({
+      pieces: Array.from({ length: 4 }, () => ({ progress: s === 0 ? 57 : s === 3 ? 10 : 0 })),
+    })),
+  };
+  const place = async (seat, out) =>
+    (await db.query('select public.match_placement($1::jsonb,$2,1,$3::int[]) as r', [JSON.stringify(outBoard), seat, out])).rows[0].r;
+  assert.equal(await place(0, [0]), 4, 'out with all coins home still places last');
+  assert.equal(await place(3, [0]), 2, 'the best player still in takes second');
+  console.log(
+    'PASS: lifelines: five missed turns and a player is out; a bigger table carries on with their turns skipped and their stake forfeited to the players who stayed, and a two-player table ends as a walk-over.',
+  );
+  // --- 2 v 2 online (migration 0016) ---------------------------------------------
+  await db.query('delete from public.matchmaking_queue');
+  await login(lf[0]);
+  await assert.rejects(db.query("select public.join_quick_match(2, 0, 'classic', true)"), /four-player table/);
+  const teamTicket = (await db.query("select public.join_quick_match(4, 0, 'classic', true) as t")).rows[0].t;
+  assert.equal(teamTicket.teams, true);
+  await login(lf[1]);
+  const soloFour = (await db.query('select public.join_quick_match(4, 0) as t')).rows[0].t;
+  assert.equal(soloFour.status, 'WAITING');
+  assert.equal(soloFour.waiting, 1, 'a solo 4-player seeker does not count toward a 2 v 2 table');
+  await db.query('delete from public.matchmaking_queue');
+  // A finished 2 v 2 with a pool: both winners are paid as winners and share the prize.
+  const team = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+  await db.query("insert into auth.users(id,email) values ($1,'t1@example.test'),($2,'t2@example.test'),($3,'t3@example.test'),($4,'t4@example.test')", team);
+  for (const u of team) {
+    await login(u);
+    await db.query('select public.get_wallet()');
+  }
+  const tLobby = randomUUID();
+  const tMatch = randomUUID();
+  await db.query("insert into public.challenges(id,creator_id,player_count,status,expires_at) values ($1,$2,4,'IN_LOBBY',now()+interval '1 hour')", [tLobby, team[0]]);
+  await db.query("insert into public.lobbies(id,challenge_id,host_id,max_players,status,stake,teams) values ($1,$1,$2,4,'STARTED',100,true)", [tLobby, team[0]]);
+  await db.query("insert into public.matches(id,lobby_id,player_count,status,winner_seat,finished_at,stake,pool,teams) values ($1,$2,4,'FINISHED',2,now(),100,400,true)", [tMatch, tLobby]);
+  await db.query('insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0),($1,$3,1),($1,$4,2),($1,$5,3)', [tMatch, ...team]);
+  const tBefore = await Promise.all(team.map(coinsOf));
+  for (const u of team) {
+    await login(u);
+    await db.query('select public.get_wallet()');
+  }
+  const tAfter = await Promise.all(team.map(coinsOf));
+  const levelBonusOf = async (u, gained) => gained; // coins only; level-ups at level 1 add 140
+  void levelBonusOf;
+  const gain = tAfter.map((c, i) => c - tBefore[i]);
+  // Seat 2 won, so seats 0 and 2 are the winning pair: 100 + 180 (half of 360) each.
+  // 120 XP from level 1 also levels up (140 coins), so allow for that.
+  assert.ok([280, 420].includes(gain[0]), `winner's partner paid as a winner (got ${gain[0]})`);
+  assert.ok([280, 420].includes(gain[2]), `winner paid (got ${gain[2]})`);
+  assert.equal(gain[1], 0, 'the losing pair takes no prize');
+  assert.equal(gain[3], 0);
+  // A partner walking out loses it for the pair; the other pair split the pool.
+  const wLobby = randomUUID();
+  const wMatch = randomUUID();
+  await db.query("insert into public.challenges(id,creator_id,player_count,status,expires_at) values ($1,$2,4,'IN_LOBBY',now()+interval '1 hour')", [wLobby, team[0]]);
+  await db.query("insert into public.lobbies(id,challenge_id,host_id,max_players,status,stake,teams) values ($1,$1,$2,4,'STARTED',100,true)", [wLobby, team[0]]);
+  await db.query("insert into public.matches(id,lobby_id,player_count,status,finished_at,stake,pool,teams,abandoned_by) values ($1,$2,4,'ABANDONED',now(),100,400,true,$3)", [wMatch, wLobby, team[1]]);
+  await db.query('insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0),($1,$3,1),($1,$4,2),($1,$5,3)', [wMatch, ...team]);
+  const wBefore = await Promise.all(team.map(coinsOf));
+  for (const u of team) {
+    await login(u);
+    await db.query('select public.get_wallet()');
+  }
+  const wGain = (await Promise.all(team.map(coinsOf))).map((c, i) => c - wBefore[i]);
+  assert.equal(wGain[1], 0, 'the one who walked out gets nothing');
+  assert.equal(wGain[3], 0, 'their partner loses too');
+  assert.equal(wGain[0], 200, 'the other pair split the 400 pool');
+  assert.equal(wGain[2], 200);
+  // In 2 v 2, running out of lifelines ends the match for that pair.
+  const oLobby = randomUUID();
+  const oMatch = randomUUID();
+  await db.query("insert into public.challenges(id,creator_id,player_count,status,expires_at) values ($1,$2,4,'IN_LOBBY',now()+interval '1 hour')", [oLobby, team[0]]);
+  await db.query("insert into public.lobbies(id,challenge_id,host_id,max_players,status,teams) values ($1,$1,$2,4,'STARTED',true)", [oLobby, team[0]]);
+  await db.query("insert into public.matches(id,lobby_id,player_count,teams,turn_deadline) values ($1,$2,4,true,now() - interval '1 second')", [oMatch, oLobby]);
+  await db.query('insert into public.match_players(match_id,user_id,seat_index,missed) values ($1,$2,0,4),($1,$3,1,0),($1,$4,2,0),($1,$5,3,0)', [oMatch, ...team]);
+  await login(team[1]);
+  const teamOut = (await db.query('select public.claim_turn_timeout($1,0) as m', [oMatch])).rows[0].m;
+  assert.equal(teamOut.match.status, 'ABANDONED', 'out of lifelines in 2 v 2 ends the match');
+  assert.equal(teamOut.match.teams, true);
+  for (const fn of ['require_teams(boolean,integer)', 'partner_seat(boolean,integer)'])
+    assert.equal(await privilege(`select has_function_privilege('authenticated','public.${fn}','EXECUTE') as ok`), false, fn);
+  console.log(
+    'PASS: 2 v 2 online: teams need four seats and queue apart; both winners are paid and share the prize; a partner walking out or running out of lifelines loses it for the pair, and the other pair split the pool.',
+  );
+  // --- team parties (migration 0017) -----------------------------------------------
+  const party = Array.from({ length: 9 }, () => randomUUID());
+  await db.query(
+    `insert into auth.users(id,email) select id, 'party' || n || '@example.test' from unnest($1::uuid[]) with ordinality as t(id, n)`,
+    [party],
+  );
+  for (const u of party) {
+    await login(u);
+    await db.query('select public.get_wallet()');
+  }
+  await db.query('delete from public.matchmaking_queue');
+  const seatOf = async (lobbyId, uid) =>
+    (await db.query("select seat_index from public.lobby_players where lobby_id=$1 and user_id=$2 and status='JOINED'", [lobbyId, uid])).rows[0]?.seat_index;
+  // The first friend to join a 2 v 2 room sits opposite the host.
+  await login(party[0]);
+  const roomA = (await db.query("select public.create_link_room(4, 0, 'classic', true) as r")).rows[0].r;
+  await login(party[1]);
+  await db.query('select public.join_link_room($1)', [roomA.code]);
+  assert.equal(await seatOf(roomA.lobbyId, party[1]), 2, 'first friend is the partner, opposite');
+  // Nobody else yet: a non-host cannot search, and the host can.
+  await assert.rejects(db.query('select public.seek_opponents($1)', [roomA.lobbyId]), /Only the host/);
+  await login(party[0]);
+  const seeking = (await db.query('select public.seek_opponents($1) as l', [roomA.lobbyId])).rows[0].l;
+  assert.equal(seeking.lobby.seeking, true);
+  // Seats cannot be shuffled while searching.
+  await login(party[1]);
+  await assert.rejects(db.query('select public.move_lobby_seat($1, 1)', [roomA.lobbyId]), /Stop searching/);
+  // For the first 20 seconds a searching pair waits for another pair: a
+  // stranger is not seated yet (0018).
+  await login(party[2]);
+  const tooSoon = (await db.query("select public.join_quick_match(4, 0, 'classic', true) as t")).rows[0].t;
+  assert.equal(tooSoon.status, 'WAITING', 'strangers wait while a pair looks for another pair');
+  assert.equal(await seatOf(roomA.lobbyId, party[2]), undefined);
+  assert.ok(seeking.lobby.seekingSince, 'the room says when it started searching');
+  // After that, a stranger searching for 2 v 2 takes a seat on the other side.
+  await db.query("update public.lobbies set seeking_since = now() - interval '30 seconds' where id=$1", [roomA.lobbyId]);
+  const strangerTicket = (await db.query("select public.join_quick_match(4, 0, 'classic', true) as t")).rows[0].t;
+  assert.equal(strangerTicket.status, 'MATCHED');
+  assert.equal(strangerTicket.lobbyId, roomA.lobbyId);
+  assert.equal(await seatOf(roomA.lobbyId, party[2]), 1);
+  // A second stranger completes the table, which stops searching and counts down.
+  await login(party[3]);
+  await db.query("select public.join_quick_match(4, 0, 'classic', true)");
+  assert.equal(await seatOf(roomA.lobbyId, party[3]), 3);
+  const fullA = (await db.query('select status, seeking from public.lobbies where id=$1', [roomA.lobbyId])).rows[0];
+  assert.equal(fullA.seeking, false);
+  assert.equal(fullA.status, 'COUNTDOWN');
+
+  // Two searching pairs play each other, at the older table.
+  await db.query('delete from public.matchmaking_queue');
+  await login(party[4]);
+  const roomB = (await db.query("select public.create_link_room(4, 0, 'kill', true) as r")).rows[0].r;
+  await login(party[5]);
+  await db.query('select public.join_link_room($1)', [roomB.code]);
+  await login(party[4]);
+  await db.query('select public.seek_opponents($1)', [roomB.lobbyId]);
+  await login(party[6]);
+  const roomC = (await db.query("select public.create_link_room(4, 0, 'kill', true) as r")).rows[0].r;
+  await login(party[7]);
+  await db.query('select public.join_link_room($1)', [roomC.code]);
+  // Changing sides before searching: move to an empty seat, then back.
+  await db.query('select public.move_lobby_seat($1, 3)', [roomC.lobbyId]);
+  assert.equal(await seatOf(roomC.lobbyId, party[7]), 3);
+  await assert.rejects(db.query('select public.move_lobby_seat($1, 0)', [roomC.lobbyId]), /already sitting/);
+  await login(party[6]);
+  await assert.rejects(db.query('select public.seek_opponents($1)', [roomC.lobbyId]), /partner opposite/);
+  await login(party[7]);
+  await db.query('select public.move_lobby_seat($1, 2)', [roomC.lobbyId]);
+  await login(party[6]);
+  const merged = (await db.query('select public.seek_opponents($1) as l', [roomC.lobbyId])).rows[0].l;
+  assert.equal(merged.lobby.movedTo, roomB.lobbyId, 'the newer pair is sent to the older table');
+  assert.equal(merged.lobby.status, 'CANCELLED');
+  assert.equal(await seatOf(roomB.lobbyId, party[6]), 1);
+  assert.equal(await seatOf(roomB.lobbyId, party[7]), 3, 'partners stay opposite each other');
+  assert.equal((await db.query('select status from public.lobbies where id=$1', [roomB.lobbyId])).rows[0].status, 'COUNTDOWN');
+  // A different mode never merges.
+  await login(party[8]);
+  await db.query("select public.join_quick_match(4, 0, 'classic', true)");
+  assert.equal(await seatOf(roomB.lobbyId, party[8]), undefined);
+  for (const fn of ['free_seat(uuid,integer[])', 'seat_player(lobbies,uuid,integer)', 'fill_team_room(uuid)'])
+    assert.equal(await privilege(`select has_function_privilege('authenticated','public.${fn}','EXECUTE') as ok`), false, fn);
+  for (const fn of ['move_lobby_seat(uuid,integer)', 'seek_opponents(uuid,boolean)'])
+    assert.equal(await privilege(`select has_function_privilege('anon','public.${fn}','EXECUTE') as ok`), false, fn);
+  console.log(
+    'PASS: team parties: the first friend in a 2 v 2 room sits opposite as partner; players can change to an empty seat; a searching pair meets another searching pair at once (at the older table, partners kept opposite), and only after 20 seconds without one do 2 v 2 quick-play strangers fill in; modes never mix.',
+  );
+
+  // --- store-version policy (migration 0029) ------------------------------------
+  const policyOf = async (platform) =>
+    (await db.query('select public.get_app_version_policy($1) as p', [platform])).rows[0].p;
+  // Seeded rows ask nothing of anyone.
+  assert.deepEqual(await policyOf('android'), {
+    min_version: '0.0.0',
+    latest_version: '0.0.0',
+    store_url: null,
+    message: null,
+  });
+  assert.equal(await policyOf('web'), null, 'unknown platforms have no policy');
+  await db.query("update public.app_versions set min_version='1.1.0', latest_version='1.2.0' where platform='ios'");
+  assert.equal((await policyOf('ios')).min_version, '1.1.0');
+  await assert.rejects(
+    db.query("update public.app_versions set min_version='1.x' where platform='android'"),
+    /check constraint/,
+  );
+  await assert.rejects(
+    db.query("update public.app_versions set store_url='http://example.test' where platform='ios'"),
+    /check constraint/,
+  );
+  assert.equal(
+    (await db.query("select count(*)::int as n from pg_policies where tablename='app_versions'")).rows[0].n,
+    0,
+    'app_versions must have no RLS policies: read through the function only',
+  );
+  assert.equal(
+    await privilege("select has_function_privilege('anon','public.get_app_version_policy(text)','EXECUTE') as ok"),
+    true,
+  );
+  assert.equal(
+    await privilege("select has_function_privilege('anon','public.touch_app_versions()','EXECUTE') as ok"),
+    false,
+  );
+  console.log(
+    'PASS: store-version policy is readable by anyone through its function, validated on write, and has no client write path.',
+  );
+} finally {
+  await db.close();
+}

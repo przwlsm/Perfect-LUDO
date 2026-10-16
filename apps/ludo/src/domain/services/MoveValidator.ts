@@ -1,0 +1,133 @@
+import { getBoardPosition, isSafeSquare, getFinishProgress, getTrackLength } from '../board';
+import { isInYard, type Piece } from '../entities/Piece';
+import type { Player } from '../entities/Player';
+import type { DieValue, PlayerColor } from '../entities/PlayerColor';
+
+export interface Move {
+  readonly pieceId: string;
+  readonly fromProgress: number;
+  readonly toProgress: number;
+  readonly capturedPieceIds: readonly string[];
+}
+
+function findPiecesAtSquare(players: readonly Player[], square: number): Piece[] {
+  const occupants: Piece[] = [];
+  for (const player of players) {
+    for (const piece of player.pieces) {
+      const position = getBoardPosition(piece.color, piece.progress, players.length);
+      if (position?.zone === 'SHARED_TRACK' && position.square === square) {
+        occupants.push(piece);
+      }
+    }
+  }
+  return occupants;
+}
+
+function countByOpponentColor(
+  occupants: readonly Piece[],
+  movingColor: PlayerColor,
+  friends: readonly PlayerColor[] = [],
+): Map<PlayerColor, number> {
+  const counts = new Map<PlayerColor, number>();
+  for (const piece of occupants) {
+    if (piece.color === movingColor || friends.includes(piece.color)) continue;
+    counts.set(piece.color, (counts.get(piece.color) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/**
+ * Two or more same-colored pieces sharing a square form a block: no other
+ * color may land there at all (own-color stacking is always allowed).
+ */
+function isBlockedForColor(
+  players: readonly Player[],
+  square: number,
+  movingColor: PlayerColor,
+  friends: readonly PlayerColor[] = [],
+): boolean {
+  const counts = countByOpponentColor(findPiecesAtSquare(players, square), movingColor, friends);
+  return [...counts.values()].some((count) => count >= 2);
+}
+
+/**
+ * A lone opponent piece on the destination square is sent back to the yard.
+ * Two-or-more of the same opponent color form a block instead (handled by
+ * isBlockedForColor, so this never gets called for that case), and safe
+ * squares never allow captures at all.
+ */
+function getCapturedPieceIds(
+  players: readonly Player[],
+  square: number,
+  movingColor: PlayerColor,
+  friends: readonly PlayerColor[] = [],
+): string[] {
+  if (isSafeSquare(square, players.length)) return [];
+  const occupants = findPiecesAtSquare(players, square).filter(
+    (p) => p.color !== movingColor && !friends.includes(p.color),
+  );
+  const counts = countByOpponentColor(occupants, movingColor, friends);
+  return occupants.filter((p) => counts.get(p.color) === 1).map((p) => p.id);
+}
+
+/**
+ * `friends` are colours on the mover's side in a team game: their coins are
+ * never captured and never block, exactly like the mover's own.
+ */
+export function getValidMoveForPiece(
+  players: readonly Player[],
+  piece: Piece,
+  dieValue: DieValue,
+  friends: readonly PlayerColor[] = [],
+  homeLocked = false,
+): Move | null {
+  const toProgress = isInYard(piece) ? (dieValue === 6 ? 1 : null) : piece.progress + dieValue;
+  if (toProgress === null || toProgress > getFinishProgress(players.length)) return null;
+  // Kill & Go: no entering the home path before this player has captured.
+  if (homeLocked && toProgress >= getTrackLength(players.length)) return null;
+
+  const position = getBoardPosition(piece.color, toProgress, players.length);
+  if (position?.zone !== 'SHARED_TRACK') {
+    return { pieceId: piece.id, fromProgress: piece.progress, toProgress, capturedPieceIds: [] };
+  }
+
+  if (isBlockedForColor(players, position.square, piece.color, friends)) return null;
+
+  const capturedPieceIds = getCapturedPieceIds(players, position.square, piece.color, friends);
+  return { pieceId: piece.id, fromProgress: piece.progress, toProgress, capturedPieceIds };
+}
+
+export function getValidMoves(
+  players: readonly Player[],
+  color: PlayerColor,
+  dieValue: DieValue,
+  friends: readonly PlayerColor[] = [],
+  homeLocked = false,
+): Move[] {
+  const player = players.find((p) => p.color === color);
+  if (!player) return [];
+
+  const moves: Move[] = [];
+  for (const piece of player.pieces) {
+    if (piece.progress === getFinishProgress(players.length)) continue;
+    const move = getValidMoveForPiece(players, piece, dieValue, friends, homeLocked);
+    if (move) moves.push(move);
+  }
+  return moves;
+}
+
+/**
+ * The genuinely different choices among one player's moves. Coins of the
+ * same colour on the same square (or all waiting at home) make identical
+ * moves, so they count once: the first coin stands in for the rest. When
+ * this leaves a single choice, there is nothing for the player to decide.
+ */
+export function distinctMoves(moves: readonly Move[]): Move[] {
+  const seen = new Set<string>();
+  return moves.filter((move) => {
+    const key = `${move.fromProgress}>${move.toProgress}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}

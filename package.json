@@ -1,0 +1,45 @@
+{
+  "name": "ludo-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "packageManager": "npm@11.4.1",
+  "scripts": {
+    "ludo": "npm run start --workspace ludo",
+    "baghchal": "npm run start --workspace baghchal",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "verify": "turbo run lint typecheck test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky",
+    "quietatlas": "npm run start --workspace quietatlas",
+    "tambola": "npm run start --workspace tambola",
+    "akshar": "npm run start --workspace akshar",
+    "utsav": "npm run start --workspace utsav",
+    "diya": "npm run start --workspace diya",
+    "kolam": "npm run start --workspace kolam",
+    "chaisort": "npm run start --workspace chaisort",
+    "monsoon": "npm run start --workspace monsoon",
+    "speaklocal": "npm run start --workspace speaklocal"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.9.8",
+    "turbo": "^2.11.6"
+  },
+  "lint-staged": {
+    "*.{json,md,yml}": [
+      "prettier --write"
+    ]
+  },
+  "overrides": {
+    "shell-quote": "^1.12.0",
+    "source-map-js": "^1.2.2"
+  }
+}

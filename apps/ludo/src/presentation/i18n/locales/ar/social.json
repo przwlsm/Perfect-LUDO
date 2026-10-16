@@ -1,0 +1,134 @@
+{
+  "friends": {
+    "title": "الأصدقاء",
+    "subtitle": "العب مع من تعرفهم",
+    "count_zero": "لا يوجد أصدقاء",
+    "count_one": "صديق واحد",
+    "count_two": "صديقان",
+    "count_few": "{{count}} أصدقاء",
+    "count_many": "{{count}} صديقًا",
+    "count_other": "{{count}} صديق",
+    "you": "أنت @{{username}}",
+    "youWithId": "أنت @{{username}} · ID {{id}}",
+    "online": "{{online}} متصل",
+    "createChallenge": "أنشئ تحديًا ←",
+    "createFailed": "تعذّر إنشاء اللعبة.",
+    "empty": {
+      "title": "لا يوجد أصدقاء بعد",
+      "body": "ابحث عن اسم مستخدم في الأعلى وأرسل طلبًا لتبدآ اللعب معًا."
+    },
+    "remove": "إزالة {{name}}"
+  },
+  "tabs": {
+    "friends": "الأصدقاء",
+    "requests": "الطلبات",
+    "sent": "المُرسلة"
+  },
+  "requests": {
+    "incomingEmpty": "لا توجد طلبات صداقة حاليًا.",
+    "sentEmpty": "لم ترسل أي طلبات.",
+    "accept": "قبول",
+    "decline": "رفض"
+  },
+  "notice": {
+    "requestSent": "تم إرسال طلب الصداقة.",
+    "nowFriends": "أصبحتما صديقين!",
+    "requestCancelled": "تم إلغاء الطلب.",
+    "friendRemoved": "تمت إزالة الصديق."
+  },
+  "search": {
+    "a11y": "ابحث باسم المستخدم أو ID المستخدم",
+    "placeholder": "ابحث باسم المستخدم أو ID المستخدم…",
+    "clear": "مسح البحث",
+    "noResults": "لم يتم العثور على لاعبين. جرّب اسم المستخدم كاملًا، أو ID المستخدم.",
+    "unavailable": "البحث غير متاح حاليًا.",
+    "self": "هذا أنت",
+    "challenge": "تحدٍّ",
+    "requestSent": "تم إرسال الطلب",
+    "addFriend": "إضافة صديق"
+  },
+  "player": {
+    "id": "ID {{id}}",
+    "idA11y": "معرّف المستخدم {{id}}"
+  },
+  "presence": {
+    "ONLINE": "متصل",
+    "AWAY": "بعيد",
+    "IN_GAME": "في لعبة",
+    "OFFLINE": "غير متصل"
+  },
+  "noBackend": {
+    "body": "اللعب مع الأصدقاء يتطلب حسابًا، وهذه النسخة لا تحتوي على خدمة حسابات مُعدّة. كل شيء آخر لا يزال يعمل بدون إنترنت.",
+    "back": "العودة إلى اللعبة"
+  },
+  "guest": {
+    "hint": "كضيف، يمكنك اللعب أونلاين الآن: اللعب السريع يُجلسك مع اللاعبين التاليين الباحثين عن لعبة."
+  },
+  "signedOut": {
+    "label": "حساب واحد، لكل سهرات اللعب",
+    "title": "سجّل الدخول لإضافة أصدقاء",
+    "body": "قائمة أصدقائك وتحدياتك ودعواتك مرتبطة بحسابك، فتتبعك إلى كل جهاز.",
+    "signIn": "سجّل الدخول أو أنشئ حسابًا",
+    "offline": "تابع اللعب بدون إنترنت"
+  },
+  "challenge": {
+    "title": "إنشاء تحدٍّ",
+    "howMany": "كم عدد اللاعبين؟",
+    "playersA11y_one": "لاعب واحد",
+    "playersA11y_two": "لاعبان",
+    "playersA11y_few": "{{count}} لاعبين",
+    "playersA11y_many": "{{count}} لاعبًا",
+    "playersA11y_other": "{{count}} لاعب",
+    "players": "اللاعبون",
+    "selectFriends_one": "اختر صديقًا واحدًا",
+    "selectFriends_two": "اختر صديقين",
+    "selectFriends_few": "اختر {{count}} أصدقاء",
+    "selectFriends_many": "اختر {{count}} صديقًا",
+    "selectFriends_other": "اختر {{count}} صديق",
+    "selected": "المختارون: {{picked}} / {{required}}",
+    "noFriends": "أضف صديقًا أولًا — التحديات ألعاب خاصة بين الأصدقاء.",
+    "selectA11y": "اختر {{name}}",
+    "creating": "جارٍ الإنشاء…",
+    "start_one": "ابدأ التحدي · لاعب واحد",
+    "start_two": "ابدأ التحدي · لاعبان",
+    "start_few": "ابدأ التحدي · {{count}} لاعبين",
+    "start_many": "ابدأ التحدي · {{count}} لاعبًا",
+    "start_other": "ابدأ التحدي · {{count}} لاعب",
+    "footnote": "يتلقى الأصدقاء المدعوون إشعارًا فورًا. تنتهي صلاحية الدعوة إذا لم يُجب أحد."
+  },
+  "invite": {
+    "dismiss": "تجاهل الدعوة",
+    "join": "انضم إلى اللعبة",
+    "decline": "رفض",
+    "unavailable": "هذه الدعوة لم تعد متاحة.",
+    "share": "انضم إلى لعبتي في Ludo Rumble! انقر على {{link}} لتأخذ مقعدك، أو افتح Ludo Rumble ← أونلاين ← لعبة خاصة وأدخل الرمز {{code}}."
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "a11y": "الإشعارات",
+    "unreadA11y_zero": "الإشعارات، لا يوجد غير مقروء",
+    "unreadA11y_one": "الإشعارات، إشعار واحد غير مقروء",
+    "unreadA11y_two": "الإشعارات، إشعاران غير مقروءين",
+    "unreadA11y_few": "الإشعارات، {{count}} إشعارات غير مقروءة",
+    "unreadA11y_many": "الإشعارات، {{count}} إشعارًا غير مقروء",
+    "unreadA11y_other": "الإشعارات، {{count}} إشعار غير مقروء",
+    "close": "إغلاق الإشعارات",
+    "empty": "لا شيء بعد. طلبات الصداقة والتحديات تصل إلى هنا.",
+    "justNow": "الآن",
+    "minutesAgo_one": "قبل دقيقة",
+    "minutesAgo_two": "قبل دقيقتين",
+    "minutesAgo_few": "قبل {{count}} دقائق",
+    "minutesAgo_many": "قبل {{count}} دقيقة",
+    "minutesAgo_other": "قبل {{count}} دقيقة",
+    "hoursAgo_one": "قبل ساعة",
+    "hoursAgo_two": "قبل ساعتين",
+    "hoursAgo_few": "قبل {{count}} ساعات",
+    "hoursAgo_many": "قبل {{count}} ساعة",
+    "hoursAgo_other": "قبل {{count}} ساعة",
+    "daysAgo_one": "قبل يوم",
+    "daysAgo_two": "قبل يومين",
+    "daysAgo_few": "قبل {{count}} أيام",
+    "daysAgo_many": "قبل {{count}} يومًا",
+    "daysAgo_other": "قبل {{count}} يوم"
+  }
+}

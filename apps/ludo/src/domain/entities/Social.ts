@@ -1,0 +1,143 @@
+import type { GameVariant } from './Variant';
+/** Backend-independent vocabulary for friends, challenges and private lobbies. */
+
+/** IN_GAME is a kind of present: only OFFLINE means absent. */
+export type PresenceStatus = 'ONLINE' | 'AWAY' | 'IN_GAME' | 'OFFLINE';
+
+export type FriendRelationship = 'SELF' | 'FRIEND' | 'REQUEST_SENT' | 'REQUEST_RECEIVED' | 'NONE';
+
+export type ChallengeStatus =
+  | 'PENDING'
+  | 'ACCEPTED'
+  | 'DECLINED'
+  | 'EXPIRED'
+  | 'CANCELLED'
+  | 'IN_LOBBY'
+  | 'STARTED'
+  | 'COMPLETED';
+
+export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED' | 'CANCELLED';
+
+export type LobbyStatus = 'WAITING' | 'COUNTDOWN' | 'STARTED' | 'CANCELLED' | 'COMPLETED';
+
+export type LobbyPlayerStatus = 'INVITED' | 'JOINED' | 'LEFT' | 'DECLINED';
+
+export type NotificationType =
+  | 'FRIEND_REQUEST'
+  | 'FRIEND_REQUEST_ACCEPTED'
+  | 'GIFT'
+  | 'CHALLENGE_INVITE'
+  | 'CHALLENGE_ACCEPTED'
+  | 'CHALLENGE_DECLINED'
+  | 'CHALLENGE_EXPIRED'
+  | 'CHALLENGE_CANCELLED'
+  | 'GAME_STARTED';
+
+/**
+ * Everything one player may see about another. Deliberately narrow: no email,
+ * no coins, no match history. Widening this type means widening what the
+ * server discloses, so it should stay a considered decision.
+ */
+export interface PublicUser {
+  readonly id: string;
+  readonly username: string;
+  readonly displayName: string | null;
+  readonly avatar: string | null;
+  /** Eight-digit ID shown so friends can search for exactly this account. Guests have none. */
+  readonly publicId: string | null;
+  readonly presence: PresenceStatus;
+  /** ISO timestamp of the last heartbeat, or null if they have never been seen. */
+  readonly lastSeen: string | null;
+}
+
+export interface Friend extends PublicUser {
+  readonly friendsSince: string;
+}
+
+export interface UserSearchResult extends PublicUser {
+  readonly relationship: FriendRelationship;
+}
+
+export interface FriendRequest {
+  readonly id: string;
+  readonly user: PublicUser;
+  readonly createdAt: string;
+}
+
+export interface LobbyPlayer {
+  readonly userId: string;
+  readonly username: string;
+  readonly displayName: string | null;
+  readonly avatar: string | null;
+  /** Fixed at invite time, so board seating never depends on join order. */
+  readonly seatIndex: number;
+  readonly status: LobbyPlayerStatus;
+  readonly isReady: boolean;
+  readonly isHost: boolean;
+  readonly joinedAt: string | null;
+  readonly invitationStatus: InvitationStatus | null;
+  readonly presence: PresenceStatus;
+  readonly lastSeen: string | null;
+}
+
+export interface Lobby {
+  readonly id: string;
+  readonly challengeId: string;
+  readonly hostId: string;
+  readonly maxPlayers: number;
+  readonly status: LobbyStatus;
+  /** Server-chosen instant the game begins; null until the countdown starts. */
+  readonly startAt: string | null;
+  readonly createdAt: string;
+  /** LINK tables only: the six-character code anyone with the link joins by. */
+  readonly inviteCode: string | null;
+  /** Coins each seat pays when the match starts; 0 for a free table. */
+  readonly stake: number;
+  /** The game mode everyone at this table plays. */
+  readonly variant: GameVariant;
+  /** 2 v 2 table: opposite seats are partners. */
+  readonly teams: boolean;
+  /** A 2 v 2 pair's room open to quick play, waiting for opponents. */
+  readonly seeking: boolean;
+  /** Set when this room's pair was moved to another table to play. */
+  readonly movedTo: string | null;
+  /** Set when this table is a round of a cup bracket. */
+  readonly cupBracketId: string | null;
+}
+
+/**
+ * FRIENDS tables are invited; QUICK tables are seated from the public queue;
+ * LINK tables are opened by a host and joined by anyone holding the invite code.
+ */
+export type ChallengeKind = 'FRIENDS' | 'QUICK' | 'LINK';
+
+export interface Challenge {
+  readonly id: string;
+  readonly creatorId: string;
+  readonly playerCount: number;
+  readonly status: ChallengeStatus;
+  readonly kind: ChallengeKind;
+  readonly expiresAt: string;
+  readonly startedAt: string | null;
+}
+
+export interface LobbySnapshot {
+  /** The server's clock at read time, used to correct for device clock skew. */
+  readonly serverNow: string;
+  readonly lobby: Lobby;
+  readonly challenge: Challenge;
+  readonly players: readonly LobbyPlayer[];
+}
+
+export interface AppNotification {
+  readonly id: string;
+  readonly type: NotificationType;
+  readonly title: string;
+  readonly message: string;
+  readonly challengeId: string | null;
+  readonly lobbyId: string | null;
+  readonly isRead: boolean;
+  readonly createdAt: string;
+}
+
+export type Unsubscribe = () => void;

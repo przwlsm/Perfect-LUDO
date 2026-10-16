@@ -1,0 +1,206 @@
+{
+  "title": "Sala de colección",
+  "subtitle": "TRONOS · MEDALLAS · VITRINA",
+  "visiting": "Sala de {{name}}",
+  "visit": "Visitar la sala de colección",
+  "loading": "Abriendo la sala…",
+  "signIn": {
+    "title": "Tus trofeos necesitan un hogar",
+    "body": "Inicia sesión y cada victoria, captura y regalo contará para tus medallas. Los tronos se ganan en las copas.",
+    "button": "Iniciar sesión"
+  },
+  "closed": {
+    "title": "Esta sala está cerrada",
+    "body": "{{name}} mantiene su colección en privado."
+  },
+  "stats": {
+    "cups": "Copas ganadas",
+    "thrones": "Tronos",
+    "medals": "Medallas",
+    "level": "Nivel"
+  },
+  "showcase": {
+    "label": "VITRINA",
+    "empty": "Elige hasta tres trofeos para mostrar en tu tarjeta de jugador.",
+    "emptyVisitor": "Todavía no hay nada en la vitrina.",
+    "edit": "Elegir vitrina",
+    "sheetTitle": "Tu vitrina",
+    "hint": "Toca hasta tres. Los rivales en la mesa, tus amigos y la clasificación los ven primero.",
+    "nothingYet": "Desbloquea una medalla o gana un trono primero.",
+    "save": "Guardar vitrina",
+    "count": "{{n}} de 3 elegidos"
+  },
+  "thrones": {
+    "label": "SALA DE TRONOS",
+    "title": "El Camino Real",
+    "body": "Gana una copa y su trono será tuyo, iluminado para que todos lo vean.",
+    "won_one": "Ganado {{count}} vez",
+    "won_other": "Ganado {{count}} veces",
+    "locked": "Aún no ganado",
+    "entry": "Entrada: {{coins}} monedas",
+    "free": "Entrada gratis",
+    "won_many": "Ganado {{count}} veces"
+  },
+  "halls": {
+    "village": "Plaza de la aldea",
+    "merchant": "Plaza del mercader",
+    "knight": "Salón del caballero",
+    "baron": "Corte del barón",
+    "duke": "Cámara del duque",
+    "king": "Corte del rey",
+    "emperor": "Palacio del emperador",
+    "legends": "Salón de las leyendas"
+  },
+  "throneNames": {
+    "village": "Trono de madera",
+    "merchant": "Trono de bronce",
+    "knight": "Trono de plata",
+    "baron": "Trono de oro",
+    "duke": "Trono de zafiro",
+    "king": "Trono de rubí",
+    "emperor": "Trono de diamante",
+    "legends": "Trono de leyenda"
+  },
+  "medals": {
+    "label": "MEDALLAS",
+    "unlocked": "{{done}} de {{total}} desbloqueadas",
+    "groups": {
+      "play": "En la mesa",
+      "arena": "En la arena",
+      "club": "En el club",
+      "royal": "El Camino Real"
+    }
+  },
+  "tiers": {
+    "locked": "Bloqueada",
+    "bronze": "Bronce",
+    "silver": "Plata",
+    "gold": "Oro",
+    "platinum": "Platino"
+  },
+  "detail": {
+    "progress": "{{progress}} / {{target}}",
+    "next": "Siguiente: {{tier}} a los {{target}}",
+    "maxed": "Platino: el nivel más alto",
+    "unlockedOn": "Desbloqueada el {{date}}",
+    "tiersTitle": "Los cuatro niveles"
+  },
+  "privacy": {
+    "title": "Visible para otros jugadores",
+    "hint": "Tus amigos, los rivales en la mesa y la clasificación pueden visitar tu sala."
+  },
+  "new": {
+    "label": "NUEVO TROFEO",
+    "one": "{{name}} · {{tier}}",
+    "more_one": "y {{count}} más",
+    "more_other": "y {{count}} más",
+    "open": "Verlo brillar",
+    "gotIt": "Entendido",
+    "more_many": "y {{count}} más"
+  },
+  "profileCard": {
+    "label": "SALA DE COLECCIÓN",
+    "title": "Tus tronos y medallas",
+    "body": "Cada victoria, captura y regalo cuenta para una medalla. Los tronos vienen de las copas.",
+    "open": "Entrar en la sala",
+    "newBadge": "{{count}} NUEVOS"
+  },
+  "achievements": {
+    "first-blood": {
+      "name": "Primera sangre",
+      "goal": "Captura {{n}} fichas rivales"
+    },
+    "six-appeal": {
+      "name": "Seis de encanto",
+      "goal": "Saca {{n}} seises"
+    },
+    "homecoming": {
+      "name": "Vuelta a casa",
+      "goal": "Lleva {{n}} fichas a casa"
+    },
+    "veteran": {
+      "name": "Veterano",
+      "goal": "Termina {{n}} partidas"
+    },
+    "hot-streak": {
+      "name": "Racha caliente",
+      "goal": "Gana {{n}} partidas seguidas"
+    },
+    "marathon": {
+      "name": "Maratón",
+      "goal": "Juega {{n}} partidas en un día"
+    },
+    "champion": {
+      "name": "Campeón",
+      "goal": "Gana {{n}} partidas en línea"
+    },
+    "bot-buster": {
+      "name": "Cazabots",
+      "goal": "Vence a la computadora {{n}} veces"
+    },
+    "full-house": {
+      "name": "Mesa llena",
+      "goal": "Gana {{n}} partidas en una mesa de seis"
+    },
+    "speed-demon": {
+      "name": "Demonio veloz",
+      "goal": "Gana {{n}} partidas Rápida 1"
+    },
+    "hunter": {
+      "name": "Cazador",
+      "goal": "Gana {{n}} partidas Caza y Ve"
+    },
+    "team-player": {
+      "name": "Jugador de equipo",
+      "goal": "Gana {{n}} partidas 2 contra 2"
+    },
+    "high-roller": {
+      "name": "Gran apostador",
+      "goal": "Gana {{n}} partidas con apuesta"
+    },
+    "podium-regular": {
+      "name": "Habitual del podio",
+      "goal": "Termina {{n}} torneos semanales entre los 10 primeros"
+    },
+    "diamond-hands": {
+      "name": "Manos de diamante",
+      "goal": "Alcanza la división {{n}} de la liga"
+    },
+    "crowd-favourite": {
+      "name": "Favorito del público",
+      "goal": "Recibe {{n}} regalos en la mesa"
+    },
+    "generous-heart": {
+      "name": "Corazón generoso",
+      "goal": "Envía {{n}} regalos en la mesa"
+    },
+    "social-butterfly": {
+      "name": "Alma social",
+      "goal": "Ten {{n}} amigos"
+    },
+    "lucky-star": {
+      "name": "Estrella de la suerte",
+      "goal": "Gira la ruleta {{n}} veces"
+    },
+    "daily-devotion": {
+      "name": "Devoción diaria",
+      "goal": "Reclama {{n}} recompensas diarias"
+    },
+    "rising-star": {
+      "name": "Estrella en ascenso",
+      "goal": "Alcanza el nivel {{n}}"
+    },
+    "collector": {
+      "name": "Coleccionista",
+      "goal": "Ten {{n}} tableros y dados"
+    },
+    "throne-collector": {
+      "name": "Coleccionista de tronos",
+      "goal": "Posee {{n}} tronos distintos"
+    },
+    "kingmaker": {
+      "name": "Hacedor de reyes",
+      "goal": "Gana {{n}} copas"
+    }
+  }
+}

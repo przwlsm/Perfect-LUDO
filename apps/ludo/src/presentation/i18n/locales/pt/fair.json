@@ -1,0 +1,16 @@
+{
+  "badge": "DADOS DO SERVIDOR",
+  "badgeA11y": "Dados lançados no servidor. Como funcionam nossos dados",
+  "title": "Como funcionam nossos dados",
+  "settings": {
+    "label": "JOGO LIMPO",
+    "title": "Dados que ninguém pode tocar",
+    "body": "Os lançamentos online são feitos no servidor do jogo, nunca em um celular, e cada jogada é conferida com as regras.",
+    "button": "Como funcionam nossos dados"
+  },
+  "p1": "Online, cada lançamento é feito no servidor do jogo com aleatoriedade criptograficamente segura e amostragem por rejeição, para que cada face tenha exatamente a mesma chance. O lançamento é registrado antes de qualquer jogador vê-lo.",
+  "p2": "Nenhum celular, nenhum jogador e ninguém no Ludo Rumble pode escolher um número. Não há ajuda para recuperar, nem quebra de sequência, nem vantagem escondida para ninguém. Os jogadores de computador lançam os mesmos dados que você.",
+  "p3": "Partidas offline são lançadas no seu celular com o gerador aleatório seguro dele, o mesmo usado para senhas, nunca uma simples chamada random().",
+  "p4": "O servidor confere cada jogada com as regras, então um app modificado não consegue mover uma peça além do dado. Um teste automático repete milhares de partidas para provar que servidor e app concordam em cada regra.",
+  "close": "Entendi"
+}

@@ -1,0 +1,116 @@
+{
+  "friends": {
+    "title": "Amigos",
+    "subtitle": "JOGUE COM QUEM VOCÊ CONHECE",
+    "count_one": "{{count}} amigo",
+    "count_many": "{{count}} de amigos",
+    "count_other": "{{count}} amigos",
+    "you": "Você é @{{username}}",
+    "youWithId": "Você é @{{username}} · ID {{id}}",
+    "online": "{{online}} ONLINE",
+    "createChallenge": "Criar um desafio →",
+    "createFailed": "Não foi possível criar o jogo.",
+    "empty": {
+      "title": "Nenhum amigo ainda",
+      "body": "Busque um nome de usuário acima e envie uma solicitação para começarem a jogar juntos."
+    },
+    "remove": "Remover {{name}}"
+  },
+  "tabs": {
+    "friends": "Amigos",
+    "requests": "Pedidos",
+    "sent": "Enviados"
+  },
+  "requests": {
+    "incomingEmpty": "Nenhum pedido de amizade agora.",
+    "sentEmpty": "Você não enviou nenhum pedido.",
+    "accept": "Aceitar",
+    "decline": "Recusar"
+  },
+  "notice": {
+    "requestSent": "Pedido de amizade enviado.",
+    "nowFriends": "Vocês agora são amigos!",
+    "requestCancelled": "Pedido cancelado.",
+    "friendRemoved": "Amigo removido."
+  },
+  "search": {
+    "a11y": "Buscar nome de usuário ou ID de usuário",
+    "placeholder": "Buscar nome de usuário ou ID…",
+    "clear": "Limpar busca",
+    "noResults": "Nenhum jogador encontrado. Tente o nome de usuário completo ou o ID de usuário.",
+    "unavailable": "A busca está indisponível agora.",
+    "self": "É você",
+    "challenge": "Desafiar",
+    "requestSent": "Pedido enviado",
+    "addFriend": "Adicionar amigo"
+  },
+  "player": {
+    "id": "ID {{id}}",
+    "idA11y": "ID de usuário {{id}}"
+  },
+  "presence": {
+    "ONLINE": "Online",
+    "AWAY": "Ausente",
+    "IN_GAME": "Em partida",
+    "OFFLINE": "Offline"
+  },
+  "noBackend": {
+    "body": "Jogar com amigos exige uma conta, e esta versão não tem serviço de contas configurado. Todo o resto continua funcionando offline.",
+    "back": "Voltar ao jogo"
+  },
+  "guest": {
+    "hint": "Como convidado, você já pode jogar online agora: o Jogo Rápido coloca você com os próximos jogadores procurando partida."
+  },
+  "signedOut": {
+    "label": "UMA CONTA, TODAS AS NOITES DE JOGO",
+    "title": "Entre para adicionar amigos",
+    "body": "Sua lista de amigos, desafios e convites ficam na sua conta, então acompanham você em qualquer aparelho.",
+    "signIn": "Entrar ou criar uma conta",
+    "offline": "Continuar jogando offline"
+  },
+  "challenge": {
+    "title": "Criar desafio",
+    "howMany": "QUANTOS JOGADORES?",
+    "playersA11y_one": "{{count}} jogador",
+    "playersA11y_many": "{{count}} de jogadores",
+    "playersA11y_other": "{{count}} jogadores",
+    "players": "JOGADORES",
+    "selectFriends_one": "ESCOLHA {{count}} AMIGO",
+    "selectFriends_many": "ESCOLHA {{count}} DE AMIGOS",
+    "selectFriends_other": "ESCOLHA {{count}} AMIGOS",
+    "selected": "Escolhidos: {{picked}} / {{required}}",
+    "noFriends": "Adicione um amigo primeiro — desafios são jogos privados entre amigos.",
+    "selectA11y": "Escolher {{name}}",
+    "creating": "Criando…",
+    "start_one": "Começar desafio · {{count}} jogador",
+    "start_many": "Começar desafio · {{count}} de jogadores",
+    "start_other": "Começar desafio · {{count}} jogadores",
+    "footnote": "Os amigos convidados recebem uma notificação na hora. O convite expira se ninguém responder."
+  },
+  "invite": {
+    "dismiss": "Dispensar convite",
+    "join": "Entrar no jogo",
+    "decline": "Recusar",
+    "unavailable": "Esse convite não está mais disponível.",
+    "share": "Entre no meu jogo de Ludo Rumble! Toque em {{link}} para sentar à mesa, ou abra Ludo Rumble → Online → Jogo Privado e digite {{code}}."
+  },
+  "notifications": {
+    "title": "Notificações",
+    "a11y": "Notificações",
+    "unreadA11y_one": "Notificações, {{count}} não lida",
+    "unreadA11y_many": "Notificações, {{count}} não lidas",
+    "unreadA11y_other": "Notificações, {{count}} não lidas",
+    "close": "Fechar notificações",
+    "empty": "Nada por aqui ainda. Pedidos de amizade e desafios aparecem aqui.",
+    "justNow": "agora mesmo",
+    "minutesAgo_one": "há {{count}} min",
+    "minutesAgo_many": "há {{count}} min",
+    "minutesAgo_other": "há {{count}} min",
+    "hoursAgo_one": "há {{count}} h",
+    "hoursAgo_many": "há {{count}} h",
+    "hoursAgo_other": "há {{count}} h",
+    "daysAgo_one": "há {{count}} d",
+    "daysAgo_many": "há {{count}} d",
+    "daysAgo_other": "há {{count}} d"
+  }
+}

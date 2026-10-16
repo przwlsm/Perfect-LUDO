@@ -1,0 +1,755 @@
+import { Component, Suspense, lazy, useCallback, useRef, useState, type ReactNode } from 'react';
+import {
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+  type LayoutChangeEvent,
+} from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Text } from '../components/AppText';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { profileService } from '@/config/container';
+import {
+  REACTION_COOLDOWN_MS,
+  REACTIONS,
+  variantOf,
+  festiveEffectOf,
+  type DieValue,
+  type GameState,
+  type Move,
+  type Player,
+  type PlayerColor,
+  type Reaction,
+  type TableGiftId,
+} from '@/domain';
+import Animated, { FadeOut, ZoomIn } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
+import type { ReactionBubble, TableGiftFlight } from '../hooks/useReactions';
+import { GiftFlight, type Point } from './GiftFlight';
+import { GiftPicker } from './GiftPicker';
+import { FairDiceBadge } from '../components/FairDice';
+import { Board2D } from '../board/Board2D';
+import { FestiveEffects } from '../board/FestiveEffects';
+import type { Board3DProps } from '../board/Board3D';
+import { tableArrangement } from '../board/tableLayout';
+import { PlayerPanel } from './PlayerPanel';
+import { RULES } from './rules';
+import { RoundBoardOverlay } from './RoundBoardOverlay';
+import { ZoomableBoard } from '../board/ZoomableBoard';
+import { Body, Button, Card, Label, Screen, Sheet, useShared } from '../components/Kit';
+import { LudoLoader } from '../components/LudoLoader';
+import { useProfile } from '../state/ProfileProvider';
+import { useCatalogText } from '../i18n/useCatalogText';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
+import { liftByDay } from '../theme/surfaces';
+import { keepLtr } from '../i18n/rtl';
+
+/**
+ * Loaded on demand so the 3D renderer never costs the 2D table anything.
+ * `async` so that a module that throws while *loading* (a synchronous
+ * throw inside Metro's require, which is what a bad native import does)
+ * becomes a rejection this catch can turn into the 2D board, instead of
+ * escaping React entirely and tearing the whole app down to a blank screen.
+ */
+const Board3D = lazy(async () => {
+  try {
+    const module = await import('../board/Board3D');
+    return { default: module.Board3D };
+  } catch {
+    return { default: Board3DUnavailable };
+  }
+});
+
+/** Stands in for the 3D board when it cannot load; same props, drawn flat. */
+function Board3DUnavailable(props: Board3DProps) {
+  return <Board2D {...props} />;
+}
+
+class BoardBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
+/**
+ * Everything a turn-based board needs, regardless of who is producing the
+ * turns. Offline (AI or pass-and-play) and online matches satisfy this the
+ * same way, which is what lets one board render both.
+ */
+/** True (and restarts the clock) when a reaction may be sent again. */
+function takeCooldown(last: { current: number }): boolean {
+  const now = Date.now();
+  if (now - last.current < REACTION_COOLDOWN_MS) return false;
+  last.current = now;
+  return true;
+}
+
+export interface GameSource {
+  readonly match: {
+    readonly id: string;
+    readonly state: GameState;
+    readonly lastDie: DieValue | null;
+  } | null;
+  readonly busy: boolean;
+  readonly activity: 'rolling' | 'moving' | null;
+  readonly seatRolls: Partial<Record<PlayerColor, DieValue>>;
+  readonly error: string | null;
+  readonly current: Player | null;
+  /** True when this device is allowed to act right now. */
+  readonly humanTurn: boolean;
+  /**
+   * The single seat this device plays, when there is one — null in
+   * pass-and-play, where every seat shares the device in turn. Lets a
+   * 2-player table put that seat nearest the local player regardless of
+   * which colour it happens to be.
+   */
+  readonly myColor: PlayerColor | null;
+  readonly moves: readonly Move[];
+  roll(): void;
+  move(selected: Move): void;
+  retry(): void;
+}
+
+export function GameTable({
+  game,
+  label,
+  fairDice = false,
+  prize,
+  statusLine,
+  seatRotation,
+  motionEnabled,
+  tableArea,
+  onTableLayout,
+  menu,
+  setMenu,
+  rules,
+  setRules,
+  pauseBody,
+  exitLabel,
+  onExit,
+  resultSheet,
+  seatLabel,
+  reactions,
+  gifts,
+  turnClock = null,
+  livesFor,
+}: {
+  /** Online only: each seat's lifelines, shown under its name. */
+  livesFor?: (color: PlayerColor) => { left: number; total: number; out: boolean } | null;
+  /** Seconds left on the current turn (online only); null when untimed. */
+  turnClock?: number | null;
+  /** Emoji at the table: the bubbles to float, and how to send one (absent: no picker). */
+  reactions?: {
+    readonly bubbles: readonly ReactionBubble[];
+    readonly send?: (emoji: Reaction) => void;
+  };
+  /**
+   * Gifts at the table (online only): the ones in flight, each seat's
+   * profile emoji, and how to send one at a seat. Absent: no gifting.
+   */
+  gifts?: {
+    readonly flights: readonly TableGiftFlight[];
+    readonly avatarOf: (color: PlayerColor) => string | null;
+    /** The account at a seat, for a visit to their Collection Room. */
+    readonly userIdOf?: (color: PlayerColor) => string | null;
+    readonly send?: (color: PlayerColor, gift: TableGiftId) => Promise<void>;
+    readonly gems: number;
+  };
+  game: GameSource;
+  label: string;
+  /** Online: the "server dice" pill under the label, opening the fairness page. */
+  fairDice?: boolean;
+  /** What this table pays, shown under the label, e.g. "1st +100 · 2nd +50". */
+  prize?: string;
+  /** The name shown on each seat's panel; defaults to the colour. */
+  seatLabel?: (color: PlayerColor) => string;
+  statusLine: string;
+  /** Pass-and-play turns each control to face its seat; nothing else should. */
+  seatRotation: boolean;
+  motionEnabled: boolean;
+  tableArea: { width: number; height: number };
+  onTableLayout(area: { width: number; height: number }): void;
+  menu: boolean;
+  setMenu(open: boolean): void;
+  rules: boolean;
+  setRules(open: boolean): void;
+  pauseBody: string;
+  exitLabel: string;
+  onExit(): void;
+  resultSheet: ReactNode;
+}) {
+  const { profile, theme, perform } = useProfile();
+  const { t } = useTranslation('game');
+  const catalog = useCatalogText();
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const s = useStyles();
+  const ui = useUi();
+  const shared = useShared();
+  const [savingView, setSavingView] = useState(false);
+  const [notice, setNotice] = useState<'boardSaveFailed' | null>(null);
+  const { match, current, humanTurn, busy, error } = game;
+  const [picker, setPicker] = useState(false);
+  const lastSent = useRef(0);
+  // Where each seat's panel sits inside the table area, so gifts can fly to it.
+  const [spots, setSpots] = useState<Partial<Record<PlayerColor, Point>>>({});
+  const spotOf = useCallback(
+    (color: PlayerColor) =>
+      ({ nativeEvent: { layout } }: LayoutChangeEvent) =>
+        setSpots((all) => {
+          const next = { x: layout.x + layout.width / 2, y: layout.y + layout.height / 2 };
+          const old = all[color];
+          return old && old.x === next.x && old.y === next.y ? all : { ...all, [color]: next };
+        }),
+    [],
+  );
+  // Which seat the gift picker is aimed at, and the landing tick per seat.
+  const [giftTarget, setGiftTarget] = useState<PlayerColor | null>(null);
+  const [hits, setHits] = useState<Partial<Record<PlayerColor, number>>>({});
+  const land = useCallback(
+    (color: PlayerColor) => setHits((all) => ({ ...all, [color]: (all[color] ?? 0) + 1 })),
+    [],
+  );
+  // The picker never shows over the menu, nor once gifting stops being possible.
+  const giftAim = menu || !gifts?.send ? null : giftTarget;
+  function react(emoji: Reaction) {
+    setPicker(false);
+    if (!reactions?.send || !takeCooldown(lastSent)) return;
+    reactions.send(emoji);
+  }
+
+  async function toggleView() {
+    if (savingView) return;
+    setSavingView(true);
+    try {
+      await perform(() => profileService.update({ board3d: !profile.board3d }));
+    } catch {
+      setNotice('boardSaveFailed');
+    } finally {
+      setSavingView(false);
+    }
+  }
+
+  if (!match || !current) {
+    return (
+      <Screen nav={false} back decor="none">
+        {error ? (
+          <Card>
+            <Body>{error}</Body>
+            <Button onPress={game.retry}>{t('table.tryAgain')}</Button>
+            <Button onPress={() => router.replace('/')}>{t('table.backToLobby')}</Button>
+          </Card>
+        ) : (
+          // Centred in the page (the page scrolls, so flex alone cannot centre it).
+          <View style={{ minHeight: windowHeight * 0.62, justifyContent: 'center' }}>
+            <LudoLoader motionEnabled={motionEnabled} />
+          </View>
+        )}
+      </Screen>
+    );
+  }
+
+  // Pass & play shares one device between every seat, so "nearest the
+  // player" means nothing there. Otherwise this device's seat is turned to
+  // the bottom of the screen: the classic board can only rotate 180°, which
+  // is exactly what moves a top-corner yard (RED, GREEN) to the bottom.
+  const myColor = seatRotation ? null : game.myColor;
+  const classic = match.state.players.length <= 4;
+  const boardFlip = classic && (myColor === 'RED' || myColor === 'GREEN');
+  const table = tableArrangement(
+    tableArea.width || 360,
+    tableArea.height || 480,
+    match.state.players.map((p) => p.color),
+    boardFlip,
+  );
+  const boardSize = table.board;
+
+  const boardProps = {
+    state: match.state,
+    validMoves: busy || menu || rules ? [] : game.moves,
+    size: boardSize,
+    theme,
+    motionEnabled,
+    flip: boardFlip,
+    homeStyle: profile.style === 'round-homes' ? ('round' as const) : ('triangle' as const),
+    showTurn: true,
+    contrast: profile.highContrast ? ('high' as const) : ('normal' as const),
+    // Coins sharing a square are the same colour at the same progress, so
+    // moving any one of them has exactly the same result: move the one tapped.
+    onSelectMove: (selected: Move) => game.move(selected),
+  };
+
+  const nameOf = (color: PlayerColor) => seatLabel?.(color) ?? t(`colors.${color}`);
+
+  /** One seat's panel, or an empty slot that keeps the others beside their own yard. */
+  function panel(color: PlayerColor | null, index: number, side: 'before' | 'after') {
+    const size = { width: table.panel.width, height: table.panel.height };
+    if (!match || !color) return <View key={`empty-${side}-${index}`} style={size} />;
+    const active = current?.color === color && match.state.status !== 'FINISHED';
+    const canRoll = Boolean(active && humanTurn && !busy && match.state.lastRoll === null);
+    const row = side === 'before' ? table.before : table.after;
+    // Panels on the right-hand end of a row, or in the right column, mirror
+    // so their dice faces the board centre.
+    const mirrored =
+      table.orientation === 'landscape' ? side === 'after' : index === row.length - 1 && index > 0;
+    return (
+      <PlayerPanel
+        key={color}
+        color={theme.colors[color]}
+        label={nameOf(color)}
+        width={size.width}
+        height={size.height}
+        mirrored={mirrored}
+        rotated={seatRotation && table.orientation === 'portrait' && side === 'before'}
+        active={active}
+        canRoll={canRoll}
+        rolling={Boolean(active && game.activity === 'rolling')}
+        value={game.seatRolls[color] ?? null}
+        diceFinish={profile.dice}
+        surface={theme.surface}
+        accent={theme.accentText}
+        motionEnabled={motionEnabled}
+        onRoll={game.roll}
+        secondsLeft={active ? turnClock : null}
+        lives={livesFor?.(color) ?? null}
+        avatar={gifts?.avatarOf(color) ?? null}
+        hit={hits[color] ?? 0}
+        onGift={
+          gifts?.send && color !== game.myColor && match.state.status !== 'FINISHED'
+            ? () => setGiftTarget(color)
+            : undefined
+        }
+        onLayout={gifts ? spotOf(color) : undefined}
+      />
+    );
+  }
+
+  const board = profile.board3d ? (
+    <BoardBoundary key={profile.board} fallback={<Board2D {...boardProps} />}>
+      <Suspense
+        fallback={
+          <View style={{ width: boardSize, height: boardSize, justifyContent: 'center' }}>
+            <LudoLoader
+              compact
+              motionEnabled={motionEnabled}
+              size={Math.min(170, boardSize * 0.42)}
+            />
+          </View>
+        }
+      >
+        <Board3D {...boardProps} />
+      </Suspense>
+    </BoardBoundary>
+  ) : (
+    <Board2D {...boardProps} />
+  );
+  // A festival board plays its effect over the table, under the pieces' touch layer.
+  const festival = festiveEffectOf(profile.board);
+  const festiveBoard = festival ? (
+    <View style={{ width: boardSize, height: boardSize }}>
+      {board}
+      <FestiveEffects effect={festival} size={boardSize} motion={motionEnabled} />
+    </View>
+  ) : (
+    board
+  );
+
+  return (
+    <View
+      style={{
+        // The table is a physical board: players keep their corners in RTL.
+        ...keepLtr,
+        flex: 1,
+        overflow: 'hidden',
+        backgroundColor: theme.background,
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+        paddingLeft: insets.left,
+        paddingRight: insets.right,
+      }}
+    >
+      <View style={s.header}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('pause.a11y')}
+          onPress={() => setMenu(true)}
+          android_ripple={{ color: ui.ripple }}
+          style={[s.iconButton, { backgroundColor: theme.surface }]}
+        >
+          <Text style={s.icon}>{'☰'}</Text>
+        </Pressable>
+        {reactions?.send ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('table.reactA11y')}
+            accessibilityState={{ expanded: picker }}
+            onPress={() => setPicker((open) => !open)}
+            android_ripple={{ color: ui.ripple }}
+            style={[
+              s.iconButton,
+              { backgroundColor: picker ? `${theme.accent}30` : theme.surface },
+            ]}
+          >
+            <Ionicons name="happy" size={24} color={picker ? theme.accentText : ui.muted} />
+          </Pressable>
+        ) : (
+          <View style={{ width: 48 }} />
+        )}
+        <View style={{ flex: 1, alignItems: 'center', gap: 3 }}>
+          <Label color={theme.accentText}>{label}</Label>
+          {fairDice && <FairDiceBadge />}
+          {prize ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="trophy" size={11} color={ui.gold} />
+              <Text style={{ color: ui.gold, fontSize: 11, fontWeight: '800' }}>{prize}</Text>
+            </View>
+          ) : (
+            <Text style={shared.small}>
+              {profile.board3d
+                ? t('table.info3d', { count: match.state.players.length })
+                : t('table.infoClassic', { count: match.state.players.length })}
+            </Text>
+          )}
+        </View>
+        <View style={{ width: 48 }} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('table.switchView', { mode: profile.board3d ? '2D' : '3D' })}
+          disabled={savingView}
+          onPress={() => void toggleView()}
+          android_ripple={{ color: `${theme.accent}25` }}
+          // By day a white chip like the other header buttons; night keeps the outline.
+          style={[
+            s.viewButton,
+            ui.scheme === 'light'
+              ? { backgroundColor: theme.surface, borderColor: ui.line }
+              : { borderColor: theme.accent },
+          ]}
+        >
+          <Text style={{ color: theme.accentText, fontWeight: '800' }}>
+            {profile.board3d ? '3D' : '2D'}
+          </Text>
+        </Pressable>
+      </View>
+
+      <View
+        style={{ flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center' }}
+        onLayout={({ nativeEvent }) => onTableLayout(nativeEvent.layout)}
+      >
+        {reactions && reactions.bubbles.length > 0 && (
+          <View pointerEvents="none" style={s.bubbles}>
+            {reactions.bubbles.map((bubble) => (
+              <Animated.View
+                key={bubble.id}
+                entering={motionEnabled ? ZoomIn.springify().damping(11) : undefined}
+                exiting={motionEnabled ? FadeOut.duration(250) : undefined}
+                style={[s.bubble, { borderColor: theme.colors[bubble.color] }]}
+              >
+                <View style={[s.bubbleDot, { backgroundColor: theme.colors[bubble.color] }]} />
+                <Text numberOfLines={1} style={s.bubbleName}>
+                  {nameOf(bubble.color)}
+                </Text>
+                <Text style={s.bubbleEmoji}>{bubble.emoji}</Text>
+              </Animated.View>
+            ))}
+          </View>
+        )}
+        {picker && reactions?.send && (
+          <Animated.View
+            entering={motionEnabled ? ZoomIn.duration(160) : undefined}
+            style={[s.picker, { backgroundColor: theme.surface }]}
+          >
+            {REACTIONS.map((emoji) => (
+              <Pressable
+                key={emoji}
+                accessibilityRole="button"
+                accessibilityLabel={t('table.reactWith', { emoji })}
+                onPress={() => react(emoji)}
+                android_ripple={{ color: ui.ripple, borderless: true }}
+                style={s.pickerItem}
+              >
+                <Text style={{ fontSize: 26 }}>{emoji}</Text>
+              </Pressable>
+            ))}
+          </Animated.View>
+        )}
+        {!classic ? (
+          // The zoom window fills the table area (about 90% of the screen's
+          // height in portrait), so a zoomed round board uses the full height.
+          <View
+            testID="game-table"
+            style={{
+              width: Math.max(boardSize, tableArea.width),
+              height: Math.max(boardSize, tableArea.height),
+            }}
+          >
+            <ZoomableBoard size={boardSize} viewport={tableArea}>
+              {festiveBoard}
+              <RoundBoardOverlay
+                size={boardSize}
+                colors={match.state.players.map((p) => p.color)}
+                palette={theme.colors}
+                nameOf={nameOf}
+                current={match.state.status === 'FINISHED' ? null : current.color}
+                canRoll={Boolean(
+                  humanTurn &&
+                  !busy &&
+                  match.state.lastRoll === null &&
+                  match.state.status !== 'FINISHED',
+                )}
+                rolling={game.activity === 'rolling'}
+                value={game.seatRolls[current.color] ?? null}
+                diceFinish={profile.dice}
+                surface={theme.surface}
+                faceSeats={seatRotation}
+                tilted={profile.board3d}
+                motionEnabled={motionEnabled}
+                onRoll={game.roll}
+              />
+            </ZoomableBoard>
+          </View>
+        ) : (
+          <View
+            testID="game-table"
+            style={{
+              flexDirection: table.orientation === 'portrait' ? 'column' : 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: table.gap,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: table.orientation === 'portrait' ? 'row' : 'column',
+                justifyContent: 'space-between',
+                width: table.orientation === 'portrait' ? boardSize : table.panel.width,
+                height: table.orientation === 'portrait' ? table.panel.height : boardSize,
+              }}
+            >
+              {table.before.map((color, i) => panel(color, i, 'before'))}
+            </View>
+            <View style={{ width: boardSize, height: boardSize }}>{festiveBoard}</View>
+            <View
+              style={{
+                flexDirection: table.orientation === 'portrait' ? 'row' : 'column',
+                justifyContent: 'space-between',
+                width: table.orientation === 'portrait' ? boardSize : table.panel.width,
+                height: table.orientation === 'portrait' ? table.panel.height : boardSize,
+              }}
+            >
+              {table.after.map((color, i) => panel(color, i, 'after'))}
+            </View>
+          </View>
+        )}
+      </View>
+
+      {gifts && gifts.flights.length > 0 && (
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { zIndex: 25 }]}>
+          {gifts.flights.map((flight) => {
+            // Round tables have no panels: gifts rise from the top edge and
+            // land on the board's centre instead.
+            const fallback = { x: tableArea.width / 2, y: tableArea.height / 2 };
+            const from = spots[flight.from] ?? { x: fallback.x, y: 0 };
+            const to = spots[flight.to] ?? fallback;
+            return (
+              <GiftFlight
+                key={flight.id}
+                gift={flight.gift}
+                from={from}
+                to={to}
+                motionEnabled={motionEnabled}
+                onLand={() => land(flight.to)}
+              />
+            );
+          })}
+        </View>
+      )}
+      {gifts?.send && (
+        <GiftPicker
+          target={giftAim}
+          targetName={giftAim ? nameOf(giftAim) : ''}
+          targetColor={giftAim ? theme.colors[giftAim] : ui.text}
+          targetUserId={giftAim ? (gifts.userIdOf?.(giftAim) ?? null) : null}
+          gems={gifts.gems}
+          onClose={() => setGiftTarget(null)}
+          onSend={gifts.send}
+        />
+      )}
+
+      <View style={{ paddingHorizontal: 16, paddingVertical: 8, alignItems: 'center', gap: 4 }}>
+        {match.state.turnLimit ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <Text style={[shared.small, { fontWeight: '800' }]}>
+              {t('table.points', {
+                done: Math.min(
+                  Math.floor((match.state.turns ?? 0) / match.state.players.length) + 1,
+                  match.state.turnLimit,
+                ),
+                total: match.state.turnLimit,
+              })}
+            </Text>
+            {match.state.players.map((p, index) => (
+              <View key={p.color} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: theme.colors[p.color],
+                  }}
+                />
+                <Text style={[shared.small, { color: ui.text, fontWeight: '800' }]}>
+                  {match.state.scores?.[index] ?? 0}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+        <Text
+          accessibilityLiveRegion="polite"
+          style={[shared.small, { textAlign: 'center', color: ui.text }]}
+        >
+          {statusLine}
+        </Text>
+        {(notice || error) && (
+          <Text style={shared.error}>{error ?? (notice ? t(`table.${notice}`) : null)}</Text>
+        )}
+        {error && (
+          <Button compact secondary onPress={game.retry}>
+            {t('table.retryTurn')}
+          </Button>
+        )}
+      </View>
+
+      <Sheet visible={menu} onClose={() => setMenu(false)} title={t('pause.title')}>
+        <Body>{pauseBody}</Body>
+        <Button onPress={() => setMenu(false)}>{t('pause.backToGame')}</Button>
+        <Button secondary disabled={busy} onPress={onExit}>
+          {exitLabel}
+        </Button>
+        <Button
+          secondary
+          onPress={() => {
+            setMenu(false);
+            setRules(true);
+          }}
+        >
+          {t('pause.howToPlay')}
+        </Button>
+      </Sheet>
+
+      <Sheet visible={rules} onClose={() => setRules(false)} title={t('rulesSheet.title')}>
+        {variantOf(match.state) !== 'classic' && (
+          <Card style={{ borderColor: `${theme.accent}55` }}>
+            <Label color={theme.accentText}>{t('rulesSheet.thisTable')}</Label>
+            <Text style={[shared.sectionTitle, { fontSize: 15 }]}>
+              {catalog.variantTitle(variantOf(match.state))}
+            </Text>
+            <Body>{catalog.variantDescription(variantOf(match.state))}</Body>
+          </Card>
+        )}
+        {RULES.map(({ n, id }) => (
+          <View key={n} style={shared.row}>
+            <Text style={{ color: theme.accentText, fontWeight: '900', fontSize: 18 }}>{n}</Text>
+            <View style={{ flex: 1, gap: 6 }}>
+              <Text style={[shared.sectionTitle, { fontSize: 15 }]}>{t(`rules.${id}.title`)}</Text>
+              <Body>{t(`rules.${id}.text`)}</Body>
+            </View>
+          </View>
+        ))}
+      </Sheet>
+
+      {resultSheet}
+    </View>
+  );
+}
+
+export const gameTableStyles = StyleSheet.create({
+  winTitle: { fontSize: 30, fontWeight: '900', textAlign: 'center' },
+});
+
+const useStyles = makeStyles((ui) => ({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  iconButton: {
+    width: 48,
+    height: 48,
+    minWidth: 48,
+    minHeight: 48,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // By day: a white chip lifted off the ivory table (night: no border, as before).
+    borderWidth: ui.scheme === 'light' ? 1 : 0,
+    borderColor: ui.line,
+    boxShadow: liftByDay(ui),
+  },
+  icon: { color: ui.muted, fontSize: 23 },
+  bubbles: {
+    position: 'absolute',
+    top: 6,
+    left: 12,
+    right: 12,
+    zIndex: 20,
+    alignItems: 'center',
+    gap: 6,
+  },
+  bubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingLeft: 10,
+    paddingRight: 6,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 2,
+    backgroundColor: `${ui.background}ee`,
+    boxShadow: `0 6px 18px ${ui.scheme === 'dark' ? '#00000080' : ui.shadow}`,
+    maxWidth: '90%',
+  },
+  bubbleDot: { width: 10, height: 10, borderRadius: 5 },
+  bubbleName: { color: ui.text, fontWeight: '800', fontSize: 13, flexShrink: 1 },
+  bubbleEmoji: { fontSize: 28 },
+  picker: {
+    position: 'absolute',
+    top: 4,
+    left: 12,
+    right: 12,
+    zIndex: 30,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: ui.border,
+    boxShadow: `0 10px 28px ${ui.scheme === 'dark' ? '#00000090' : ui.shadow}`,
+  },
+  pickerItem: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  viewButton: {
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    height: 48,
+    minWidth: 48,
+    minHeight: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: liftByDay(ui),
+  },
+}));

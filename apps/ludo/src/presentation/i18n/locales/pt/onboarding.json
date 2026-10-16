@@ -1,0 +1,25 @@
+{
+  "step": "{{current}} / {{total}}",
+  "skip": "Pular",
+  "skipA11y": "Pular o tutorial",
+  "next": "Próximo",
+  "start": "Bora jogar",
+  "pages": {
+    "roll": {
+      "title": "Tire seis para começar",
+      "text": "Tire um seis para tirar um peão da sua base. Cada seis dá direito a jogar de novo."
+    },
+    "race": {
+      "title": "Leve seus peões para casa",
+      "text": "Ande no sentido horário pelo tabuleiro e depois suba pela sua trilha colorida. Você precisa do número exato para terminar."
+    },
+    "capture": {
+      "title": "Capture ou fique seguro",
+      "text": "Pare em cima de um rival para mandá-lo de volta à base. As casas com estrela e as de entrada são seguras, e cada captura dá uma jogada bônus."
+    },
+    "modes": {
+      "title": "Jogue do seu jeito",
+      "text": "Enfrente o computador offline, passe o celular entre amigos ou jogue online em partidas rápidas. Entre na sua conta para guardar suas moedas e seu progresso."
+    }
+  }
+}

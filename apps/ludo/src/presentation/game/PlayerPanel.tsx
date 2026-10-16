@@ -1,0 +1,333 @@
+import { useEffect } from 'react';
+import { Pressable, View, type LayoutChangeEvent } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Text } from '../components/AppText';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
+import { TURN_SECONDS, type DieValue } from '@/domain';
+import { AnimatedDice } from '../components/AnimatedDice';
+import { useUi } from '../theme/AppearanceProvider';
+import { liftByDay } from '../theme/surfaces';
+
+/**
+ * One seat's corner of the table: the player's token and name beside a
+ * raised dice tile. The whole panel is the roll button, so the target is
+ * large. The active seat glows in its colour, and when it is this device's
+ * turn to roll an arrow pulses beside the dice pointing at it.
+ */
+export function PlayerPanel({
+  color,
+  label,
+  width,
+  height,
+  mirrored,
+  rotated,
+  active,
+  canRoll,
+  rolling,
+  value,
+  diceFinish,
+  surface,
+  accent,
+  motionEnabled,
+  onRoll,
+  secondsLeft = null,
+  lives = null,
+  avatar = null,
+  hit = 0,
+  onGift,
+  onLayout,
+}: {
+  /** Online only: lifelines left of the total, and whether the player is out. */
+  lives?: { left: number; total: number; out: boolean } | null;
+  /** Online: the player's profile emoji, shown on their token. */
+  avatar?: string | null;
+  /** Bumps when a gift lands on this seat; the panel shakes once per bump. */
+  hit?: number;
+  /** Online: opens the gift picker aimed at this seat (opponents only). */
+  onGift?: () => void;
+  /** Reports where the panel sits, so gifts can fly to it. */
+  onLayout?: (event: LayoutChangeEvent) => void;
+  /** Online turn clock for the active seat; null when there is none. */
+  secondsLeft?: number | null;
+  color: string;
+  label: string;
+  width: number;
+  height: number;
+  /** Dice on the left, token on the right: for panels on the right of the table. */
+  mirrored: boolean;
+  /** Turned to face a player across the table (pass & play only). */
+  rotated: boolean;
+  active: boolean;
+  canRoll: boolean;
+  rolling: boolean;
+  value: DieValue | null;
+  diceFinish: string;
+  surface: string;
+  accent: string;
+  motionEnabled: boolean;
+  onRoll(): void;
+}) {
+  const { t } = useTranslation('game');
+  const ui = useUi();
+  const day = ui.scheme === 'light';
+  const tile = height - 12;
+  const token = Math.max(20, Math.round(height * 0.38));
+  const nudge = useSharedValue(0);
+
+  useEffect(() => {
+    cancelAnimation(nudge);
+    nudge.value = 0;
+    if (canRoll && motionEnabled)
+      nudge.value = withRepeat(
+        withTiming(1, { duration: 520, easing: Easing.inOut(Easing.quad) }),
+        -1,
+        true,
+      );
+    return () => cancelAnimation(nudge);
+  }, [canRoll, motionEnabled, nudge]);
+
+  // The arrow sits on the board-facing side of the dice and points back at it.
+  const arrowStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: (mirrored ? -1 : 1) * nudge.value * 5 }],
+  }));
+
+  // A landed gift rocks the whole panel: a quick shake that settles.
+  const shake = useSharedValue(0);
+  useEffect(() => {
+    if (!hit || !motionEnabled) return;
+    shake.set(0);
+    shake.set(
+      withSequence(
+        withTiming(1, { duration: 60 }),
+        withTiming(-1, { duration: 90 }),
+        withTiming(0.6, { duration: 80 }),
+        withTiming(-0.3, { duration: 80 }),
+        withTiming(0, { duration: 120, easing: Easing.out(Easing.quad) }),
+      ),
+    );
+  }, [hit, motionEnabled, shake]);
+  const shakeStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: shake.get() * 7 },
+      { rotate: `${shake.get() * 2.5 + (rotated ? 180 : 0)}deg` },
+    ],
+  }));
+
+  const identity = (
+    <View style={{ alignItems: 'center', gap: 3, flexShrink: 1, minWidth: 0 }}>
+      <View
+        style={{
+          width: token,
+          height: token,
+          borderRadius: token,
+          backgroundColor: color,
+          borderWidth: 3,
+          borderColor: '#ffffffdd',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 2px 4px #00000060',
+        }}
+      >
+        {avatar ? (
+          <Text style={{ fontSize: token * 0.56, lineHeight: token * 0.72 }}>{avatar}</Text>
+        ) : (
+          <View
+            style={{
+              width: token * 0.34,
+              height: token * 0.34,
+              borderRadius: token,
+              backgroundColor: '#ffffff90',
+            }}
+          />
+        )}
+      </View>
+      <Text
+        numberOfLines={1}
+        style={{
+          fontSize: 10,
+          fontWeight: '900',
+          letterSpacing: 0.3,
+          color: active ? ui.text : ui.muted,
+          maxWidth: active ? width - tile - 26 : width - 20,
+        }}
+      >
+        {label}
+      </Text>
+      {lives &&
+        (lives.out ? (
+          <Text style={{ color: ui.danger, fontSize: 9, fontWeight: '900', letterSpacing: 0.8 }}>
+            {t('panel.out')}
+          </Text>
+        ) : (
+          <View
+            accessible
+            accessibilityLabel={t('panel.livesA11y', { left: lives.left, total: lives.total })}
+            style={{ flexDirection: 'row', gap: 2 }}
+          >
+            {Array.from({ length: lives.total }, (_, i) => (
+              <Text key={i} style={{ fontSize: 8, color: i < lives.left ? '#f43f5e' : ui.border }}>
+                ♥
+              </Text>
+            ))}
+          </View>
+        ))}
+    </View>
+  );
+
+  const dice = (
+    <View
+      style={{
+        width: tile,
+        height: tile,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: active ? `${color}26` : ui.fill,
+        borderWidth: 1.5,
+        borderColor: active ? `${color}aa` : ui.line,
+        borderTopColor: active ? color : ui.border,
+      }}
+    >
+      <AnimatedDice
+        size={tile - 6}
+        value={value}
+        finish={diceFinish}
+        rolling={rolling}
+        ready={canRoll}
+        motionEnabled={motionEnabled}
+      />
+    </View>
+  );
+
+  const arrow = (
+    <Animated.Text
+      style={[
+        { fontSize: Math.round(height * 0.32), color: accent, opacity: canRoll ? 1 : 0 },
+        arrowStyle,
+      ]}
+    >
+      {mirrored ? '▶' : '◀'}
+    </Animated.Text>
+  );
+
+  // An opponent's panel is the gift target: tapping it opens the picker.
+  // The device's own panel stays the roll button.
+  const giftable = Boolean(onGift) && !canRoll;
+  return (
+    <AnimatedPressable
+      onLayout={onLayout}
+      accessibilityRole="button"
+      accessibilityLabel={
+        giftable ? t('gift.sendToA11y', { name: label }) : t('dice.rollA11y', { name: label })
+      }
+      accessibilityHint={
+        canRoll ? t('dice.yourTurnHint') : giftable ? t('gift.hint') : t('dice.waitHint')
+      }
+      accessibilityState={{ disabled: !canRoll && !giftable }}
+      disabled={!canRoll && !giftable}
+      onPress={canRoll ? onRoll : onGift}
+      style={[
+        shakeStyle,
+        {
+          width,
+          height,
+          borderRadius: 18,
+          paddingHorizontal: 8,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 4,
+          backgroundColor: surface,
+          borderWidth: 2,
+          // By day an idle seat is a white card lifted off the ivory page (the
+          // 60%); the active seat keeps its colour border and glow in both modes.
+          borderColor: active ? color : day ? ui.line : `${color}40`,
+          boxShadow: active
+            ? `0 0 16px ${color}90`
+            : day
+              ? liftByDay(ui)
+              : `0 4px 10px ${ui.shadow}`,
+          opacity: lives?.out ? 0.45 : active ? 1 : 0.82,
+        },
+      ]}
+    >
+      {active && secondsLeft !== null && (
+        <>
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left: 10,
+              right: 10,
+              bottom: 3,
+              height: 3,
+              borderRadius: 2,
+              backgroundColor: ui.fillStrong,
+              overflow: 'hidden',
+            }}
+          >
+            <View
+              style={{
+                width: `${Math.min(100, (secondsLeft / TURN_SECONDS) * 100)}%`,
+                height: '100%',
+                backgroundColor: secondsLeft <= 5 ? ui.danger : color,
+              }}
+            />
+          </View>
+          <View
+            pointerEvents="none"
+            accessibilityLabel={t('panel.secondsLeft', { count: secondsLeft })}
+            style={{
+              position: 'absolute',
+              top: -9,
+              [mirrored ? 'left' : 'right']: 10,
+              paddingHorizontal: 6,
+              paddingVertical: 1,
+              borderRadius: 8,
+              // By day the clock is a navy pill (the 30%), red in the last seconds.
+              backgroundColor: secondsLeft <= 5 ? ui.danger : day ? ui.navy : ui.background,
+              borderWidth: 1,
+              borderColor: secondsLeft <= 5 ? ui.danger : day ? ui.navy : color,
+            }}
+          >
+            <Text
+              style={{
+                color: day && secondsLeft > 5 ? ui.secondaryText : ui.onColor,
+                fontSize: 10,
+                fontWeight: '900',
+              }}
+            >
+              {t('panel.secondsShort', { seconds: secondsLeft })}
+            </Text>
+          </View>
+        </>
+      )}
+      {/* One die on the table: only the seat whose turn it is shows one. */}
+      {!active ? (
+        <View style={{ flex: 1, alignItems: 'center' }}>{identity}</View>
+      ) : mirrored ? (
+        <>
+          {arrow}
+          {dice}
+          {identity}
+        </>
+      ) : (
+        <>
+          {identity}
+          {dice}
+          {arrow}
+        </>
+      )}
+    </AnimatedPressable>
+  );
+}
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);

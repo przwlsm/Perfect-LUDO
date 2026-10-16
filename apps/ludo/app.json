@@ -1,0 +1,108 @@
+{
+  "react-native-google-mobile-ads": {
+    "android_sdk": "classic"
+  },
+  "expo": {
+    "name": "Ludo Rumble",
+    "slug": "Ludo",
+    "version": "1.0.0",
+    "scheme": "perfectludo",
+    "orientation": "default",
+    "icon": "./assets/brand/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.devmindslabs.ludoRumble"
+    },
+    "android": {
+      "package": "com.devmindslabs.ludoRumble",
+      "adaptiveIcon": {
+        "backgroundColor": "#0e1322",
+        "foregroundImage": "./assets/brand/icon.png",
+        "monochromeImage": "./assets/brand/icon-monochrome.png"
+      },
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/brand/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-asset",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "# The 3D board (expo-gl): its view is created by reflection and its native\n# library calls back into these classes by name, so R8 must not rename or\n# strip anything in the package. Without this a 3D table crashes the app.\n-keep class expo.modules.gl.** { *; }"
+          }
+        }
+      ],
+      "expo-iap",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "delayAppMeasurementInit": true,
+          "userTrackingUsageDescription": "This lets us show ads that are more relevant to you."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false,
+          "enableBackgroundRecording": false
+        }
+      ],
+      "expo-web-browser",
+      [
+        "expo-localization",
+        {
+          "supportsRTL": true,
+          "supportedLocales": {
+            "ios": ["en", "hi", "bn", "mr", "te", "ta", "gu", "kn", "es", "pt", "ar"],
+            "android": ["en", "hi", "bn", "mr", "te", "ta", "gu", "kn", "es", "pt", "ar"]
+          }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#f6f3ec",
+          "image": "./assets/brand/splash-icon.png",
+          "imageWidth": 288,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#0e1322",
+            "image": "./assets/brand/splash-icon.png"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 3000
+    },
+    "owner": "prwlsm-org",
+    "extra": {
+      "eas": {
+        "projectId": "6dba90bf-764b-48b4-ab15-614844011bf9"
+      }
+    }
+  }
+}

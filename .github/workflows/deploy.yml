@@ -1,0 +1,143 @@
+# Continuous deployment of every app in apps/ with EAS.
+#
+# On every push to main (or an app-dev* branch) it works out which apps the
+# push changed (scripts/ci/changed-apps.mjs), checks them, then for each one:
+#   * JavaScript or asset changes ship as an over-the-air update: installed
+#     phones pick it up when the app is next opened (each app waits up to
+#     3 s at launch for it; on a slow network, the launch after).
+#   * Changes that alter native code (a new native library, app.json plugins,
+#     an SDK upgrade) change the app's fingerprint and cannot ship over the
+#     air, so a new EAS build is started instead, to upload to the store.
+#
+# Branches:
+#   main     -> EAS profile/channel "production" (store installs)
+#   app-dev* -> EAS profile/channel "preview" (internal test APKs)
+#
+# An app ships only when it is in the DEPLOY_APPS repository variable
+# (comma-separated or "all"; empty = none), is linked to EAS (a project id
+# in its app.json; run scripts/eas-link-apps.mjs), and the EXPO_TOKEN
+# secret exists. Otherwise it is checked and skipped with a notice, never
+# failed. Setup: docs/DEPLOY.md.
+name: Deploy
+
+on:
+  push:
+    branches: [main, 'app-dev*']
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'App folder to deploy (e.g. diya), or "all"'
+        required: true
+        default: all
+
+permissions:
+  contents: read
+
+concurrency:
+  # One deploy per branch at a time; a newer push waits rather than cutting
+  # an update off half-published.
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.pick.outputs.apps }}
+      filters: ${{ steps.pick.outputs.filters }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: pick
+        run: |
+          node scripts/ci/changed-apps.mjs "${{ github.event.before }}" "${{ github.sha }}" "${{ inputs.app }}" >> "$GITHUB_OUTPUT"
+          apps=$(grep '^apps=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)
+          echo "filters=$(node -e "console.log(JSON.parse(process.argv[1]).map(a=>'--filter='+a).join(' '))" "$apps")" >> "$GITHUB_OUTPUT"
+          echo "Apps to deploy: $apps" >> "$GITHUB_STEP_SUMMARY"
+
+  check:
+    needs: plan
+    if: needs.plan.outputs.apps != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck, lint and tests (changed apps and what they use)
+        run: npx turbo run typecheck lint test ${{ needs.plan.outputs.filters }}
+      - name: Ludo database rules
+        if: contains(fromJSON(needs.plan.outputs.apps), 'ludo')
+        run: npm run test:online --workspace ludo
+      - name: Bagh-Chal database rules
+        if: contains(fromJSON(needs.plan.outputs.apps), 'baghchal')
+        run: npm run test:online --workspace baghchal
+
+  deploy:
+    needs: [plan, check]
+    if: needs.plan.outputs.apps != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        app: ${{ fromJSON(needs.plan.outputs.apps) }}
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # main is the store; every other deploy branch is internal testing.
+      TARGET: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+      # Repository variable (Settings → Secrets and variables → Actions →
+      # Variables): the apps allowed to ship, comma-separated (e.g.
+      # "diya,kolam"), or "all". Empty means none, so a merge never starts a
+      # store build for an app whose first release (signing key, store
+      # listing, AdMob ids) has not been set up yet.
+      DEPLOY_APPS: ${{ vars.DEPLOY_APPS }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Is ${{ matrix.app }} ready to deploy?
+        id: ready
+        run: |
+          # Linked = has an EAS project id; updates.url is in app.json or, like
+          # Ludo, derived from the id by app.config.ts.
+          linked=$(node -e "const fs=require('fs');const d='./apps/${{ matrix.app }}/';const e=require(d+'app.json').expo;const derived=fs.existsSync(d+'app.config.ts')&&fs.readFileSync(d+'app.config.ts','utf8').includes('u.expo.dev');console.log(Boolean(e.extra?.eas?.projectId&&(e.updates?.url||derived)))")
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::notice title=${{ matrix.app }}::EXPO_TOKEN secret is not set, so nothing was deployed. See docs/DEPLOY.md."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          elif [ "$linked" != "true" ]; then
+            echo "::notice title=${{ matrix.app }}::Not linked to EAS yet (run scripts/eas-link-apps.mjs ${{ matrix.app }}), so it was skipped."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          elif [ "$DEPLOY_APPS" != "all" ] && [[ ",${DEPLOY_APPS// /}," != *",${{ matrix.app }},"* ]]; then
+            echo "::notice title=${{ matrix.app }}::Not in the DEPLOY_APPS repository variable, so it was checked but not shipped. See docs/DEPLOY.md."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v7
+        if: steps.ready.outputs.go == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.ready.outputs.go == 'true'
+        run: npm ci
+      - uses: expo/expo-github-action@v9
+        if: steps.ready.outputs.go == 'true'
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      # Publishes an over-the-air update when a build with the same native
+      # fingerprint exists; otherwise starts that build first. iOS joins once
+      # there is an Apple developer account (platform: all).
+      - name: Deploy ${{ matrix.app }}
+        if: steps.ready.outputs.go == 'true'
+        uses: expo/expo-github-action/continuous-deploy-fingerprint@v9
+        with:
+          profile: ${{ env.TARGET }}
+          branch: ${{ env.TARGET }}
+          environment: ${{ env.TARGET }}
+          platform: android
+          working-directory: apps/${{ matrix.app }}

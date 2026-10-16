@@ -1,0 +1,99 @@
+{
+  "react-native-google-mobile-ads": {
+    "android_sdk": "classic"
+  },
+  "expo": {
+    "name": "Speak Local",
+    "slug": "speaklocal",
+    "version": "0.1.0",
+    "scheme": "speaklocal",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/images/icon.png",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.devmindslabs.speaklocal",
+      "infoPlist": {
+        "CADisableMinimumFrameDurationOnPhone": true
+      }
+    },
+    "android": {
+      "package": "com.devmindslabs.speaklocal",
+      "predictiveBackGestureEnabled": false,
+      "blockedPermissions": [],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-foreground.png",
+        "backgroundImage": "./assets/images/adaptive-background.png",
+        "monochromeImage": "./assets/images/adaptive-monochrome.png",
+        "backgroundColor": "#16204a"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#10233a",
+          "dark": {
+            "image": "./assets/images/splash-icon.png",
+            "backgroundColor": "#10233a"
+          }
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Speak Local uses the microphone only when you tap Record, so you can hear yourself next to the native voice. Recordings stay on your phone.",
+          "recordAudioAndroid": true,
+          "enableBackgroundPlayback": false,
+          "enableBackgroundRecording": false
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "delayAppMeasurementInit": true,
+          "userTrackingUsageDescription": "This lets us show ads that are more relevant to you."
+        }
+      ],
+      "expo-iap",
+      "expo-localization",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "backgroundColor": "#10233a",
+    "web": {
+      "favicon": "./assets/images/favicon.png",
+      "output": "single"
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 3000,
+      "url": "https://u.expo.dev/44256ef3-4869-4a70-9e21-738ad5377af7"
+    },
+    "owner": "prwlsm-org",
+    "extra": {
+      "eas": {
+        "projectId": "44256ef3-4869-4a70-9e21-738ad5377af7"
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+import type { Unsubscribe } from '../entities/Social';
+import type { Stake } from '../entities/Stakes';
+import type { GameVariant } from '../entities/Variant';
+
+export type QuickMatchPlayerCount = 2 | 3 | 4;
+
+/** The caller's place in the quick-play queue, as the server sees it. */
+export interface QuickMatchTicket {
+  readonly status: 'WAITING' | 'MATCHED';
+  /** Set once a table has been seated; the client then joins that lobby. */
+  readonly lobbyId: string | null;
+  readonly playerCount: number;
+  /** Coins each seat pays; only players at the same stake are seated together. */
+  readonly stake: number;
+  /** Only players choosing the same game mode are seated together. */
+  readonly variant: GameVariant;
+  /** 2 v 2 tables queue apart from every-player-for-themselves ones. */
+  readonly teams: boolean;
+  /** Others waiting for the same table size, so "finding opponent" can say how close it is. */
+  readonly waiting: number;
+  readonly serverNow: string;
+}
+
+/**
+ * Quick play for people with nobody to challenge. Open to guests: the
+ * queue is the one online feature that must not require an account.
+ */
+export interface IMatchmakingRepository {
+  /**
+   * Enters the queue, or refreshes an existing ticket. Doubles as the
+   * heartbeat: a ticket that is not refreshed is dropped server-side, so a
+   * closed app never leaves a phantom opponent behind.
+   */
+  join(
+    playerCount: QuickMatchPlayerCount,
+    stake?: Stake,
+    variant?: GameVariant,
+    teams?: boolean,
+  ): Promise<QuickMatchTicket>;
+  leave(): Promise<void>;
+  /** Fires when the caller's own ticket changes, e.g. when a table is seated. */
+  subscribe(userId: string, onChange: () => void): Unsubscribe;
+}

@@ -1,0 +1,84 @@
+{
+  "title": "Royal Road",
+  "subtitle": "CUPS · THRONES · GLORY",
+  "card": {
+    "a11y": "Royal Road cups. Open the halls",
+    "title": "Royal Road cups",
+    "body": "Four players, two rounds, one throne. Win a cup and take its throne home."
+  },
+  "intro": "Four players, two rounds. The winner takes three entries and the hall’s throne; the runner-up gets their entry back.",
+  "signIn": {
+    "title": "The halls are for members",
+    "body": "Sign in to enter a cup. Entries are paid in coins and thrones go to your Collection Room.",
+    "button": "Sign in"
+  },
+  "botCap": "Brackets with computer players pay coins {{cap}} times a day · {{used}} used today.",
+  "hall": {
+    "free": "Free entry",
+    "entry": "Entry {{coins}}",
+    "prize": "Winner {{coins}}",
+    "runnerUp": "Runner-up {{coins}}",
+    "waiting_one": "{{count}} waiting",
+    "waiting_other": "{{count}} waiting",
+    "won_one": "Won {{count}} time",
+    "won_other": "Won {{count}} times",
+    "mode": {
+      "quick1": "Quick · 1 coin home",
+      "quick2": "Quick · 2 coins home",
+      "classic": "Classic · all four home"
+    },
+    "enter": "Enter",
+    "entering": "Entering…",
+    "continue": "Back to your bracket",
+    "short": "Need {{coins}} more coins"
+  },
+  "bracket": {
+    "title": "Bracket",
+    "loading": "Opening the bracket…",
+    "waitingTitle": "Filling the seats",
+    "waitingBody": "Seats still open after a minute are taken by computer players.",
+    "fillIn": "Computer players arrive in {{time}}",
+    "leave": "Leave and take the entry back",
+    "semis": "Semi-finals",
+    "final": "Final",
+    "openSeat": "Open seat",
+    "vs": "vs",
+    "pending": "Waiting",
+    "playing": "Playing…",
+    "won": "Won",
+    "lost": "Lost",
+    "tableReady": "Your table is ready",
+    "goToTable": "Go to your table",
+    "knockedOut": "Knocked out this time. The throne waits for the next cup.",
+    "champion": "{{name}} takes the throne!",
+    "youWon": "The {{throne}} is yours!",
+    "prize": "+{{coins}} coins",
+    "runnerUpPrize": "Runner-up · entry returned",
+    "capReached": "Today’s coin allowance for brackets with computer players is used up. The throne is still yours.",
+    "backToCups": "Back to the halls",
+    "seeRoom": "See it in your Collection Room",
+    "you": "You"
+  },
+  "match": {
+    "backToBracket": "Back to the bracket"
+  },
+  "private": {
+    "button": "With friends",
+    "codeTitle": "HAVE A CUP CODE?",
+    "codePlaceholder": "Cup code",
+    "codeButton": "Join",
+    "waitingTitle": "WAITING FOR FRIENDS",
+    "waitingBody": "Share the code. Two to four players; the host starts the cup when everyone is in.",
+    "code": "CUP CODE {{code}}",
+    "share": "Share invite",
+    "start_one": "Start with {{count}} player",
+    "start_other": "Start with {{count}} players",
+    "hostStarts": "The host starts the cup when everyone is in.",
+    "potRule": "Cups with friends: the winner takes the whole pot. The throne needs a full table of four.",
+    "joining": "Taking your seat…",
+    "joinFailed": "Could not join that cup.",
+    "invalid": "That is not a cup code.",
+    "shareMessage": "Join my Ludo Rumble cup! Code {{code}} · {{link}}",
+    "cancel": "Cancel the cup and refund everyone"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "update": {
+    "installed": "INSTALADA",
+    "new": "NUEVA",
+    "versionsA11y": "Versión instalada {{from}}. Nueva versión {{to}}.",
+    "appStoreHint": "Abre la App Store y busca Ludo Rumble para actualizar.",
+    "required": {
+      "label": "ACTUALIZACIÓN NECESARIA",
+      "title": "Hora de un tiro nuevo",
+      "body": "Esta versión de Ludo Rumble ya no tiene soporte. Actualiza para seguir jugando: tus monedas, gemas y progreso están guardados en tu cuenta.",
+      "updateNow": "Actualizar ahora",
+      "checkAgain": "Ya actualicé, comprobar de nuevo",
+      "checking": "Comprobando…"
+    },
+    "offer": {
+      "title": "Nueva versión disponible",
+      "body": "Hay una nueva versión de Ludo Rumble con mejoras y correcciones. Solo toma un momento.",
+      "update": "Actualizar"
+    },
+    "ready": {
+      "title": "Actualización lista",
+      "body": "Reinicia para obtener las últimas correcciones.",
+      "restart": "Reiniciar",
+      "restartA11y": "Reiniciar ahora para actualizar"
+    }
+  },
+  "crash": {
+    "title": "Ese tiro salió mal",
+    "body": "Ocurrió algo inesperado y ya nos avisaron. Tus monedas y tu progreso están a salvo.",
+    "retry": "REINTENTAR",
+    "retrying": "REINICIANDO…"
+  }
+}

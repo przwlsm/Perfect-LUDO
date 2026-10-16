@@ -1,0 +1,129 @@
+import { Pressable, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import { levelInfo, STAKES, stakeMinLevel, tablePrize, type Stake } from '@/domain';
+import { Text } from './AppText';
+import { CoinIcon } from './Currency';
+import { formatCount } from './Kit';
+import { useProfile } from '../state/ProfileProvider';
+import { makeStyles, useUi } from '../theme/AppearanceProvider';
+
+/**
+ * Entry stake chips for an online table, with what the winner takes.
+ * Stakes need an account with enough coins (the high tables a level too);
+ * those chips are locked otherwise, and a locked choice falls back free.
+ */
+export function StakePicker({
+  value,
+  players,
+  maxStake,
+  onChange,
+}: {
+  value: Stake;
+  players: number;
+  /** Hides tables above this stake (private rooms are capped server-side). */
+  maxStake?: number;
+  onChange(stake: Stake): void;
+}) {
+  const { theme, member, wallet, profile } = useProfile();
+  const { t } = useTranslation('home');
+  const s = useStyles();
+  const ui = useUi();
+  const level = levelInfo(profile.xp).level;
+  const canPay = (stake: Stake) =>
+    stake === 0 ||
+    (member && wallet === 'ready' && profile.coins >= stake && level >= stakeMinLevel(stake));
+  return (
+    <View style={{ gap: 8 }}>
+      <View style={s.row}>
+        {STAKES.filter((stake) => maxStake === undefined || stake <= maxStake).map((stake) => {
+          const allowed = canPay(stake);
+          const gated = stake > 0 && level < stakeMinLevel(stake);
+          const selected = stake === value;
+          return (
+            <Pressable
+              key={stake}
+              accessibilityRole="button"
+              accessibilityLabel={
+                stake === 0
+                  ? t('stake.freeA11y')
+                  : allowed
+                    ? t('stake.tableA11y', { amount: stake })
+                    : gated
+                      ? t('stake.tableGatedA11y', { amount: stake, level: stakeMinLevel(stake) })
+                      : t('stake.tableLockedA11y', { amount: stake })
+              }
+              accessibilityState={{ selected, disabled: !allowed }}
+              disabled={!allowed}
+              onPress={() => onChange(stake)}
+              android_ripple={{ color: `${theme.accent}30` }}
+              style={[
+                s.chip,
+                { backgroundColor: theme.surface },
+                selected && {
+                  borderColor: ui.gold,
+                  backgroundColor: ui.scheme === 'dark' ? '#2a2210' : `${ui.gold}18`,
+                },
+                // Locked: dashed and quieter, with a lock, so it never reads as choosable.
+                !allowed && s.locked,
+              ]}
+            >
+              {stake === 0 ? (
+                <Text style={[s.chipText, selected && { color: ui.gold }]}>{t('stake.free')}</Text>
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  {allowed ? (
+                    <CoinIcon size={14} />
+                  ) : (
+                    <Ionicons name="lock-closed" size={12} color={ui.subtle} />
+                  )}
+                  <Text
+                    style={[
+                      s.chipText,
+                      selected && { color: ui.gold },
+                      !allowed && { color: ui.subtle },
+                    ]}
+                  >
+                    {stake >= 1000 ? `${stake / 1000}K` : stake}
+                  </Text>
+                </View>
+              )}
+              {gated && (
+                <Text style={s.gate}>{t('stake.gate', { level: stakeMinLevel(stake) })}</Text>
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={s.hint}>
+        {value === 0
+          ? member
+            ? t('stake.freeHint')
+            : t('stake.guestHint')
+          : t('stake.paidHint', {
+              stake: formatCount(value),
+              prize: formatCount(tablePrize(value, players)),
+            })}
+      </Text>
+    </View>
+  );
+}
+
+const useStyles = makeStyles((ui) => ({
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    flexGrow: 1,
+    flexBasis: '30%',
+    minHeight: 48,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: ui.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+  },
+  chipText: { color: ui.text, fontWeight: '900', fontSize: 14 },
+  locked: { borderStyle: 'dashed', borderColor: ui.border, opacity: 0.75 },
+  gate: { color: ui.subtle, fontSize: 9, fontWeight: '800' },
+  hint: { color: ui.muted, fontSize: 12, lineHeight: 17 },
+}));

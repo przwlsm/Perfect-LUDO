@@ -1,0 +1,206 @@
+{
+  "title": "Sala de coleção",
+  "subtitle": "TRONOS · MEDALHAS · VITRINE",
+  "visiting": "Sala de {{name}}",
+  "visit": "Visitar a sala de coleção",
+  "loading": "Abrindo a sala…",
+  "signIn": {
+    "title": "Seus troféus precisam de um lar",
+    "body": "Entre na conta e cada vitória, captura e presente passa a contar para as medalhas. Os tronos vêm das copas.",
+    "button": "Entrar"
+  },
+  "closed": {
+    "title": "Esta sala está fechada",
+    "body": "{{name}} mantém a coleção em particular."
+  },
+  "stats": {
+    "cups": "Copas vencidas",
+    "thrones": "Tronos",
+    "medals": "Medalhas",
+    "level": "Nível"
+  },
+  "showcase": {
+    "label": "VITRINE",
+    "empty": "Escolha até três troféus para mostrar no seu cartão de jogador.",
+    "emptyVisitor": "Nada em exibição ainda.",
+    "edit": "Escolher vitrine",
+    "sheetTitle": "Sua vitrine",
+    "hint": "Toque em até três. Rivais na mesa, amigos e o ranking veem estes primeiro.",
+    "nothingYet": "Desbloqueie uma medalha ou vença um trono primeiro.",
+    "save": "Salvar vitrine",
+    "count": "{{n}} de 3 escolhidos"
+  },
+  "thrones": {
+    "label": "SALÃO DOS TRONOS",
+    "title": "A Estrada Real",
+    "body": "Vença uma copa e o trono dela é seu, iluminado para todos verem.",
+    "won_one": "Vencido {{count}} vez",
+    "won_other": "Vencido {{count}} vezes",
+    "locked": "Ainda não vencido",
+    "entry": "Entrada: {{coins}} moedas",
+    "free": "Entrada grátis",
+    "won_many": "Vencido {{count}} vezes"
+  },
+  "halls": {
+    "village": "Praça da aldeia",
+    "merchant": "Praça do mercador",
+    "knight": "Salão do cavaleiro",
+    "baron": "Corte do barão",
+    "duke": "Câmara do duque",
+    "king": "Corte do rei",
+    "emperor": "Palácio do imperador",
+    "legends": "Salão das lendas"
+  },
+  "throneNames": {
+    "village": "Trono de madeira",
+    "merchant": "Trono de bronze",
+    "knight": "Trono de prata",
+    "baron": "Trono de ouro",
+    "duke": "Trono de safira",
+    "king": "Trono de rubi",
+    "emperor": "Trono de diamante",
+    "legends": "Trono da lenda"
+  },
+  "medals": {
+    "label": "MEDALHAS",
+    "unlocked": "{{done}} de {{total}} desbloqueadas",
+    "groups": {
+      "play": "Na mesa",
+      "arena": "Na arena",
+      "club": "No clube",
+      "royal": "A Estrada Real"
+    }
+  },
+  "tiers": {
+    "locked": "Bloqueada",
+    "bronze": "Bronze",
+    "silver": "Prata",
+    "gold": "Ouro",
+    "platinum": "Platina"
+  },
+  "detail": {
+    "progress": "{{progress}} / {{target}}",
+    "next": "Próximo: {{tier}} em {{target}}",
+    "maxed": "Platina: o nível mais alto",
+    "unlockedOn": "Desbloqueada em {{date}}",
+    "tiersTitle": "Os quatro níveis"
+  },
+  "privacy": {
+    "title": "Visível para outros jogadores",
+    "hint": "Amigos, rivais na mesa e o ranking podem visitar sua sala."
+  },
+  "new": {
+    "label": "NOVO TROFÉU",
+    "one": "{{name}} · {{tier}}",
+    "more_one": "e mais {{count}}",
+    "more_other": "e mais {{count}}",
+    "open": "Ver brilhar",
+    "gotIt": "Entendi",
+    "more_many": "e mais {{count}}"
+  },
+  "profileCard": {
+    "label": "SALA DE COLEÇÃO",
+    "title": "Seus tronos e medalhas",
+    "body": "Cada vitória, captura e presente conta para uma medalha. Os tronos vêm das copas.",
+    "open": "Entrar na sala",
+    "newBadge": "{{count}} NOVOS"
+  },
+  "achievements": {
+    "first-blood": {
+      "name": "Primeiro sangue",
+      "goal": "Capture {{n}} peças rivais"
+    },
+    "six-appeal": {
+      "name": "Charme do seis",
+      "goal": "Tire {{n}} seis"
+    },
+    "homecoming": {
+      "name": "Volta para casa",
+      "goal": "Leve {{n}} peças para casa"
+    },
+    "veteran": {
+      "name": "Veterano",
+      "goal": "Termine {{n}} partidas"
+    },
+    "hot-streak": {
+      "name": "Sequência quente",
+      "goal": "Vença {{n}} partidas seguidas"
+    },
+    "marathon": {
+      "name": "Maratona",
+      "goal": "Jogue {{n}} partidas em um dia"
+    },
+    "champion": {
+      "name": "Campeão",
+      "goal": "Vença {{n}} partidas online"
+    },
+    "bot-buster": {
+      "name": "Caça-bots",
+      "goal": "Vença o computador {{n}} vezes"
+    },
+    "full-house": {
+      "name": "Mesa cheia",
+      "goal": "Vença {{n}} partidas em uma mesa de seis"
+    },
+    "speed-demon": {
+      "name": "Demônio da velocidade",
+      "goal": "Vença {{n}} partidas Rápida 1"
+    },
+    "hunter": {
+      "name": "Caçador",
+      "goal": "Vença {{n}} partidas Caça e Vai"
+    },
+    "team-player": {
+      "name": "Jogador de equipe",
+      "goal": "Vença {{n}} partidas 2 contra 2"
+    },
+    "high-roller": {
+      "name": "Grande apostador",
+      "goal": "Vença {{n}} partidas com aposta"
+    },
+    "podium-regular": {
+      "name": "Figurinha do pódio",
+      "goal": "Termine {{n}} torneios semanais no top 10"
+    },
+    "diamond-hands": {
+      "name": "Mãos de diamante",
+      "goal": "Alcance a divisão {{n}} da liga"
+    },
+    "crowd-favourite": {
+      "name": "Queridinho da torcida",
+      "goal": "Receba {{n}} presentes na mesa"
+    },
+    "generous-heart": {
+      "name": "Coração generoso",
+      "goal": "Envie {{n}} presentes na mesa"
+    },
+    "social-butterfly": {
+      "name": "Borboleta social",
+      "goal": "Tenha {{n}} amigos"
+    },
+    "lucky-star": {
+      "name": "Estrela da sorte",
+      "goal": "Gire a roleta {{n}} vezes"
+    },
+    "daily-devotion": {
+      "name": "Devoção diária",
+      "goal": "Resgate {{n}} recompensas diárias"
+    },
+    "rising-star": {
+      "name": "Estrela em ascensão",
+      "goal": "Alcance o nível {{n}}"
+    },
+    "collector": {
+      "name": "Colecionador",
+      "goal": "Tenha {{n}} tabuleiros e dados"
+    },
+    "throne-collector": {
+      "name": "Colecionador de tronos",
+      "goal": "Tenha {{n}} tronos diferentes"
+    },
+    "kingmaker": {
+      "name": "Fazedor de reis",
+      "goal": "Vença {{n}} copas"
+    }
+  }
+}
