@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { CUPS, type CupDef, type CupHall, type getCup } from '@/domain';
 import { Text } from '../components/AppText';
-import { CoinIcon } from '../components/Currency';
+import { CoinIcon, GemIcon } from '../components/Currency';
 import { Button } from '../components/Kit';
 import { Shine } from '../components/Live';
 import { numberLocale } from '../i18n/format';
@@ -200,7 +200,15 @@ export function HallCard({
         <CoinIcon size={26} />
         <View style={{ flex: 1 }}>
           <Text style={s.prizeLabel}>{t('hall.winnerTakes')}</Text>
-          <Text style={s.prize}>{fmt(hall.prize)}</Text>
+          <View style={s.prizeLine}>
+            <Text style={s.prize}>{fmt(hall.prize)}</Text>
+            {cup.gems > 0 && (
+              <View style={s.gems}>
+                <GemIcon size={14} />
+                <Text style={s.gemsText}>{t('hall.gems', { gems: cup.gems })}</Text>
+              </View>
+            )}
+          </View>
         </View>
         {hall.won > 0 && (
           <View style={s.wonBadge}>
@@ -298,6 +306,19 @@ const s = StyleSheet.create({
   },
   prizeLabel: { color: '#f5d68a', fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
   prize: { color: GOLD, fontSize: 24, fontWeight: '900' },
+  prizeLine: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  gems: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: '#c084fc2e',
+    borderWidth: 1,
+    borderColor: '#c084fc66',
+  },
+  gemsText: { color: '#e9d5ff', fontSize: 13, fontWeight: '900' },
   wonBadge: {
     flexDirection: 'row',
     alignItems: 'center',

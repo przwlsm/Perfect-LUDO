@@ -19,7 +19,7 @@
     "body": "Inicia sesión para entrar en una copa. Las entradas se pagan en monedas y los tronos van a tu sala de colección.",
     "button": "Iniciar sesión"
   },
-  "botCap": "Los cuadros de inicio inmediato pagan monedas {{cap}} veces al día · {{used}} usadas hoy.",
+  "botCap": "Los cuadros de inicio inmediato pagan monedas {{cap}} veces al día, una en los salones 6–8 · {{used}} usadas hoy.",
   "hall": {
     "free": "Entrada gratis",
     "entry": "Entrada {{coins}}",
@@ -41,7 +41,8 @@
     "continue": "Volver a tu cuadro",
     "short": "Faltan {{coins}} monedas",
     "tier": "SALÓN {{n}} DE {{total}}",
-    "winnerTakes": "EL GANADOR SE LLEVA"
+    "winnerTakes": "EL GANADOR SE LLEVA",
+    "gems": "+{{gems}} gemas"
   },
   "bracket": {
     "title": "Cuadro",
@@ -68,7 +69,8 @@
     "capReached": "Se agotó la asignación de monedas de hoy para cuadros de inicio inmediato. El trono sigue siendo tuyo.",
     "backToCups": "Volver a los salones",
     "seeRoom": "Verlo en tu sala de colección",
-    "you": "Tú"
+    "you": "Tú",
+    "gemsPrize": "+{{gems}} gemas"
   },
   "match": {
     "backToBracket": "Volver al cuadro"

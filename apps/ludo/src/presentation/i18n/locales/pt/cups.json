@@ -19,7 +19,7 @@
     "body": "Entre na conta para disputar uma copa. As entradas são pagas em moedas e os tronos vão para a sua sala de coleção.",
     "button": "Entrar"
   },
-  "botCap": "Chaves de início imediato pagam moedas {{cap}} vezes por dia · {{used}} usadas hoje.",
+  "botCap": "Chaves de início imediato pagam moedas {{cap}} vezes por dia, uma nos salões 6–8 · {{used}} usadas hoje.",
   "hall": {
     "free": "Entrada grátis",
     "entry": "Entrada {{coins}}",
@@ -41,7 +41,8 @@
     "continue": "Voltar para sua chave",
     "short": "Faltam {{coins}} moedas",
     "tier": "SALÃO {{n}} DE {{total}}",
-    "winnerTakes": "O VENCEDOR LEVA"
+    "winnerTakes": "O VENCEDOR LEVA",
+    "gems": "+{{gems}} gemas"
   },
   "bracket": {
     "title": "Chave",
@@ -68,7 +69,8 @@
     "capReached": "A cota de moedas de hoje para chaves de início imediato acabou. O trono continua sendo seu.",
     "backToCups": "Voltar aos salões",
     "seeRoom": "Ver na sua sala de coleção",
-    "you": "Você"
+    "you": "Você",
+    "gemsPrize": "+{{gems}} gemas"
   },
   "match": {
     "backToBracket": "Voltar para a chave"

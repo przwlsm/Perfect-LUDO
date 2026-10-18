@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler, useWindowDimensions } from 'react-native';
+import { BackHandler, Platform, useWindowDimensions } from 'react-native';
 import { router, useIsFocused } from 'expo-router';
 import {
   coinsHome,
@@ -129,7 +129,7 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
   const [leaving, setLeaving] = useState(false);
   const live = game.status === 'IN_PROGRESS' && match !== null && mySeat !== null;
   useEffect(() => {
-    if (!live || !focused) return;
+    if (Platform.OS === 'web' || !live || !focused) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       setMenu(false);
       setConfirmLeave(true);

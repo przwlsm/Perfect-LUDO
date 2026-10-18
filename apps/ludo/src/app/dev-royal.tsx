@@ -5,10 +5,46 @@ import { RoyalRoadCard } from '@/presentation/collection/RoyalRoadCard';
 import { VictoryScreen } from '@/presentation/game/VictoryScreen';
 import { HallCard } from '@/presentation/collection/HallCard';
 import { ThroneArt } from '@/presentation/collection/ThroneArt';
-import { CUPS, getCup } from '@/domain';
+import { ACHIEVEMENT_GROUPS, ACHIEVEMENTS, CUPS, getCup } from '@/domain';
+import { GemGuide } from '@/presentation/components/GemGuide';
+import { ThroneHallCard } from '@/presentation/collection/ThroneHallCard';
+import { CollectionCard } from '@/presentation/collection/CollectionCard';
+import { MedalShelf } from '@/presentation/screens/CollectionScreen';
 
 export default function DevRoyal() {
   const { v } = useLocalSearchParams<{ v?: string }>();
+  if (v === '4') {
+    const won: Record<string, number> = {
+      village: 3,
+      merchant: 2,
+      knight: 1,
+      baron: 1,
+      emperor: 1,
+    };
+    const tiers = Object.fromEntries(ACHIEVEMENTS.map((a, i) => [a.id, i % 5]));
+    return (
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 16, backgroundColor: '#0b1020' }}>
+        <CollectionCard />
+        <ThroneHallCard wonCount={(id) => won[id] ?? 0} motion />
+        {ACHIEVEMENT_GROUPS.slice(0, 2).map((g) => (
+          <MedalShelf
+            key={g}
+            group={g}
+            tierOf={(id) => tiers[id] ?? 0}
+            isNew={(id) => id === ACHIEVEMENTS[1]!.id}
+            motion
+            onOpen={() => undefined}
+          />
+        ))}
+      </ScrollView>
+    );
+  }
+  if (v === '3')
+    return (
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 16, backgroundColor: '#0b1020' }}>
+        <GemGuide />
+      </ScrollView>
+    );
   if (v === '2')
     return (
       <ScrollView contentContainerStyle={{ padding: 16, gap: 16, backgroundColor: '#0b1020' }}>

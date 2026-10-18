@@ -24,7 +24,8 @@
     "rewards": "ಬಹುಮಾನಗಳು",
     "friends": "ಸ್ನೇಹಿತರು",
     "profile": "ಪ್ರೊಫೈಲ್",
-    "accountRequired": "{{label}}, ಖಾತೆ ಅಗತ್ಯವಿದೆ"
+    "accountRequired": "{{label}}, ಖಾತೆ ಅಗತ್ಯವಿದೆ",
+    "store": "ಸ್ಟೋರ್"
   },
   "wallet": {
     "vaultA11y": "ನಿಮ್ಮ ತಿಜೋರಿಯಲ್ಲಿ {{amount}} ಕಾಯಿನ್‌ಗಳಿವೆ. ಬಹುಮಾನಗಳನ್ನು ತೆರೆಯಿರಿ",

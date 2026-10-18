@@ -39,7 +39,8 @@
     "locked": "Ainda não vencido",
     "entry": "Entrada: {{coins}} moedas",
     "free": "Entrada grátis",
-    "won_many": "Vencido {{count}} vezes"
+    "won_many": "Vencido {{count}} vezes",
+    "progress": "{{won}} de {{total}} conquistados"
   },
   "halls": {
     "village": "Praça da aldeia",
@@ -103,7 +104,10 @@
     "title": "Seus tronos e medalhas",
     "body": "Cada vitória, captura e presente conta para uma medalha. Os tronos vêm das copas.",
     "open": "Entrar na sala",
-    "newBadge": "{{count}} NOVOS"
+    "newBadge": "{{count}} NOVOS",
+    "summary": "{{thrones}} de {{total}} tronos, {{medals}} de {{medalTotal}} medalhas",
+    "thrones": "{{n}}/{{total}} tronos",
+    "medals": "{{n}}/{{total}} medalhas"
   },
   "achievements": {
     "first-blood": {

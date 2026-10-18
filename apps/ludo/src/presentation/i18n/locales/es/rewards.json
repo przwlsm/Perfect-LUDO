@@ -76,7 +76,7 @@
     "complete": "Alcanzaste todos los niveles. Legendario.",
     "progress": "{{xp}} / {{needed}} XP para el nivel {{next}}. Cada partida da XP de temporada.",
     "premiumTitle": "Desbloquea el camino premium",
-    "premiumHint": "Más monedas en cada nivel y 40 gemas cada cinco niveles.",
+    "premiumHint": "Más monedas en cada nivel, gemas cada cinco niveles y 50 gemas al terminar.",
     "premiumA11y": "Desbloquear premium por {{gems}} gemas",
     "tierFreeA11y": "Recompensa gratis del nivel {{tier}}",
     "tierPremiumA11y": "Recompensa premium del nivel {{tier}}",
@@ -118,5 +118,34 @@
     "a11y": "Cambiar {{gems}} gemas por {{coins}} monedas",
     "done": "¡Cambiado! +{{coins}} monedas.",
     "short": "Aún no tienes gemas suficientes para ese lote."
+  },
+  "gemGuide": {
+    "label": "GEMAS",
+    "title": "Para qué sirven las gemas",
+    "earn": "Gana gemas con las misiones diarias, la racha de regalos, al subir de nivel, en la ruta de temporada, con vídeos cortos y en las copas del Camino Real.",
+    "cups": {
+      "title": "Gana copas del Camino Real",
+      "body": "Cada copa pública da gemas al ganador, hasta {{cupGems}} en el Salón de las Leyendas."
+    },
+    "spin": {
+      "title": "Gira otra vez",
+      "body": "Un giro de la suerte más por {{spin}} gemas, hasta tres al día."
+    },
+    "season": {
+      "title": "Pase de temporada",
+      "body": "Desbloquea la ruta premium por {{season}} gemas."
+    },
+    "gifts": {
+      "title": "Regalos en la mesa",
+      "body": "Envía una rosa, una risa o una corona en mesas online por {{giftMin}} a {{giftMax}} gemas."
+    },
+    "store": {
+      "title": "Tableros especiales",
+      "body": "Algunos tableros y dados de fiesta de la Tienda se compran con gemas."
+    },
+    "exchange": {
+      "title": "Cambia por monedas",
+      "body": "Cambia gemas por monedas abajo: 1 gema = {{rate}} monedas."
+    }
   }
 }

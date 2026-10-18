@@ -24,7 +24,8 @@
     "rewards": "Recompensas",
     "friends": "Amigos",
     "profile": "Perfil",
-    "accountRequired": "{{label}}, requiere una cuenta"
+    "accountRequired": "{{label}}, requiere una cuenta",
+    "store": "Tienda"
   },
   "wallet": {
     "vaultA11y": "{{amount}} monedas en tu bóveda. Abrir recompensas",

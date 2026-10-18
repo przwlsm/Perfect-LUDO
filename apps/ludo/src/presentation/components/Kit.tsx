@@ -226,6 +226,27 @@ export function CoinPill() {
     </Pressable>
   );
 }
+/** The store, one tap away on every screen (except the store itself), for guests too. */
+export function StoreButton() {
+  const { t } = useTranslation();
+  const path = usePathname();
+  const s = useStyles();
+  const ui = useUi();
+  if (path === '/store') return null;
+  const violet = ui.scheme === 'dark' ? '#c5a5ff' : ui.violet;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t('nav.store')}
+      onPress={() => router.push('/store')}
+      android_ripple={{ color: `${violet}30` }}
+      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+      style={[s.storeButton, { borderColor: `${violet}55`, backgroundColor: `${violet}1f` }]}
+    >
+      <Ionicons name="storefront" size={18} color={violet} />
+    </Pressable>
+  );
+}
 /** Gems, for members once the wallet has loaded; opens the rewards page. */
 export function GemPill() {
   const { profile, member, wallet } = useProfile();
@@ -285,7 +306,7 @@ export function Screen({
         ? FadeInRight.duration(260)
         : undefined;
   // The gem pill takes room; drop the brand words sooner so nothing overlaps.
-  const compactHeader = width / fontScale < (level !== null ? 440 : 390);
+  const compactHeader = width / fontScale < (level !== null ? 480 : 430);
   // Landscape on a phone leaves little height; tighten the chrome so more
   // of each screen's content is on screen without scrolling.
   const landscape = width > height;
@@ -337,6 +358,7 @@ export function Screen({
           </Pressable>
           <View style={s.headerActions}>
             <NotificationBell />
+            <StoreButton />
             <GemPill />
             <CoinPill />
           </View>
@@ -529,6 +551,14 @@ const useStyles = makeStyles((ui) => ({
   },
   brand: { minHeight: 48, flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  storeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   levelBadge: {
     position: 'absolute',
     right: -7,

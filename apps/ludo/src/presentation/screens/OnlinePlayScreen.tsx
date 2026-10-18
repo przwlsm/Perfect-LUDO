@@ -269,7 +269,6 @@ export default function OnlinePlayScreen() {
   return (
     <Screen title={t('play.title')} subtitle={null}>
       <View style={shared.section}>
-        <Text style={shared.sectionTitle}>{t('play.quick.title')}</Text>
         {day ? (
           // The page's navy hero (the 30%): its content takes the night tokens.
           <LinearGradient
@@ -281,7 +280,7 @@ export default function OnlinePlayScreen() {
             <SchemeScope scheme="dark">{quickPlay}</SchemeScope>
           </LinearGradient>
         ) : (
-          <Card style={{ borderColor: `${theme.accent}40` }}>{quickPlay}</Card>
+          <Card style={{ ...s.quickCard, borderColor: `${theme.accent}40` }}>{quickPlay}</Card>
         )}
       </View>
 
@@ -624,9 +623,7 @@ function QuickPlayBody({
     );
   return (
     <>
-      <Label color={theme.accentText}>{t('play.quick.noFriendsNeeded')}</Label>
       <Text style={shared.sectionTitle}>{t('play.quick.findNow')}</Text>
-      <Body>{t('play.quick.seatedWith')}</Body>
       <Label>{t('play.tableSize')}</Label>
       <View style={shared.row}>
         {SEATS.map((n) => (
@@ -686,12 +683,15 @@ const useStyles = makeStyles((ui) => ({
   well: { backgroundColor: `${ui.background}b3` },
   hero: {
     borderRadius: 18,
-    padding: 18,
+    padding: 16,
     borderWidth: 1,
     borderColor: DARK.border,
-    gap: 14,
+    // Tight enough that the Quick Match button shows without scrolling.
+    gap: 10,
     boxShadow: liftByDay(ui),
   },
+  /** Quick play by night: the same tight spacing as the day hero. */
+  quickCard: { padding: 16, gap: 10 },
   tile: {
     width: 40,
     height: 40,
@@ -726,7 +726,7 @@ const useStyles = makeStyles((ui) => ({
     borderWidth: 1,
     borderColor: ui.line,
     borderRadius: 13,
-    paddingVertical: 14,
+    paddingVertical: 11,
     alignItems: 'center',
   },
   choiceText: { color: ui.text, fontSize: 15, fontWeight: '800' },

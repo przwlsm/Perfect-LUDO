@@ -19,7 +19,7 @@
     "body": "Sign in to enter a cup. Entries are paid in coins and thrones go to your Collection Room.",
     "button": "Sign in"
   },
-  "botCap": "Instant-start brackets pay coins {{cap}} times a day · {{used}} used today.",
+  "botCap": "Instant-start brackets pay coins {{cap}} times a day, once in halls 6–8 · {{used}} used today.",
   "hall": {
     "free": "Free entry",
     "entry": "Entry {{coins}}",
@@ -39,7 +39,8 @@
     "continue": "Back to your bracket",
     "short": "Need {{coins}} more coins",
     "tier": "HALL {{n}} OF {{total}}",
-    "winnerTakes": "WINNER TAKES"
+    "winnerTakes": "WINNER TAKES",
+    "gems": "+{{gems}} gems"
   },
   "bracket": {
     "title": "Bracket",
@@ -66,7 +67,8 @@
     "capReached": "Today’s coin allowance for instant-start brackets is used up. The throne is still yours.",
     "backToCups": "Back to the halls",
     "seeRoom": "See it in your Collection Room",
-    "you": "You"
+    "you": "You",
+    "gemsPrize": "+{{gems}} gems"
   },
   "match": {
     "backToBracket": "Back to the bracket"

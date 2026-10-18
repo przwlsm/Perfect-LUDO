@@ -38,7 +38,8 @@
     "won_other": "Won {{count}} times",
     "locked": "Not yet won",
     "entry": "Entry {{coins}} coins",
-    "free": "Free entry"
+    "free": "Free entry",
+    "progress": "{{won}} of {{total}} won"
   },
   "halls": {
     "village": "Village Green",
@@ -101,7 +102,10 @@
     "title": "Your thrones and medals",
     "body": "Every win, capture and gift counts toward a medal. Thrones come from the cups.",
     "open": "Enter the room",
-    "newBadge": "{{count}} NEW"
+    "newBadge": "{{count}} NEW",
+    "summary": "{{thrones}} of {{total}} thrones, {{medals}} of {{medalTotal}} medals",
+    "thrones": "{{n}}/{{total}} thrones",
+    "medals": "{{n}}/{{total}} medals"
   },
   "achievements": {
     "first-blood": {

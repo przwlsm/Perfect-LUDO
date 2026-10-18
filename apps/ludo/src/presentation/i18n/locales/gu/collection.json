@@ -38,7 +38,8 @@
     "won_other": "{{count}} વાર જીત્યું",
     "locked": "હજુ જીત્યું નથી",
     "entry": "પ્રવેશ {{coins}} સિક્કા",
-    "free": "મફત પ્રવેશ"
+    "free": "મફત પ્રવેશ",
+    "progress": "{{total}} માંથી {{won}} જીત્યા"
   },
   "halls": {
     "village": "ગામનું મેદાન",
@@ -101,7 +102,10 @@
     "title": "તમારાં સિંહાસનો અને ચંદ્રકો",
     "body": "દરેક જીત, કબજો અને ભેટ ચંદ્રક તરફ ગણાય છે. સિંહાસનો કપમાંથી મળે છે.",
     "open": "ખંડમાં જાઓ",
-    "newBadge": "{{count}} નવા"
+    "newBadge": "{{count}} નવા",
+    "summary": "{{total}} માંથી {{thrones}} સિંહાસન, {{medalTotal}} માંથી {{medals}} મેડલ",
+    "thrones": "{{n}}/{{total}} સિંહાસન",
+    "medals": "{{n}}/{{total}} મેડલ"
   },
   "achievements": {
     "first-blood": {

@@ -24,7 +24,8 @@
     "rewards": "బహుమతులు",
     "friends": "స్నేహితులు",
     "profile": "ప్రొఫైల్",
-    "accountRequired": "{{label}}, అకౌంట్ అవసరం"
+    "accountRequired": "{{label}}, అకౌంట్ అవసరం",
+    "store": "స్టోర్"
   },
   "wallet": {
     "vaultA11y": "మీ వాల్ట్‌లో {{amount}} కాయిన్స్. బహుమతులు తెరవండి",

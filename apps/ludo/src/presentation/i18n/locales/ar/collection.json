@@ -42,7 +42,8 @@
     "won_other": "فُزت به {{count}} مرة",
     "locked": "لم يُفز به بعد",
     "entry": "الدخول {{coins}} عملة",
-    "free": "دخول مجاني"
+    "free": "دخول مجاني",
+    "progress": "فزت بـ {{won}} من {{total}}"
   },
   "halls": {
     "village": "ساحة القرية",
@@ -109,7 +110,10 @@
     "title": "عروشك وميدالياتك",
     "body": "كل فوز وأسر وهدية يُحتسب نحو ميدالية. العروش تأتي من الكؤوس.",
     "open": "دخول الغرفة",
-    "newBadge": "{{count}} جديد"
+    "newBadge": "{{count}} جديد",
+    "summary": "{{thrones}} من {{total}} عروش، {{medals}} من {{medalTotal}} ميدالية",
+    "thrones": "{{n}}/{{total}} عروش",
+    "medals": "{{n}}/{{total}} ميداليات"
   },
   "achievements": {
     "first-blood": {

@@ -38,7 +38,8 @@
     "won_other": "{{count}} वेळा जिंकले",
     "locked": "अजून जिंकले नाही",
     "entry": "प्रवेश {{coins}} नाणी",
-    "free": "मोफत प्रवेश"
+    "free": "मोफत प्रवेश",
+    "progress": "{{total}} पैकी {{won}} जिंकली"
   },
   "halls": {
     "village": "गावचे मैदान",
@@ -101,7 +102,10 @@
     "title": "तुमची सिंहासने आणि पदके",
     "body": "प्रत्येक विजय, कब्जा आणि भेट पदकाकडे मोजली जाते. सिंहासने कपमधून मिळतात.",
     "open": "दालनात जा",
-    "newBadge": "{{count}} नवीन"
+    "newBadge": "{{count}} नवीन",
+    "summary": "{{total}} पैकी {{thrones}} सिंहासने, {{medalTotal}} पैकी {{medals}} पदके",
+    "thrones": "{{n}}/{{total}} सिंहासने",
+    "medals": "{{n}}/{{total}} पदके"
   },
   "achievements": {
     "first-blood": {

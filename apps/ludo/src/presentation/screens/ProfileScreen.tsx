@@ -59,6 +59,9 @@ export default function ProfileScreen() {
         </LinearGradient>
       </View>
 
+      {/* The shining door to the Collection Room, right under who you are. */}
+      {member && <CollectionCard />}
+
       <SocialIdentityCard />
 
       {/* ---- The record ---- */}
@@ -167,8 +170,6 @@ export default function ProfileScreen() {
           </Button>
         </Card>
       )}
-
-      {member && <CollectionCard />}
 
       {/* ---- The look ---- */}
       <Card>

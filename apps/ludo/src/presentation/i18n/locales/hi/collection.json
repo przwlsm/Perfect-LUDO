@@ -38,7 +38,8 @@
     "won_other": "{{count}} बार जीता",
     "locked": "अभी नहीं जीता",
     "entry": "प्रवेश {{coins}} सिक्के",
-    "free": "मुफ़्त प्रवेश"
+    "free": "मुफ़्त प्रवेश",
+    "progress": "{{total}} में से {{won}} जीते"
   },
   "halls": {
     "village": "गाँव का मैदान",
@@ -101,7 +102,10 @@
     "title": "आपके सिंहासन और पदक",
     "body": "हर जीत, कब्ज़ा और उपहार पदक की ओर गिना जाता है। सिंहासन कप से मिलते हैं।",
     "open": "कक्ष में जाएँ",
-    "newBadge": "{{count}} नए"
+    "newBadge": "{{count}} नए",
+    "summary": "{{total}} में से {{thrones}} सिंहासन, {{medalTotal}} में से {{medals}} मेडल",
+    "thrones": "{{n}}/{{total}} सिंहासन",
+    "medals": "{{n}}/{{total}} मेडल"
   },
   "achievements": {
     "first-blood": {

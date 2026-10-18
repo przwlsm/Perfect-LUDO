@@ -17,6 +17,8 @@ export interface CupDef {
    * in the top halls friends could agree who takes a big pot.
    */
   readonly friends: boolean;
+  /** Gems for the winner of a public cup, on top of the coins (0043). */
+  readonly gems: number;
   /** The throne's look: a base and a highlight. */
   readonly throne: { readonly base: string; readonly light: string; readonly gem: string | null };
 }
@@ -29,6 +31,7 @@ export const CUPS = [
     runnerUp: 100,
     variant: 'quick2',
     friends: true,
+    gems: 1,
     throne: { base: '#8b5a2b', light: '#c98f55', gem: null },
   },
   {
@@ -38,6 +41,7 @@ export const CUPS = [
     runnerUp: 250,
     variant: 'quick2',
     friends: true,
+    gems: 2,
     throne: { base: '#a05a2c', light: '#e08b4f', gem: null },
   },
   {
@@ -47,6 +51,7 @@ export const CUPS = [
     runnerUp: 1000,
     variant: 'quick2',
     friends: true,
+    gems: 3,
     throne: { base: '#8a94a6', light: '#dfe5ee', gem: '#5b6b8a' },
   },
   {
@@ -56,6 +61,7 @@ export const CUPS = [
     runnerUp: 5000,
     variant: 'quick2',
     friends: true,
+    gems: 5,
     throne: { base: '#b8860b', light: '#ffd76a', gem: '#c0392b' },
   },
   {
@@ -65,6 +71,7 @@ export const CUPS = [
     runnerUp: 25000,
     variant: 'quick2',
     friends: true,
+    gems: 8,
     throne: { base: '#1f4e9c', light: '#6fa3ff', gem: '#2563eb' },
   },
   {
@@ -74,6 +81,7 @@ export const CUPS = [
     runnerUp: 75000,
     variant: 'quick2',
     friends: false,
+    gems: 15,
     throne: { base: '#9b1c31', light: '#ff6b81', gem: '#e11d48' },
   },
   {
@@ -83,6 +91,7 @@ export const CUPS = [
     runnerUp: 200000,
     variant: 'quick2',
     friends: false,
+    gems: 25,
     throne: { base: '#4b5563', light: '#e5f6ff', gem: '#a5f3fc' },
   },
   {
@@ -92,6 +101,7 @@ export const CUPS = [
     runnerUp: 500000,
     variant: 'quick2',
     friends: false,
+    gems: 50,
     throne: { base: '#111827', light: '#fbbf24', gem: '#f59e0b' },
   },
 ] as const satisfies readonly CupDef[];

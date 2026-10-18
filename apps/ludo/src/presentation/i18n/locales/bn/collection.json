@@ -38,7 +38,8 @@
     "won_other": "{{count}} বার জিতেছেন",
     "locked": "এখনও জেতা হয়নি",
     "entry": "প্রবেশ {{coins}} কয়েন",
-    "free": "বিনামূল্যে প্রবেশ"
+    "free": "বিনামূল্যে প্রবেশ",
+    "progress": "{{total}}টির মধ্যে {{won}} জেতা"
   },
   "halls": {
     "village": "গ্রামের মাঠ",
@@ -101,7 +102,10 @@
     "title": "আপনার সিংহাসন আর পদক",
     "body": "প্রতিটি জয়, দখল আর উপহার পদকের হিসাবে যোগ হয়। সিংহাসন আসে কাপ থেকে।",
     "open": "কক্ষে প্রবেশ",
-    "newBadge": "{{count}}টি নতুন"
+    "newBadge": "{{count}}টি নতুন",
+    "summary": "{{total}}টির মধ্যে {{thrones}} সিংহাসন, {{medalTotal}}টির মধ্যে {{medals}} মেডেল",
+    "thrones": "{{n}}/{{total}} সিংহাসন",
+    "medals": "{{n}}/{{total}} মেডেল"
   },
   "achievements": {
     "first-blood": {

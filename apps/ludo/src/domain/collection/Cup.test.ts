@@ -39,3 +39,9 @@ describe('cups with friends', () => {
     expect(CUPS.map((c) => c.friends)).toEqual([true, true, true, true, true, false, false, false]);
   });
 });
+
+describe('cup gem prizes', () => {
+  it('grow with the hall, as on the server (0043)', () => {
+    expect(CUPS.map((c) => c.gems)).toEqual([1, 2, 3, 5, 8, 15, 25, 50]);
+  });
+});

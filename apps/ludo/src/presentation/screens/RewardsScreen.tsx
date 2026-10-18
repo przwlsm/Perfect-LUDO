@@ -35,6 +35,7 @@ import { Text } from '../components/AppText';
 import { Body, Button, Card, Label, Screen, Sheet, useShared } from '../components/Kit';
 import { CoinIcon, GemIcon } from '../components/Currency';
 import { AdTile } from '../components/AdTile';
+import { GemGuide } from '../components/GemGuide';
 import { InviteCard } from '../components/InviteCard';
 import { LuckyWheel } from '../components/LuckyWheel';
 import { Shine } from '../components/Live';
@@ -353,6 +354,9 @@ export default function RewardsScreen() {
       )}
 
       {member && <InviteCard />}
+
+      {/* ---- What gems are for: how to earn them and every way to use them ---- */}
+      <GemGuide />
 
       {/* ---- Gems to coins, one way, in fixed bundles ---- */}
       <Card>
@@ -846,11 +850,7 @@ function TierColumn({
       >
         {reward.gems > 0 ? <GemIcon size={18} /> : <CoinIcon size={18} />}
         <Text style={{ color: ui.text, fontSize: 11, fontWeight: '800' }}>
-          {reward.gems > 0 && !isPremium
-            ? reward.gems
-            : isPremium && reward.gems >= 40
-              ? reward.gems
-              : reward.coins}
+          {reward.gems > 0 ? reward.gems : reward.coins}
         </Text>
         {claimed ? (
           <Ionicons name="checkmark" size={14} color={ui.green} />

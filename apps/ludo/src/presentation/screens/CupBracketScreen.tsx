@@ -176,6 +176,11 @@ export default function CupBracketScreen() {
                   : t('bracket.capReached')}
             </Text>
           )}
+          {iWon && !data.isPrivate && data.prizePaid && def.gems > 0 && (
+            <Text style={[s.prize, { color: ui.scheme === 'dark' ? '#e9d5ff' : ui.violet }]}>
+              {t('bracket.gemsPrize', { gems: def.gems })}
+            </Text>
+          )}
           {iAmRunnerUp && <Text style={shared.small}>{t('bracket.runnerUpPrize')}</Text>}
           {iAmIn && !iWon && !iAmRunnerUp && <Body>{t('bracket.knockedOut')}</Body>}
           {iWon && (

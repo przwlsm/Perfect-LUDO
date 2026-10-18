@@ -668,7 +668,7 @@ try {
   assert.equal(onlineWon.coins, 1240, 'online win pays 100, plus 140 for reaching level 2');
   assert.equal(onlineWon.xp, 120);
   assert.equal(onlineWon.level.level, 2);
-  assert.equal(onlineWon.gems, 25, 'levelling up to 2 paid 5 gems');
+  assert.equal(onlineWon.gems, 22, 'levelling up to 2 paid 2 gems (0044)');
   assert.equal((await db.query('select public.award_online_match($1) as w', [pMatch])).rows[0].w.coins, 1240, 'paid once');
   await login(pLose);
   // The loser never collects; loading the wallet collects for them.
@@ -716,7 +716,7 @@ try {
   const gemsBefore = (await db.query('select gems from public.profiles where uid=$1', [pWin])).rows[0].gems;
   const secondSpin = await doSpin();
   const gemsAfter = secondSpin.wallet.gems;
-  assert.equal(gemsAfter, gemsBefore - 10 + (secondSpin.reward.kind === 'gems' ? secondSpin.reward.amount : 0), 'extra spins cost 10 gems');
+  assert.equal(gemsAfter, gemsBefore - 5 + (secondSpin.reward.kind === 'gems' ? secondSpin.reward.amount : 0), 'extra spins cost 5 gems (0044)');
   await doSpin();
   await doSpin();
   await assert.rejects(doSpin(), /all the spins for today/);
@@ -753,6 +753,13 @@ try {
   await db.query('select public.buy_season_premium()');
   assert.equal((await db.query('select gems from public.profiles where uid=$1', [pWin])).rows[0].gems, 50);
   await db.query('select public.claim_season_tier(1, true)');
+  // 0044: the premium track pays back 100 gems a season, well under its price.
+  const premiumGems = (await db.query(
+    'select sum((public.season_tier_reward(t, true)->>\'gems\')::int)::int as g from generate_series(1, 30) t',
+  )).rows[0].g;
+  assert.equal(premiumGems, 100, 'the premium track pays 100 gems a season');
+  assert.ok(premiumGems < 250, 'a pass never pays for the next one');
+  assert.equal((await db.query("select public.season_tier_reward(30, true)->>'gems' as g")).rows[0].g, '50');
 
   // Rewarded ads (0020): small grants, capped per UTC day, all opt-in.
   const adUser = randomUUID();
@@ -761,7 +768,7 @@ try {
   const adClaim = async (kind) =>
     (await db.query('select public.claim_ad_reward($1) as w', [kind])).rows[0].w;
   await assert.rejects(db.query("select public.claim_ad_reward('nope')"), /not available/);
-  for (let i = 1; i <= 5; i++) assert.equal((await adClaim('gem')).gems, 20 + 2 * i, 'two gems per ad (0033)');
+  for (let i = 1; i <= 5; i++) assert.equal((await adClaim('gem')).gems, 20 + i, 'one gem per ad (0044)');
   await assert.rejects(adClaim('gem'), /tomorrow/);
   // The rescue boost needs today's rescue claimed first, then pays once.
   await assert.rejects(adClaim('rescue-boost'), /rescue first/);
@@ -1257,6 +1264,8 @@ try {
     const fin = br.rounds.find((r) => r.round === 2);
     assert.ok([fin.a, fin.b].includes(cupRival));
     const before = await coinsOf(cupRival);
+    const gemsOf = async (u) => Number((await db.query('select gems from public.profiles where uid=$1', [u])).rows[0].gems);
+    const gemsBefore = { [cupUser]: await gemsOf(cupUser), [cupRival]: await gemsOf(cupRival) };
     if (fin.lobbyId) {
       await finishTable(fin.lobbyId, cupRival);
       br = (await db.query('select public.get_cup_bracket($1) as b', [br.id])).rows[0].b;
@@ -1267,6 +1276,11 @@ try {
       assert.equal(await coinsOf(cupRival), before + 750, 'the winner collects three entries');
       const throne = (await db.query("select count from public.throne_wins where uid=$1 and cup_id='merchant'", [cupRival])).rows[0];
       assert.equal(throne.count, 1, 'the throne is lit in the Collection Room');
+    }
+    // 0043: the winner of a public cup also takes the hall's gems (2 in the Merchant's Square).
+    for (const u of [cupUser, cupRival]) {
+      const won = br.winner === u && br.prizePaid;
+      assert.equal(await gemsOf(u), gemsBefore[u] + (won ? 2 : 0), won ? 'the winner takes the gems' : 'no gems without the win');
     }
     const col = (await db.query('select public.get_collection() as c')).rows[0].c;
     assert.ok(col.achievements.find((a) => a.id === 'kingmaker').progress >= (br.winner === cupRival ? 1 : 0));
@@ -1397,10 +1411,13 @@ try {
     const fin = pb.rounds.find((r) => r.round === 2);
     assert.ok(fin && fin.lobbyId, 'the final is seated');
     const before = await coinsOf(fin.a);
+    const gemsOf = async (u) => Number((await db.query('select gems from public.profiles where uid=$1', [u])).rows[0].gems);
+    const gemsBefore = await gemsOf(fin.a);
     await login(fin.a); await finishTable(fin.lobbyId, fin.a);
     pb = (await db.query('select public.get_cup_bracket($1) as b', [pb.id])).rows[0].b;
     assert.equal(pb.status, 'FINISHED'); assert.equal(pb.winner, fin.a);
     assert.equal(await coinsOf(fin.a), before + 750, 'the winner takes the whole pot');
+    assert.equal(await gemsOf(fin.a), gemsBefore, 'a cup with friends pays no gems (0043)');
     assert.equal(Number((await db.query("select count(*) from public.throne_wins where uid=$1 and cup_id='merchant'", [fin.a])).rows[0].count), 0, 'no throne without four seats');
     const f3 = randomUUID();
     await db.query("insert into auth.users(id,email) values ($1,'f3@example.test')", [f3]);
@@ -1416,6 +1433,8 @@ try {
   {
     const open = (await db.query('select id from public.cups where friends_allowed order by sort')).rows.map((r) => r.id);
     assert.deepEqual(open, ['village', 'merchant', 'knight', 'baron', 'duke'], 'halls 1 to 5 allow friends');
+    const gemPrizes = (await db.query('select gems from public.cups order by sort')).rows.map((r) => r.gems);
+    assert.deepEqual(gemPrizes, [1, 2, 3, 5, 8, 15, 25, 50], 'each hall pays its winner gems (0043)');
     const h = randomUUID(), f = randomUUID();
     await db.query("insert into auth.users(id,email) values ($1,'bighost@example.test'),($2,'bigfriend@example.test')", [h, f]);
     for (const u of [h, f]) { await login(u); await db.query('select public.get_wallet()'); }
@@ -1446,6 +1465,73 @@ try {
   console.log(
     'PASS: cups with friends are open in halls 1 to 5 only: the top three halls refuse a private cup without taking an entry, an older private cup there takes no new players, and its host can still cancel for a refund.',
   );
+
+  // Royal Road gem prizes (0043): paid once, to a human winner of a public cup
+  // whose coin prize was paid, never for a cup with friends.
+  {
+    const w = randomUUID();
+    await db.query("insert into auth.users(id,email) values ($1,'gemwinner@example.test')", [w]);
+    await login(w); await db.query('select public.get_wallet()');
+    const gemsOf = async (u) => Number((await db.query('select gems from public.profiles where uid=$1', [u])).rows[0].gems);
+    const bot = (await db.query('select uid from public.profiles where is_bot limit 1')).rows[0].uid;
+    const finish = async ({ cup, winner, paid = true }) => {
+      const id = (await db.query(
+        "insert into public.cup_brackets(cup_id,status,is_private) values ($1,'PLAYING',false) returning id", [cup],
+      )).rows[0].id;
+      await db.query(
+        "update public.cup_brackets set status='FINISHED', finished_at=now(), winner_uid=$2, prize_paid=$3 where id=$1",
+        [id, winner, paid],
+      );
+      return id;
+    };
+    const g0 = await gemsOf(w);
+    const won = await finish({ cup: 'emperor', winner: w });
+    assert.equal(await gemsOf(w), g0 + 25, 'the Emperor’s Palace pays 25 gems');
+    await db.query("update public.cup_brackets set status='FINISHED' where id=$1", [won]);
+    assert.equal(await gemsOf(w), g0 + 25, 'a finished bracket never pays twice');
+    await finish({ cup: 'village', winner: w, paid: false });
+    assert.equal(await gemsOf(w), g0 + 25, 'no gems when the daily cap held back the coin prize');
+    await finish({ cup: 'village', winner: w });
+    assert.equal(await gemsOf(w), g0 + 26, 'a public village cup pays 1 gem');
+    const pb = (await db.query(
+      "insert into public.cup_brackets(cup_id,status,is_private,invite_code) values ('village','PLAYING',true,'GEMSAA') returning id",
+    )).rows[0].id;
+    await db.query("update public.cup_brackets set status='FINISHED', winner_uid=$2, prize_paid=true where id=$1", [pb, w]);
+    assert.equal(await gemsOf(w), g0 + 26, 'a cup with friends pays no gems');
+    const botGems = await gemsOf(bot);
+    await finish({ cup: 'legends', winner: bot });
+    assert.equal(await gemsOf(bot), botGems, 'a computer player never collects gems');
+  }
+  console.log('PASS: Royal Road gem prizes: each hall pays its human winner 1 to 50 gems once, only when the coin prize was paid, and never for a cup with friends.');
+
+  // Balance (0044): the top halls pay a bracket with computer players once a
+  // day; the other halls keep the overall cap of three.
+  {
+    const w = randomUUID();
+    await db.query("insert into auth.users(id,email) values ($1,'topcap@example.test')", [w]);
+    await login(w); await db.query('select public.get_wallet()');
+    const bot = (await db.query('select uid from public.profiles where is_bot limit 1')).rows[0].uid;
+    const wallet = async () => (await db.query('select coins, gems from public.profiles where uid=$1', [w])).rows[0];
+    const settle = async (cup) => {
+      const id = (await db.query(
+        "insert into public.cup_brackets(cup_id,status,has_bots) values ($1,'PLAYING',true) returning id", [cup],
+      )).rows[0].id;
+      await db.query('insert into public.cup_rounds(bracket_id,round,slot,a_uid,b_uid,winner_uid) values ($1,2,0,$2,$3,$2)', [id, w, bot]);
+      await db.query('select public.cup_settle($1)', [id]);
+      return (await db.query('select prize_paid from public.cup_brackets where id=$1', [id])).rows[0].prize_paid;
+    };
+    const w0 = await wallet();
+    assert.equal(await settle('emperor'), true, 'the first top-hall win of the day pays');
+    const w1 = await wallet();
+    assert.equal(Number(w1.coins) - Number(w0.coins), 600000);
+    assert.equal(w1.gems - w0.gems, 25, 'and its gems');
+    assert.equal(await settle('legends'), false, 'a second top-hall win with computer players that day does not');
+    const w2 = await wallet();
+    assert.equal(Number(w2.coins), Number(w1.coins)); assert.equal(w2.gems, w1.gems);
+    assert.equal(await settle('village'), true, 'the lower halls still pay within the overall cap of three');
+    assert.equal((await wallet()).gems, w2.gems + 1);
+  }
+  console.log('PASS: balance: a video pays 1 gem, a level-up 2, extra spins cost 5 gems, and the top three halls pay a bracket with computer players once a day while the others keep the cap of three.');
 
   // Real-money grants (0023): a verified order grants exactly once, and the
   // function is closed to clients entirely (only the Edge Function calls it).

@@ -76,7 +76,7 @@
     "complete": "Todos os níveis alcançados. Lendário.",
     "progress": "{{xp}} / {{needed}} XP para o nível {{next}}. Toda partida rende XP de temporada.",
     "premiumTitle": "Desbloqueie a trilha premium",
-    "premiumHint": "Mais moedas em cada nível e 40 gemas a cada cinco níveis.",
+    "premiumHint": "Mais moedas em cada nível, gemas a cada cinco níveis e 50 gemas ao terminar.",
     "premiumA11y": "Desbloquear premium por {{gems}} gemas",
     "tierFreeA11y": "Recompensa grátis do nível {{tier}}",
     "tierPremiumA11y": "Recompensa premium do nível {{tier}}",
@@ -118,5 +118,34 @@
     "a11y": "Trocar {{gems}} gemas por {{coins}} moedas",
     "done": "Trocado! +{{coins}} moedas.",
     "short": "Ainda não há gemas suficientes para esse pacote."
+  },
+  "gemGuide": {
+    "label": "GEMAS",
+    "title": "Para que servem as gemas",
+    "earn": "Ganhe gemas nas missões diárias, na sequência de presentes, ao subir de nível, na trilha da temporada, com vídeos curtos e nas copas da Estrada Real.",
+    "cups": {
+      "title": "Vença copas da Estrada Real",
+      "body": "Cada copa pública dá gemas ao vencedor, até {{cupGems}} no Salão das Lendas."
+    },
+    "spin": {
+      "title": "Gire de novo",
+      "body": "Mais um giro da sorte por {{spin}} gemas, até três por dia."
+    },
+    "season": {
+      "title": "Passe da temporada",
+      "body": "Desbloqueie a trilha premium por {{season}} gemas."
+    },
+    "gifts": {
+      "title": "Presentes na mesa",
+      "body": "Envie uma rosa, uma risada ou uma coroa em mesas online por {{giftMin}} a {{giftMax}} gemas."
+    },
+    "store": {
+      "title": "Tabuleiros especiais",
+      "body": "Alguns tabuleiros e dados de festa da Loja são comprados com gemas."
+    },
+    "exchange": {
+      "title": "Troque por moedas",
+      "body": "Troque gemas por moedas abaixo: 1 gema = {{rate}} moedas."
+    }
   }
 }

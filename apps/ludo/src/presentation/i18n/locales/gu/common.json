@@ -24,7 +24,8 @@
     "rewards": "ઇનામ",
     "friends": "મિત્રો",
     "profile": "પ્રોફાઇલ",
-    "accountRequired": "{{label}}, એકાઉન્ટ જરૂરી છે"
+    "accountRequired": "{{label}}, એકાઉન્ટ જરૂરી છે",
+    "store": "સ્ટોર"
   },
   "wallet": {
     "vaultA11y": "તમારી તિજોરીમાં {{amount}} કોઈન. ઇનામ ખોલો",
