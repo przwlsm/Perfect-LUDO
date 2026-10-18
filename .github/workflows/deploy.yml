@@ -29,9 +29,24 @@ on:
   workflow_dispatch:
     inputs:
       app:
-        description: 'App folder to deploy (e.g. diya), or "all"'
+        description: 'App to publish over the air'
         required: true
+        type: choice
         default: all
+        # One entry per folder under apps/ (add new apps here too).
+        options:
+          - all
+          - ludo
+          - baghchal
+          - quietatlas
+          - tambola
+          - akshar
+          - utsav
+          - speaklocal
+          - diya
+          - kolam
+          - chaisort
+          - monsoon
 
 permissions:
   contents: read

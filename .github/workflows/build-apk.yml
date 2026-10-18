@@ -22,9 +22,24 @@ on:
   workflow_dispatch:
     inputs:
       app:
-        description: 'App folder to build (e.g. diya), or "all"'
+        description: 'App to build'
         required: true
+        type: choice
         default: diya
+        # One entry per folder under apps/ (add new apps here too).
+        options:
+          - ludo
+          - baghchal
+          - quietatlas
+          - tambola
+          - akshar
+          - utsav
+          - speaklocal
+          - diya
+          - kolam
+          - chaisort
+          - monsoon
+          - all
       store:
         description: 'Store build: refuse test ad ids and also produce the .aab'
         type: boolean
