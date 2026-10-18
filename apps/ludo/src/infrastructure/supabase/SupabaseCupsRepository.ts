@@ -1,8 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   parseCupBracket,
+  parseCupGameLength,
   parseCupsView,
   type CupBracket,
+  type CupGameLength,
   type CupsView,
   type ICupsRepository,
 } from '@/domain';
@@ -37,5 +39,9 @@ export class SupabaseCupsRepository implements ICupsRepository {
 
   async get(bracketId: string): Promise<CupBracket> {
     return parseCupBracket(await rpc(this.client, 'get_cup_bracket', { p_bracket: bracketId }));
+  }
+
+  async gameLength(): Promise<CupGameLength> {
+    return parseCupGameLength(await rpc(this.client, 'cup_game_length'));
   }
 }

@@ -135,8 +135,8 @@
       "goal": "Gana {{n}} partidas en línea"
     },
     "bot-buster": {
-      "name": "Cazabots",
-      "goal": "Vence a la computadora {{n}} veces"
+      "name": "Campeón de mesa",
+      "goal": "Gana {{n}} partidas rápidas"
     },
     "full-house": {
       "name": "Mesa llena",

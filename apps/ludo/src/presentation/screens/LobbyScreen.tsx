@@ -31,6 +31,8 @@ import { useSocial } from '../state/SocialProvider';
 import { ConnectionPill } from '../components/ConnectionPill';
 import { GuestAdOffer } from '../components/GuestAdOffer';
 import { NewTrophyCard } from '../collection/CollectionCard';
+import { RoyalRoadCard } from '../collection/RoyalRoadCard';
+import { useCupGameLength } from '../hooks/useCupGameLength';
 import { Body, Button, Card, Label, Screen, Sheet, useShared } from '../components/Kit';
 import { useConnectivity } from '../state/ConnectivityProvider';
 import { useProfile } from '../state/ProfileProvider';
@@ -82,7 +84,7 @@ export default function LobbyScreen() {
   );
   const rewards = useRewards();
   const tournament = useTournament();
-  const { identity } = useSocial();
+  const { identity, signedIn } = useSocial();
   const focused = useIsFocused();
   const motion = useMotionEnabled(profile.reducedMotion, focused);
   const [arenaSeats, setArenaSeats] = useState<2 | 4 | 'teams'>(2);
@@ -92,6 +94,7 @@ export default function LobbyScreen() {
   const missionsReady = missions.filter((m) => m.progress >= m.target && !m.claimed).length;
   const season = rewards.data?.season ?? null;
   const online = connectivity.available && connectivity.online;
+  const cupTime = useCupGameLength(signedIn && online);
   const topTen = tournament.data?.top[9]?.points ?? tournament.data?.top.at(-1)?.points ?? 0;
   const myPoints = tournament.data?.me.points ?? 0;
   const openAi = (preset: { variant?: GameVariant; teams?: boolean } = {}) => {
@@ -252,6 +255,17 @@ export default function LobbyScreen() {
             onSeats={setArenaSeats}
           />
         </SchemeScope>
+      )}
+
+      {/* The Royal Road, the app's big stage, right under Quick Match. */}
+      {connectivity.available && (
+        <RoyalRoadCard
+          gameMinutes={cupTime.game}
+          cupMinutes={cupTime.cup}
+          measured={cupTime.measured}
+          motion={motion}
+          onPress={() => router.push('/cups')}
+        />
       )}
 
       {/* Weekly tournament */}

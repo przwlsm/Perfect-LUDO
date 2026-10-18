@@ -257,7 +257,8 @@ export function Screen({
 }: {
   children: ReactNode;
   title?: string;
-  subtitle?: string;
+  /** The small line above the title; left out it is the app's default, `null` shows none. */
+  subtitle?: string | null;
   nav?: boolean;
   back?: boolean;
   immersive?: boolean;
@@ -368,7 +369,9 @@ export function Screen({
           >
             {title && (
               <View style={s.heading}>
-                <Label color={theme.accentText}>{subtitle ?? t('brand.defaultSubtitle')}</Label>
+                {subtitle !== null && (
+                  <Label color={theme.accentText}>{subtitle ?? t('brand.defaultSubtitle')}</Label>
+                )}
                 <Title>{title}</Title>
               </View>
             )}

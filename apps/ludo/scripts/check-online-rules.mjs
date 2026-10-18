@@ -888,8 +888,11 @@ try {
   // stay out of search and the weekly ladder.
   {
     const bots = (await db.query('select country from public.profiles where is_bot')).rows;
-    assert.equal(bots.length, 30, 'thirty computer players');
-    assert.equal(new Set(bots.map((b) => b.country)).size, 30, 'each from a different country');
+    assert.equal(bots.length, 50, 'fifty computer players');
+    // 0040 added twenty more, several from India where most players are, so
+    // countries may repeat; every one must still be a real two-letter code.
+    assert.ok(new Set(bots.map((b) => b.country)).size >= 35, 'a wide spread of countries');
+    assert.ok(bots.every((b) => /^[A-Z]{2}$/.test(b.country)), 'every computer player has a country code');
     const solo = randomUUID();
     await db.query("insert into auth.users(id,email) values ($1,'solo@example.test')", [solo]);
     await login(solo);
@@ -1230,7 +1233,7 @@ try {
     const mine = br.rounds.find((r) => r.a === cupRival || r.b === cupRival);
     assert.ok(mine.lobbyId);
     const lob = (await db.query('select * from public.lobbies where id=$1', [mine.lobbyId])).rows[0];
-    assert.equal(lob.cup_bracket_id, br.id); assert.equal(lob.variant, 'quick1'); assert.equal(lob.stake, 0);
+    assert.equal(lob.cup_bracket_id, br.id); assert.equal(lob.variant, 'quick2', 'every hall plays Quick 2 (0041)'); assert.equal(lob.stake, 0);
     assert.equal(lob.status, 'COUNTDOWN');
     const lsnap = (await db.query('select public.lobby_snapshot($1) as s', [mine.lobbyId])).rows[0].s;
     assert.equal(lsnap.lobby.cupBracketId, br.id, 'the lobby knows its cup');
@@ -1406,6 +1409,42 @@ try {
   }
   console.log(
     'PASS: cups with friends: a code seats two to four friends and never a computer player, the host alone starts it (not alone), a bye carries a third player through, the winner takes the pot, the throne needs a full table, the host leaving refunds everyone, and public brackets never mix with private ones.',
+  );
+
+  // Cups with friends only in the first five halls (0042): the top halls are
+  // public draw only, so friends cannot agree who takes a big pot.
+  {
+    const open = (await db.query('select id from public.cups where friends_allowed order by sort')).rows.map((r) => r.id);
+    assert.deepEqual(open, ['village', 'merchant', 'knight', 'baron', 'duke'], 'halls 1 to 5 allow friends');
+    const h = randomUUID(), f = randomUUID();
+    await db.query("insert into auth.users(id,email) values ($1,'bighost@example.test'),($2,'bigfriend@example.test')", [h, f]);
+    for (const u of [h, f]) { await login(u); await db.query('select public.get_wallet()'); }
+    await db.query('update public.profiles set coins = 1000000 where uid = any($1)', [[h, f]]);
+    const coinsOf = async (u) => Number((await db.query('select coins from public.profiles where uid=$1', [u])).rows[0].coins);
+    await login(h);
+    for (const hall of ['king', 'emperor', 'legends']) {
+      await assert.rejects(db.query('select public.create_private_cup($1)', [hall]), /first five halls/, `${hall} is public draw only`);
+    }
+    assert.equal(await coinsOf(h), 1000000, 'a refused cup takes no entry');
+    assert.equal((await db.query('select public.my_cup_bracket() as b')).rows[0].b, null);
+    // Hall 5 still allows friends.
+    const duke = (await db.query("select public.create_private_cup('duke') as b")).rows[0].b;
+    assert.equal(duke.private, true);
+    await db.query('select public.leave_cup($1)', [duke.id]);
+    assert.equal(await coinsOf(h), 1000000, 'leaving refunds the entry');
+    // A private cup opened in a top hall before the rule takes no new players.
+    await db.query("update public.cups set friends_allowed = true where id = 'king'");
+    const old = (await db.query("select public.create_private_cup('king') as b")).rows[0].b;
+    await db.query("update public.cups set friends_allowed = false where id = 'king'");
+    await login(f);
+    await assert.rejects(db.query('select public.join_cup_by_code($1)', [old.inviteCode]), /first five halls/);
+    assert.equal(await coinsOf(f), 1000000, 'the friend paid nothing');
+    await login(h);
+    await db.query('select public.leave_cup($1)', [old.id]);
+    assert.equal(await coinsOf(h), 1000000, 'its host can still cancel it for a refund');
+  }
+  console.log(
+    'PASS: cups with friends are open in halls 1 to 5 only: the top three halls refuse a private cup without taking an entry, an older private cup there takes no new players, and its host can still cancel for a refund.',
   );
 
   // Real-money grants (0023): a verified order grants exactly once, and the
@@ -2012,6 +2051,50 @@ try {
   );
   console.log(
     'PASS: store-version policy is readable by anyone through its function, validated on write, and has no client write path.',
+  );
+
+  // --- cup game length (migration 0041) ----------------------------------------
+  {
+    const halls = (await db.query('select distinct variant from public.cups')).rows.map((r) => r.variant);
+    assert.deepEqual(halls, ['quick2'], 'every Royal Road hall plays Quick 2');
+    // Age out what earlier checks played, so only the games below count.
+    await db.query("update public.matches set finished_at = now() - interval '40 days' where status = 'FINISHED'");
+    const host = randomUUID();
+    await db.query("insert into auth.users(id,email) values ($1,'timer@example.test')", [host]);
+    const game = async (players, variant, status, secs) => {
+      const lobby = randomUUID();
+      await db.query("insert into public.lobbies(id,host_id,max_players,status) values ($1,$2,$3,'STARTED')", [lobby, host, players]);
+      await db.query(
+        `insert into public.matches(lobby_id,player_count,status,variant,created_at,finished_at)
+         values ($1,$2,$3,$4, now() - make_interval(secs => $5), now())`,
+        [lobby, players, status, variant, secs],
+      );
+    };
+    const length = async () => (await db.query('select public.cup_game_length() as l')).rows[0].l;
+    assert.deepEqual(await length(), { variant: 'quick2', seconds: 0, samples: 0 }, 'no games, no average');
+    await game(2, 'quick2', 'FINISHED', 300);
+    await game(2, 'quick2', 'FINISHED', 420);
+    await game(2, 'quick2', 'FINISHED', 20); // a walk-over
+    await game(2, 'quick2', 'FINISHED', 7200); // a table left open
+    await game(2, 'quick2', 'ABANDONED', 500);
+    await game(4, 'quick2', 'FINISHED', 900);
+    await game(2, 'classic', 'FINISHED', 1500);
+    assert.deepEqual(
+      await length(),
+      { variant: 'quick2', seconds: 360, samples: 2 },
+      'heads-up Quick 2 games that finished, without the extremes',
+    );
+    assert.equal(
+      await privilege("select has_function_privilege('anon','public.cup_game_length()','EXECUTE') as ok"),
+      false,
+    );
+    assert.equal(
+      await privilege("select has_function_privilege('authenticated','public.cup_game_length()','EXECUTE') as ok"),
+      true,
+    );
+  }
+  console.log(
+    'PASS: cup game length: every hall plays Quick 2, and the average counts only finished heads-up Quick 2 games from the last month, without walk-overs or stalled tables.',
   );
 } finally {
   await db.close();

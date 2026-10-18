@@ -163,3 +163,40 @@ export function parseCupsView(v: unknown): CupsView {
 export function cupEntryName(entry: CupEntry | undefined): string | null {
   return entry?.displayName || entry?.username || null;
 }
+
+/** How long a cup game takes: the server's average of recent real games. */
+export interface CupGameLength {
+  /** Average seconds per game; 0 when no game has been counted yet. */
+  readonly seconds: number;
+  /** How many finished games the average is taken over. */
+  readonly samples: number;
+}
+
+/**
+ * Our own estimate for a heads-up Quick 2 game (two coins home), used until
+ * enough real games have been played for the server's average to mean much.
+ */
+export const QUICK2_ESTIMATE_SECONDS = 6 * 60;
+/** Fewer real games than this and the estimate is shown instead. */
+export const MIN_LENGTH_SAMPLES = 10;
+
+export function parseCupGameLength(v: unknown): CupGameLength {
+  const r = row(v);
+  return { seconds: Math.max(0, int(r.seconds)), samples: Math.max(0, int(r.samples)) };
+}
+
+/**
+ * Whole minutes for one cup game, never under one: the server's average
+ * when it rests on enough games, otherwise the estimate. A whole cup is two
+ * games back to back (the semi-finals run side by side), so it takes twice this.
+ */
+export function cupGameMinutes(length: CupGameLength | null): {
+  readonly game: number;
+  readonly cup: number;
+  readonly measured: boolean;
+} {
+  const measured = !!length && length.samples >= MIN_LENGTH_SAMPLES && length.seconds > 0;
+  const seconds = measured ? length.seconds : QUICK2_ESTIMATE_SECONDS;
+  const game = Math.max(1, Math.round(seconds / 60));
+  return { game, cup: game * 2, measured };
+}

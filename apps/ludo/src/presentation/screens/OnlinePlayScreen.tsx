@@ -23,7 +23,6 @@ import { useMotionEnabled } from '../hooks/useMotionEnabled';
 import { VariantPicker } from '../components/VariantPicker';
 import { TeamsToggle } from '../components/TeamsToggle';
 import { AccountGateSheet, LOGIN_HREF, SIGN_UP_HREF } from '../social/AccountGate';
-import { UserAvatar } from '../social/UserAvatar';
 import { useConnectivity } from '../state/ConnectivityProvider';
 import { useProfile } from '../state/ProfileProvider';
 import { useSocial } from '../state/SocialProvider';
@@ -34,6 +33,8 @@ import { DARK, type Palette } from '../theme/palette';
 import { iconTile, liftByDay, MARIGOLD, NAVY_HERO } from '../theme/surfaces';
 import { mirrorInRtl } from '../i18n/rtl';
 import { LudoSpinner } from '../components/LoaderArt';
+import { RoyalRoadCard } from '../collection/RoyalRoadCard';
+import { useCupGameLength } from '../hooks/useCupGameLength';
 
 const SEATS: readonly QuickMatchPlayerCount[] = [2, 3, 4];
 
@@ -59,8 +60,11 @@ export default function OnlinePlayScreen() {
   const connectivity = useConnectivity();
   const { enabled, signedIn, account, identity } = useSocial();
   const auth = useAuthSession();
+  const cupTime = useCupGameLength(signedIn && connectivity.online);
   const quick = useQuickMatch();
   const searchMotion = useMotionEnabled(profile.reducedMotion, quick.phase === 'searching');
+  // The Royal Road card's slow rays and floating throne rest while a search is on screen.
+  const cardMotion = useMotionEnabled(profile.reducedMotion, quick.phase === 'idle');
   const ui = useUi();
   const s = useStyles();
   const shared = useShared();
@@ -173,7 +177,7 @@ export default function OnlinePlayScreen() {
 
   if (!enabled || !connectivity.available) {
     return (
-      <Screen title={t('play.title')} subtitle={t('play.subtitle')}>
+      <Screen title={t('play.title')} subtitle={null}>
         <Card>
           <Body>{t('play.noServer')}</Body>
           <Button onPress={() => router.replace('/')}>{t('backToGame')}</Button>
@@ -184,7 +188,7 @@ export default function OnlinePlayScreen() {
 
   if (!connectivity.online) {
     return (
-      <Screen title={t('play.title')} subtitle={t('play.subtitle')}>
+      <Screen title={t('play.title')} subtitle={null}>
         <Card>
           <ConnectionPill large />
           <Text style={shared.sectionTitle}>{t('play.unavailable.title')}</Text>
@@ -263,37 +267,33 @@ export default function OnlinePlayScreen() {
   );
 
   return (
-    <Screen title={t('play.title')} subtitle={t('play.subtitle')}>
-      <Card>
-        <View style={shared.between}>
-          <View style={[shared.row, { flex: 1 }]}>
-            <UserAvatar
-              id={identity?.id ?? 'me'}
-              name={name}
-              emoji={identity?.avatar ?? null}
-              size={44}
-            />
-            <View style={{ flex: 1, gap: 3 }}>
-              <Text style={s.welcome} numberOfLines={1}>
-                {t('play.welcome', { name })}
-              </Text>
-              <Text style={shared.small}>
-                {account === 'guest'
-                  ? t('play.guestHandle', { username: identity?.username ?? 'guest' })
-                  : identity
-                    ? identity.publicId
-                      ? t('play.handleWithId', {
-                          username: identity.username,
-                          id: identity.publicId,
-                        })
-                      : t('play.handle', { username: identity.username })
-                    : t('play.settingUpProfile')}
-              </Text>
-            </View>
-          </View>
-          <ConnectionPill large />
-        </View>
-      </Card>
+    <Screen title={t('play.title')} subtitle={null}>
+      <View style={shared.section}>
+        <Text style={shared.sectionTitle}>{t('play.quick.title')}</Text>
+        {day ? (
+          // The page's navy hero (the 30%): its content takes the night tokens.
+          <LinearGradient
+            colors={NAVY_HERO}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.hero}
+          >
+            <SchemeScope scheme="dark">{quickPlay}</SchemeScope>
+          </LinearGradient>
+        ) : (
+          <Card style={{ borderColor: `${theme.accent}40` }}>{quickPlay}</Card>
+        )}
+      </View>
+
+      {/* The Royal Road sits right under quick play: it is the app's big stage. */}
+      <RoyalRoadCard
+        gameMinutes={cupTime.game}
+        cupMinutes={cupTime.cup}
+        measured={cupTime.measured}
+        motion={cardMotion}
+        onPress={() => router.push('/cups')}
+      />
+
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t('play.tournament.a11y')}
@@ -326,39 +326,6 @@ export default function OnlinePlayScreen() {
           color={day ? ui.text : ui.subtle}
         />
       </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('cups:card.a11y')}
-        onPress={() => router.push('/cups')}
-        android_ripple={{ color: `${theme.accent}30` }}
-        style={[s.cups, { borderColor: day ? ui.line : `${ui.gem}55` }]}
-      >
-        <View style={[s.tourneyIcon, { backgroundColor: `${ui.gem}22` }]}>
-          <Ionicons name="ribbon" size={22} color={ui.gem} />
-        </View>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={s.tourneyTitle}>{t('cups:card.title')}</Text>
-          <Text style={shared.small}>{t('cups:card.body')}</Text>
-        </View>
-        <Ionicons name="chevron-forward" style={mirrorInRtl} size={20} color={ui.subtle} />
-      </Pressable>
-
-      <View style={shared.section}>
-        <Text style={shared.sectionTitle}>{t('play.quick.title')}</Text>
-        {day ? (
-          // The page's navy hero (the 30%): its content takes the night tokens.
-          <LinearGradient
-            colors={NAVY_HERO}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={s.hero}
-          >
-            <SchemeScope scheme="dark">{quickPlay}</SchemeScope>
-          </LinearGradient>
-        ) : (
-          <Card style={{ borderColor: `${theme.accent}40` }}>{quickPlay}</Card>
-        )}
-      </View>
 
       <View style={shared.section}>
         <Text style={shared.sectionTitle}>{t('play.teams.title')}</Text>
@@ -714,17 +681,6 @@ const useStyles = makeStyles((ui) => ({
     backgroundColor: ui.scheme === 'dark' ? '#2a2210' : MARIGOLD[1],
     boxShadow: liftByDay(ui),
   },
-  /** The cups card: a plain card with a violet tile, under the marigold tournament. */
-  cups: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 18,
-    borderWidth: 1,
-    backgroundColor: ui.scheme === 'dark' ? ui.surfaceLow : '#ffffff',
-    boxShadow: liftByDay(ui),
-  },
   fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   /** A frosted well on the marigold card. */
   well: { backgroundColor: `${ui.background}b3` },
@@ -765,7 +721,6 @@ const useStyles = makeStyles((ui) => ({
     letterSpacing: 2,
     paddingHorizontal: 14,
   },
-  welcome: { color: ui.text, fontSize: 19, fontWeight: '800' },
   choice: {
     flex: 1,
     borderWidth: 1,

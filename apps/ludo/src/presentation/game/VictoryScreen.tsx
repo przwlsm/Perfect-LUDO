@@ -74,6 +74,7 @@ export function VictoryScreen({
   primary,
   secondary,
   shareMessage,
+  invite = null,
   error,
   motionEnabled,
 }: {
@@ -99,6 +100,8 @@ export function VictoryScreen({
   primary: { label: string; busy?: boolean; onPress(): void };
   secondary: { label: string; onPress(): void };
   shareMessage?: string;
+  /** A next step worth offering after a win, such as the Royal Road cups. */
+  invite?: { title: string; body: string; cta: string; onPress(): void } | null;
   error?: string | null;
   motionEnabled: boolean;
 }) {
@@ -282,6 +285,40 @@ export function VictoryScreen({
                   color={DARK.green}
                 />
               </View>
+            </Animated.View>
+          )}
+          {invite && (
+            <Animated.View entering={rise(520)}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${invite.title}. ${invite.body}`}
+                accessibilityHint={invite.cta}
+                disabled={primary.busy}
+                onPress={invite.onPress}
+                style={({ pressed }) => [
+                  s.invite,
+                  { opacity: primary.busy ? 0.6 : pressed ? 0.9 : 1 },
+                ]}
+              >
+                {/* The Royal Road's own night colours, the same in both modes. */}
+                <LinearGradient
+                  colors={['#160b3d', '#3a1478', '#6b21a8']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+                <Shine active={motion} every={3600} />
+                <View style={s.inviteIcon}>
+                  <Ionicons name="trophy" size={22} color="#2b1600" />
+                </View>
+                <View style={{ flex: 1, gap: 3 }}>
+                  <Text style={s.inviteTitle}>{invite.title}</Text>
+                  <Text style={s.inviteBody}>{invite.body}</Text>
+                  <Text style={s.inviteCta}>
+                    {invite.cta} {forwardArrow}
+                  </Text>
+                </View>
+              </Pressable>
             </Animated.View>
           )}
           {error ? <Text style={s.error}>{error}</Text> : null}
@@ -702,6 +739,27 @@ const useStyles = makeStyles((ui) => ({
   levelText: { color: ui.text, fontWeight: '800', fontSize: 14 },
   small: { color: ui.muted, fontSize: 12, fontWeight: '700' },
   section: { color: ui.muted, fontSize: 12, fontWeight: '900', letterSpacing: 1.6 },
+  invite: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#ffd76a66',
+  },
+  inviteIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffd76a',
+  },
+  inviteTitle: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  inviteBody: { color: '#e9ddff', fontSize: 12, lineHeight: 17 },
+  inviteCta: { color: '#ffd76a', fontSize: 13, fontWeight: '900', marginTop: 2 },
   statsGrid: { flexDirection: 'row', gap: 10 },
   stat: {
     flex: 1,

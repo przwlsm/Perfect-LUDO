@@ -20,7 +20,9 @@ function ads(): AdsModule | null {
   if (mod === undefined) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports -- optional native module
-      mod = require('react-native-google-mobile-ads') as AdsModule;
+      const loaded = require('react-native-google-mobile-ads') as Partial<AdsModule>;
+      // On the web Metro serves an empty module in its place (metro.config.js).
+      mod = loaded.TestIds ? (loaded as AdsModule) : null;
     } catch {
       mod = null;
     }

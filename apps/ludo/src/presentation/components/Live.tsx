@@ -145,11 +145,17 @@ export function Shine({
   active,
   width = 400,
   every = 3200,
+  strength = 0.18,
 }: {
   active: boolean;
   width?: number;
   every?: number;
+  /** How bright the highlight's centre is, 0 to 1. */
+  strength?: number;
 }) {
+  const peak = Math.round(Math.min(1, Math.max(0, strength)) * 255)
+    .toString(16)
+    .padStart(2, '0');
   const x = useSharedValue(-1);
   useEffect(() => {
     cancelAnimation(x);
@@ -174,7 +180,7 @@ export function Shine({
       style={[StyleSheet.absoluteFill, { alignItems: 'center' }, anim]}
     >
       <LinearGradient
-        colors={['#ffffff00', '#ffffff2e', '#ffffff00']}
+        colors={['#ffffff00', `#ffffff${peak}`, '#ffffff00']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={{ width: 90, height: '300%', marginTop: '-50%' }}
