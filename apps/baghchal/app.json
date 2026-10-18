@@ -40,7 +40,16 @@
           "userTrackingUsageDescription": "This lets us show ads that are more relevant to you."
         }
       ],
-      "expo-iap"
+      "expo-iap",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
