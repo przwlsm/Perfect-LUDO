@@ -87,7 +87,10 @@
     "updates": {
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 3000,
-      "url": "https://u.expo.dev/ccb92aa4-4045-4bd3-8dd8-fdd723485b5c"
+      "url": "https://u.expo.dev/ccb92aa4-4045-4bd3-8dd8-fdd723485b5c",
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
     },
     "owner": "prwlsm-org",
     "extra": {
