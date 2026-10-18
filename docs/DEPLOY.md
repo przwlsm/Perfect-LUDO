@@ -87,6 +87,83 @@ store build for an app whose first release is not set up.
       sends small changes over the air (close and reopen the app) and starts
       a new store build only when native code changes.
 
+## Free builds and download links (`.github/workflows/build-apk.yml`)
+
+GitHub builds the apps on its own runners (free for this public repository;
+no EAS builds are used) and publishes each APK behind a link that never
+changes:
+
+```
+https://github.com/przwlsm/Perfect-LUDO/releases/download/<app>-latest/<app>.apk
+```
+
+Send that link to anyone with an Android phone: they open it, tap the file,
+allow installing from the browser once, and the app installs. Every build is
+also kept as a numbered release (`<app>-b<run>`) under GitHub → Releases.
+
+How to run it:
+
+- **By hand:** GitHub → Actions → **Build APK** → _Run workflow_ → app folder
+  (e.g. `diya`) or `all`. Tick **store** for a Google Play build: it then
+  refuses Google's test ad ids and also produces the `.aab` to upload.
+- **On merge to `main`:** the changed apps that are listed in the
+  `BUILD_APPS` repository variable (`diya,kolam` or `all`; empty = none).
+
+A build takes about 20–30 minutes. The run's **Summary** page shows the link
+and which key signed it.
+
+### Signing key (once)
+
+Without it, APKs are signed with Android's debug key: fine for testing,
+rejected by Google Play. One upload key is shared by every app. It was
+created on 2026-10-18 with `keytool` and lives **outside the repo** in
+`C:\Users\Prajwal.S\.android-keys\` (keystore `devmindslabs-upload.jks`,
+alias `upload`, passwords in `secrets.txt`). **Back that folder up**
+somewhere safe (a password manager, an encrypted drive): once an app is on
+Play, its updates must be signed with this key forever.
+
+Add four secrets in GitHub → Settings → Secrets and variables → Actions:
+
+| Secret                      | Value                                 |
+| --------------------------- | ------------------------------------- |
+| `ANDROID_KEYSTORE_BASE64`   | the contents of `keystore.base64.txt` |
+| `ANDROID_KEYSTORE_PASSWORD` | from `secrets.txt`                    |
+| `ANDROID_KEY_ALIAS`         | `upload`                              |
+| `ANDROID_KEY_PASSWORD`      | from `secrets.txt`                    |
+
+Per-app secrets, when an app needs them (names are case-insensitive):
+`ADMOB_ANDROID_APP_ID_<app>`, `ADMOB_REWARDED_ID_<app>` (required for a store
+build), and for Ludo and Bagh-Chal `SUPABASE_URL_<app>`,
+`SUPABASE_ANON_KEY_<app>`.
+
+If you ever build with EAS instead, upload the same keystore there
+(`npx eas-cli@latest credentials` in the app folder) so both routes sign alike.
+
+### Testers and the Play Store
+
+An APK from the link and the Play Store version are signed by different
+keys (Play re-signs with its own), so a tester who installed the link version
+must uninstall it before installing from Play. Updates **within** one route
+install over each other normally.
+
+## Over-the-air updates: Expo today, your own server if ever needed
+
+Small fixes reach phones through Expo's update service (free up to 1,000
+monthly active users across all apps; past that, those phones simply wait
+for the next Play release). If the apps outgrow the free tier, there are two
+quick switches, neither touching app code:
+
+1. **Expo Starter plan**: USD 19/month, 3,000 users included, then
+   USD 0.005 per extra user.
+2. **Self-host the update server** with the open-source **xprem** (formerly
+   Expo Open OTA), which speaks the same Expo Updates protocol:
+   - run it on any small host (Docker image; it stores updates in S3-compatible
+     storage such as Cloudflare R2's free tier);
+   - point each app at it by changing `updates.url` in its `app.json` to the
+     server's URL, and publish updates with its CLI instead of `eas update`;
+   - because `updates.url` is native config, that change needs one new store
+     build per app, after which updates flow from your server.
+
 ## Good to know
 
 - Updates only reach builds made by EAS for that channel. A debug build from
