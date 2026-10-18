@@ -93,4 +93,21 @@ if (keystore && storePassword && keyAlias && keyPassword) {
 }
 
 fs.writeFileSync(gradleFile, gradle);
+
+// Expo's default JVM limits (2 GB heap, 512 MB metaspace) are too small for
+// the release lint pass of an app with many native libraries: Ludo's failed
+// with "Metaspace". Both local and CI machines have room for more.
+const propsFile = path.resolve('android/gradle.properties');
+if (fs.existsSync(propsFile)) {
+  const props = fs.readFileSync(propsFile, 'utf8');
+  const jvmArgs = 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m';
+  const updated = /^org\.gradle\.jvmargs=.*$/m.test(props)
+    ? props.replace(/^org\.gradle\.jvmargs=.*$/m, jvmArgs)
+    : `${props.trimEnd()}\n${jvmArgs}\n`;
+  if (updated !== props) {
+    fs.writeFileSync(propsFile, updated);
+    notes.push('Gradle JVM memory raised to 4 GB / 1 GB metaspace');
+  }
+}
+
 console.log(`android-release: ${notes.join('; ')}`);
