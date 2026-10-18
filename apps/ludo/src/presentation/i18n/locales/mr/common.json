@@ -24,7 +24,8 @@
     "rewards": "बक्षिसे",
     "friends": "मित्र",
     "profile": "प्रोफाइल",
-    "accountRequired": "{{label}}, अकाउंट आवश्यक"
+    "accountRequired": "{{label}}, अकाउंट आवश्यक",
+    "store": "स्टोअर"
   },
   "wallet": {
     "vaultA11y": "तुमच्या तिजोरीत {{amount}} कॉइन. बक्षिसे उघडा",

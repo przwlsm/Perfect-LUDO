@@ -184,7 +184,7 @@ export function MatchmakingOverlay({
               </PlayerCard>
             )}
           </View>
-          <VsBadge active={motion} />
+          <MatchSpinner active={motion} />
           <View style={[s.opponents, opponents > 1 && { gap: 10 }]}>
             {Array.from({ length: teams ? 2 : opponents }, (_, i) => (
               <PlayerCard
@@ -308,35 +308,104 @@ function RollingFace({
   );
 }
 
-function VsBadge({ active }: { active: boolean }) {
+/** The four Ludo colours, in board order, for the orbiting tokens. */
+const TOKEN_COLORS = ['#ef4444', '#10b981', '#f59e0b', '#3b82f6'] as const;
+/** Pip positions per die face on a 3×3 grid (row, column). */
+const PIPS: readonly (readonly [number, number][])[] = [
+  [[1, 1]],
+  [
+    [0, 2],
+    [2, 0],
+  ],
+  [
+    [0, 2],
+    [1, 1],
+    [2, 0],
+  ],
+  [
+    [0, 0],
+    [0, 2],
+    [2, 0],
+    [2, 2],
+  ],
+  [
+    [0, 0],
+    [0, 2],
+    [1, 1],
+    [2, 0],
+    [2, 2],
+  ],
+  [
+    [0, 0],
+    [0, 2],
+    [1, 0],
+    [1, 2],
+    [2, 0],
+    [2, 2],
+  ],
+];
+const SPINNER = 96;
+const DIE = 44;
+
+/**
+ * The centre of the arena while the search runs: four Ludo tokens orbit a
+ * dashed track, and a die in the middle tumbles through its faces. Still,
+ * showing a six, when motion is off or the table is found.
+ */
+function MatchSpinner({ active }: { active: boolean }) {
   const s = useStyles();
-  const spin = useSharedValue(0);
-  const pulse = useSharedValue(0);
+  const orbit = useSharedValue(0);
+  const track = useSharedValue(0);
+  const tumble = useSharedValue(0);
+  const [face, setFace] = useState(5);
   useEffect(() => {
-    cancelAnimation(spin);
-    cancelAnimation(pulse);
-    if (active) {
-      spin.value = withRepeat(withTiming(360, { duration: 6000, easing: Easing.linear }), -1);
-      pulse.value = withRepeat(withTiming(1, { duration: 700 }), -1, true);
-    }
+    cancelAnimation(orbit);
+    cancelAnimation(track);
+    cancelAnimation(tumble);
+    if (!active) return;
+    orbit.value = withRepeat(withTiming(360, { duration: 2400, easing: Easing.linear }), -1);
+    track.value = withRepeat(withTiming(-360, { duration: 7000, easing: Easing.linear }), -1);
+    const roll = setInterval(() => {
+      setFace((f) => (f + 1 + Math.floor(Math.random() * 5)) % 6);
+      tumble.value = 0;
+      tumble.value = withTiming(1, { duration: 380, easing: Easing.out(Easing.cubic) });
+    }, 420);
     return () => {
-      cancelAnimation(spin);
-      cancelAnimation(pulse);
+      clearInterval(roll);
+      cancelAnimation(orbit);
+      cancelAnimation(track);
+      cancelAnimation(tumble);
     };
-  }, [active, spin, pulse]);
-  const rays = useAnimatedStyle(() => ({ transform: [{ rotate: `${spin.value}deg` }] }));
-  const badge = useAnimatedStyle(() => ({ transform: [{ scale: 1 + pulse.value * 0.08 }] }));
+  }, [active, orbit, track, tumble]);
+  const orbitStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${orbit.value}deg` }] }));
+  const trackStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${track.value}deg` }] }));
+  // Each roll turns the die a quarter turn and lets it land with a little bounce.
+  const dieStyle = useAnimatedStyle(() => ({
+    transform: [
+      { rotate: `${tumble.value * 90}deg` },
+      { scale: 1 + Math.sin(tumble.value * Math.PI) * 0.14 },
+    ],
+  }));
   return (
-    <View style={s.vsWrap}>
-      <Animated.View style={[s.rays, rays]}>
-        {Array.from({ length: 12 }, (_, i) => (
-          <View key={i} style={[s.ray, { transform: [{ rotate: `${i * 30}deg` }] }]} />
+    <View style={s.spinner}>
+      <Animated.View style={[s.track, trackStyle]} />
+      <Animated.View style={[s.orbit, orbitStyle]}>
+        {TOKEN_COLORS.map((color, i) => (
+          <View key={color} style={[s.tokenArm, { transform: [{ rotate: `${i * 90}deg` }] }]}>
+            <View style={[s.token, { backgroundColor: color, boxShadow: `0 0 10px ${color}aa` }]} />
+          </View>
         ))}
       </Animated.View>
-      <Animated.View style={badge}>
-        <LinearGradient colors={['#ffd9a1', '#ffb95f']} style={s.vs}>
-          <Text style={s.vsText}>VS</Text>
-        </LinearGradient>
+      <Animated.View style={[s.die, dieStyle]}>
+        {PIPS[active ? face : 5]!.map(([row, col]) => (
+          <View
+            key={`${row}${col}`}
+            style={[
+              s.pip,
+              { top: 7 + row * ((DIE - 14) / 2) - 4, left: 7 + col * ((DIE - 14) / 2) - 4 },
+            ]}
+          />
+        ))}
       </Animated.View>
     </View>
   );
@@ -400,31 +469,41 @@ const useStyles = makeStyles((ui) => ({
     maxWidth: 130,
   },
   name: { color: ui.text, fontWeight: '800', fontSize: 13 },
-  vsWrap: { width: 90, height: 90, alignItems: 'center', justifyContent: 'center' },
-  rays: {
+  spinner: { width: SPINNER, height: SPINNER, alignItems: 'center', justifyContent: 'center' },
+  track: {
     position: 'absolute',
-    width: 90,
-    height: 90,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: SPINNER - 12,
+    height: SPINNER - 12,
+    borderRadius: (SPINNER - 12) / 2,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: `${ui.gold}66`,
   },
-  ray: {
+  orbit: { position: 'absolute', width: SPINNER, height: SPINNER },
+  tokenArm: { position: 'absolute', width: SPINNER, height: SPINNER, alignItems: 'center' },
+  token: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#ffffffcc',
+  },
+  die: {
+    width: DIE,
+    height: DIE,
+    borderRadius: 11,
+    backgroundColor: '#fffaf0',
+    borderWidth: 1.5,
+    borderColor: '#e8d9bd',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+  },
+  pip: {
     position: 'absolute',
-    width: 3,
-    height: 90,
-    borderRadius: 2,
-    backgroundColor: '#ffb95f38',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#1d1b2e',
   },
-  vs: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: ui.background,
-  },
-  vsText: { color: '#4a3010', fontWeight: '900', fontSize: 22 },
   timer: {
     flexDirection: 'row',
     alignItems: 'center',

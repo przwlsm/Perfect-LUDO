@@ -24,10 +24,14 @@ export const SEASON_TIERS = 30;
 export const SEASON_TIER_XP = 150;
 export const SEASON_PREMIUM_GEMS = 250;
 
-/** Mirrors the server's season_tier_reward, so the pass can show every reward. */
+/**
+ * Mirrors the server's season_tier_reward, so the pass can show every reward.
+ * The premium track pays 100 gems a season (0044), well under the 250 it
+ * costs, so every season's pass is a real spend and gems stay rare.
+ */
 export function seasonTierReward(tier: number, premium: boolean): { coins: number; gems: number } {
   return premium
-    ? { coins: 150 + 15 * tier, gems: tier % 5 === 0 ? 40 : 8 }
+    ? { coins: 150 + 15 * tier, gems: tier === SEASON_TIERS ? 50 : tier % 5 === 0 ? 10 : 0 }
     : { coins: 80 + 10 * tier, gems: tier % 5 === 0 ? 15 : 0 };
 }
 
@@ -52,14 +56,14 @@ export const AD_REWARD_CAPS: Readonly<Record<AdRewardKind, number>> = {
   coin: 4,
   double: 3,
 };
-export const AD_GEM_AMOUNT = 2;
+export const AD_GEM_AMOUNT = 1;
 export const AD_RESCUE_BOOST_COINS = 500;
 /** The plain coin ad: the best single ad in the game, by design. */
 export const AD_COIN_AMOUNT = 500;
 
 /**
  * Gems exchange for coins one way, in fixed bundles. 200 a gem keeps a gem
- * ad (2 gems) below the coin ad and far below a coin pack's rate, so no
+ * ad (1 gem since 0044) far below the coin ad and a coin pack's rate, so no
  * route undercuts another. Mirrors the server's gem_coin_rate.
  */
 export const GEM_COIN_RATE = 200;
@@ -88,7 +92,7 @@ export const SPIN_SLOTS: readonly { readonly kind: SpinKind; readonly amount: nu
   { kind: 'xp', amount: 80 },
 ];
 export const SPINS_PER_DAY = 4;
-export const EXTRA_SPIN_GEMS = 10;
+export const EXTRA_SPIN_GEMS = 5;
 export const SPIN_STREAK_BONUS_GEMS = 25;
 
 export interface SpinResult {

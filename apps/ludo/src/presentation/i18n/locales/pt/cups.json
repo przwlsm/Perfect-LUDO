@@ -4,7 +4,14 @@
   "card": {
     "a11y": "Copas da Estrada Real. Abrir os salões",
     "title": "Copas da Estrada Real",
-    "body": "Quatro jogadores, duas rodadas, um trono. Vença uma copa e leve o trono para casa."
+    "body": "Quatro jogadores, duas rodadas, um trono. Vença uma copa e leve o trono para casa.",
+    "label": "ESTRADA REAL · {{n}} TRONOS",
+    "mode": "Rápida 2",
+    "gameTime": "≈ {{minutes}} min por partida",
+    "cupTime": "Copa inteira ≈ {{minutes}} min",
+    "cta": "Entrar nos salões",
+    "timeMeasured": "Média de partidas reais recentes.",
+    "timeEstimate": "Nossa estimativa até haver mais partidas."
   },
   "intro": "Quatro jogadores, duas rodadas. O vencedor leva três entradas e o trono do salão; o vice recebe a entrada de volta.",
   "signIn": {
@@ -12,7 +19,7 @@
     "body": "Entre na conta para disputar uma copa. As entradas são pagas em moedas e os tronos vão para a sua sala de coleção.",
     "button": "Entrar"
   },
-  "botCap": "Chaves com jogadores de computador pagam moedas {{cap}} vezes por dia · {{used}} usadas hoje.",
+  "botCap": "Chaves de início imediato pagam moedas {{cap}} vezes por dia, uma nos salões 6–8 · {{used}} usadas hoje.",
   "hall": {
     "free": "Entrada grátis",
     "entry": "Entrada {{coins}}",
@@ -32,14 +39,17 @@
     "enter": "Entrar",
     "entering": "Entrando…",
     "continue": "Voltar para sua chave",
-    "short": "Faltam {{coins}} moedas"
+    "short": "Faltam {{coins}} moedas",
+    "tier": "SALÃO {{n}} DE {{total}}",
+    "winnerTakes": "O VENCEDOR LEVA",
+    "gems": "+{{gems}} gemas"
   },
   "bracket": {
     "title": "Chave",
     "loading": "Abrindo a chave…",
     "waitingTitle": "Preenchendo os assentos",
-    "waitingBody": "Assentos ainda livres depois de um minuto são ocupados por jogadores de computador.",
-    "fillIn": "Jogadores de computador chegam em {{time}}",
+    "waitingBody": "Assentos ainda livres depois de um minuto são preenchidos para a copa começar na hora.",
+    "fillIn": "Os assentos restantes são preenchidos em {{time}}",
     "leave": "Sair e receber a entrada de volta",
     "semis": "Semifinais",
     "final": "Final",
@@ -56,10 +66,11 @@
     "youWon": "O {{throne}} é seu!",
     "prize": "+{{coins}} moedas",
     "runnerUpPrize": "Vice · entrada devolvida",
-    "capReached": "A cota de moedas de hoje para chaves com jogadores de computador acabou. O trono continua sendo seu.",
+    "capReached": "A cota de moedas de hoje para chaves de início imediato acabou. O trono continua sendo seu.",
     "backToCups": "Voltar aos salões",
     "seeRoom": "Ver na sua sala de coleção",
-    "you": "Você"
+    "you": "Você",
+    "gemsPrize": "+{{gems}} gemas"
   },
   "match": {
     "backToBracket": "Voltar para a chave"
@@ -83,5 +94,10 @@
     "invalid": "Isso não é um código de copa.",
     "shareMessage": "Entre na minha copa do Ludo Rumble! Código {{code}} · {{link}}",
     "cancel": "Cancelar a copa e devolver a todos"
+  },
+  "invite": {
+    "title": "Pronto para um trono?",
+    "body": "Copas da Estrada Real: quatro jogadores, duas rodadas de Rápida 2. Cerca de {{minutes}} min por partida, {{cup}} min a copa inteira.",
+    "cta": "Ver as copas"
   }
 }

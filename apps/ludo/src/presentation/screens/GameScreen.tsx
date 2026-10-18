@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler, useWindowDimensions } from 'react-native';
+import { BackHandler, Platform, useWindowDimensions } from 'react-native';
 import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
@@ -145,7 +145,7 @@ function MatchScreen({
   // rules open, back closes them and returns to the board.
   const playing = matchState === 'IN_PROGRESS';
   useEffect(() => {
-    if (!playing || !focused) return;
+    if (Platform.OS === 'web' || !playing || !focused) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (rules) setRules(false);
       else setMenu(!menu);

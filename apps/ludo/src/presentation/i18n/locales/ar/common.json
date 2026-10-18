@@ -24,7 +24,8 @@
     "rewards": "المكافآت",
     "friends": "الأصدقاء",
     "profile": "الملف الشخصي",
-    "accountRequired": "{{label}}، يتطلب حسابًا"
+    "accountRequired": "{{label}}، يتطلب حسابًا",
+    "store": "المتجر"
   },
   "wallet": {
     "vaultA11y": "{{amount}} عملة في خزنتك. افتح المكافآت",

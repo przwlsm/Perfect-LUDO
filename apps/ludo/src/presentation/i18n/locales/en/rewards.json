@@ -76,7 +76,7 @@
     "complete": "Every tier reached. Legendary.",
     "progress": "{{xp}} / {{needed}} XP to tier {{next}}. Every match earns season XP.",
     "premiumTitle": "Unlock the premium track",
-    "premiumHint": "More coins on every tier and 40 gems every fifth.",
+    "premiumHint": "More coins on every tier, gems every fifth tier and 50 gems for finishing.",
     "premiumA11y": "Unlock premium for {{gems}} gems",
     "tierFreeA11y": "Tier {{tier}} free reward",
     "tierPremiumA11y": "Tier {{tier}} premium reward",
@@ -118,5 +118,34 @@
     "a11y": "Exchange {{gems}} gems for {{coins}} coins",
     "done": "Exchanged! +{{coins}} coins.",
     "short": "Not enough gems for that bundle yet."
+  },
+  "gemGuide": {
+    "label": "GEMS",
+    "title": "What gems are for",
+    "earn": "Earn gems from daily missions, the daily gift streak, level-ups, the season track, short videos and Royal Road cups.",
+    "cups": {
+      "title": "Win Royal Road cups",
+      "body": "Every public cup pays its winner gems, up to {{cupGems}} in the Hall of Legends."
+    },
+    "spin": {
+      "title": "Spin again",
+      "body": "One more Lucky Spin for {{spin}} gems, up to three a day."
+    },
+    "season": {
+      "title": "Season pass",
+      "body": "Unlock the premium track for {{season}} gems."
+    },
+    "gifts": {
+      "title": "Table gifts",
+      "body": "Send a rose, a laugh or a crown at online tables for {{giftMin}} to {{giftMax}} gems."
+    },
+    "store": {
+      "title": "Special boards",
+      "body": "Some festival boards and dice in the Store are bought with gems."
+    },
+    "exchange": {
+      "title": "Swap for coins",
+      "body": "Turn gems into coins below: 1 gem = {{rate}} coins."
+    }
   }
 }

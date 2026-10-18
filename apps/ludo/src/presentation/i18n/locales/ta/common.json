@@ -24,7 +24,8 @@
     "rewards": "பரிசுகள்",
     "friends": "நண்பர்கள்",
     "profile": "ப்ரொஃபைல்",
-    "accountRequired": "{{label}}, அக்கவுன்ட் தேவை"
+    "accountRequired": "{{label}}, அக்கவுன்ட் தேவை",
+    "store": "ஸ்டோர்"
   },
   "wallet": {
     "vaultA11y": "உங்கள் பெட்டகத்தில் {{amount}} காயின்கள். பரிசுகளைத் திறக்கவும்",

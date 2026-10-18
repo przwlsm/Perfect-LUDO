@@ -24,7 +24,8 @@
     "rewards": "পুরস্কার",
     "friends": "বন্ধুরা",
     "profile": "প্রোফাইল",
-    "accountRequired": "{{label}}, অ্যাকাউন্ট দরকার"
+    "accountRequired": "{{label}}, অ্যাকাউন্ট দরকার",
+    "store": "স্টোর"
   },
   "wallet": {
     "vaultA11y": "আপনার ভল্টে {{amount}} কয়েন আছে। পুরস্কার খুলুন",

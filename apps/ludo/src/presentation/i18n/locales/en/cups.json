@@ -4,7 +4,14 @@
   "card": {
     "a11y": "Royal Road cups. Open the halls",
     "title": "Royal Road cups",
-    "body": "Four players, two rounds, one throne. Win a cup and take its throne home."
+    "body": "Four players, two rounds, one throne. Win a cup and take its throne home.",
+    "label": "ROYAL ROAD · {{n}} THRONES",
+    "mode": "Quick 2",
+    "gameTime": "≈ {{minutes}} min a game",
+    "cupTime": "Whole cup ≈ {{minutes}} min",
+    "cta": "Enter the halls",
+    "timeMeasured": "Average of recent real games.",
+    "timeEstimate": "Our estimate until more games are played."
   },
   "intro": "Four players, two rounds. The winner takes three entries and the hall’s throne; the runner-up gets their entry back.",
   "signIn": {
@@ -12,7 +19,7 @@
     "body": "Sign in to enter a cup. Entries are paid in coins and thrones go to your Collection Room.",
     "button": "Sign in"
   },
-  "botCap": "Brackets with computer players pay coins {{cap}} times a day · {{used}} used today.",
+  "botCap": "Instant-start brackets pay coins {{cap}} times a day, once in halls 6–8 · {{used}} used today.",
   "hall": {
     "free": "Free entry",
     "entry": "Entry {{coins}}",
@@ -30,14 +37,17 @@
     "enter": "Enter",
     "entering": "Entering…",
     "continue": "Back to your bracket",
-    "short": "Need {{coins}} more coins"
+    "short": "Need {{coins}} more coins",
+    "tier": "HALL {{n}} OF {{total}}",
+    "winnerTakes": "WINNER TAKES",
+    "gems": "+{{gems}} gems"
   },
   "bracket": {
     "title": "Bracket",
     "loading": "Opening the bracket…",
     "waitingTitle": "Filling the seats",
-    "waitingBody": "Seats still open after a minute are taken by computer players.",
-    "fillIn": "Computer players arrive in {{time}}",
+    "waitingBody": "Seats still open after a minute are filled so the cup starts on time.",
+    "fillIn": "Remaining seats fill in {{time}}",
     "leave": "Leave and take the entry back",
     "semis": "Semi-finals",
     "final": "Final",
@@ -54,10 +64,11 @@
     "youWon": "The {{throne}} is yours!",
     "prize": "+{{coins}} coins",
     "runnerUpPrize": "Runner-up · entry returned",
-    "capReached": "Today’s coin allowance for brackets with computer players is used up. The throne is still yours.",
+    "capReached": "Today’s coin allowance for instant-start brackets is used up. The throne is still yours.",
     "backToCups": "Back to the halls",
     "seeRoom": "See it in your Collection Room",
-    "you": "You"
+    "you": "You",
+    "gemsPrize": "+{{gems}} gems"
   },
   "match": {
     "backToBracket": "Back to the bracket"
@@ -80,5 +91,10 @@
     "invalid": "That is not a cup code.",
     "shareMessage": "Join my Ludo Rumble cup! Code {{code}} · {{link}}",
     "cancel": "Cancel the cup and refund everyone"
+  },
+  "invite": {
+    "title": "Ready for a throne?",
+    "body": "Royal Road cups: four players, two rounds of Quick 2. About {{minutes}} min a game, {{cup}} min for the whole cup.",
+    "cta": "See the cups"
   }
 }

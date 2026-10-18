@@ -57,7 +57,7 @@ export default function TournamentScreen() {
 
   if (!member)
     return (
-      <Screen title={t('tournament.title')} subtitle={t('tournament.subtitle')}>
+      <Screen back title={t('tournament.title')} subtitle={t('tournament.subtitle')}>
         <Card>
           <Text style={shared.sectionTitle}>{t('tournament.climb')}</Text>
           <Body>{t('tournament.signInBody')}</Body>
@@ -77,7 +77,7 @@ export default function TournamentScreen() {
   const shieldTile = iconTile(divisionColor, ui);
   const standing = <Standing data={data} />;
   return (
-    <Screen title={t('tournament.title')} subtitle={t('tournament.subtitle')}>
+    <Screen back title={t('tournament.title')} subtitle={t('tournament.subtitle')}>
       {tournament.error && <Text style={shared.error}>{tournament.error}</Text>}
 
       {/* ---- Your league division ---- */}

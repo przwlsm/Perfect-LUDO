@@ -45,7 +45,7 @@ export default function SettingsScreen() {
     }
   }
   return (
-    <Screen title={t('title')} subtitle={t('subtitle')} decor="light">
+    <Screen back title={t('title')} subtitle={t('subtitle')} decor="light">
       <LanguageCard />
       <AppearanceCard />
       <Card>

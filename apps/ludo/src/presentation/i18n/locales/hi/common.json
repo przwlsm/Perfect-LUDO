@@ -24,7 +24,8 @@
     "rewards": "इनाम",
     "friends": "दोस्त",
     "profile": "प्रोफ़ाइल",
-    "accountRequired": "{{label}}, अकाउंट ज़रूरी है"
+    "accountRequired": "{{label}}, अकाउंट ज़रूरी है",
+    "store": "स्टोर"
   },
   "wallet": {
     "vaultA11y": "आपकी तिजोरी में {{amount}} कॉइन। इनाम खोलें",

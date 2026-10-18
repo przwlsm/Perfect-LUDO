@@ -24,7 +24,8 @@
     "rewards": "Rewards",
     "friends": "Friends",
     "profile": "Profile",
-    "accountRequired": "{{label}}, account required"
+    "accountRequired": "{{label}}, account required",
+    "store": "Store"
   },
   "wallet": {
     "vaultA11y": "{{amount}} coins in your vault. Open rewards",

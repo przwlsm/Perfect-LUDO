@@ -3,18 +3,18 @@ import { View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { getCup, type CupHall } from '@/domain';
+import { CUPS, getCup, type CupHall } from '@/domain';
 import { Text, TextInput } from '../components/AppText';
-import { CoinIcon } from '../components/Currency';
 import { Body, Button, Card, Label, Screen, useShared } from '../components/Kit';
 import { LudoLoader } from '../components/LudoLoader';
-import { ThroneArt } from '../collection/ThroneArt';
+import { HallCard } from '../collection/HallCard';
+import { RoyalRoadScene } from '../collection/RoyalRoadCard';
+import { useCupGameLength } from '../hooks/useCupGameLength';
 import { useCups } from '../hooks/useCups';
 import { useMotionEnabled } from '../hooks/useMotionEnabled';
 import { useProfile } from '../state/ProfileProvider';
 import { makeStyles, useUi } from '../theme/AppearanceProvider';
 import { liftByDay } from '../theme/surfaces';
-import { numberLocale } from '../i18n/format';
 
 /**
  * The Royal Road: eight halls, each a four-player knockout for coins and a
@@ -29,6 +29,7 @@ export default function CupsScreen() {
   const shared = useShared();
   const motion = useMotionEnabled(profile.reducedMotion, true);
   const [code, setCode] = useState('');
+  const cupTime = useCupGameLength(member);
 
   if (!member)
     return (
@@ -43,7 +44,6 @@ export default function CupsScreen() {
 
   const data = cups.data;
   const openBracket = (id: string) => router.push({ pathname: '/cups/[id]', params: { id } });
-  const fmt = (n: number) => n.toLocaleString(numberLocale());
 
   async function enter(hall: CupHall) {
     const bracket = await cups.join(hall.id);
@@ -63,7 +63,29 @@ export default function CupsScreen() {
 
   return (
     <Screen back title={t('title')} subtitle={t('subtitle')}>
-      <Body>{t('intro')}</Body>
+      {/* The Royal Road banner: the same night scene as the card that led here. */}
+      <View style={s.banner}>
+        <RoyalRoadScene motion={motion} />
+        <View style={s.bannerLabel}>
+          <Ionicons name="ribbon" size={12} color="#ffd76a" />
+          <Text style={s.bannerLabelText}>{t('card.label', { n: CUPS.length })}</Text>
+        </View>
+        <Text style={s.bannerText}>{t('intro')}</Text>
+        <View style={s.chips}>
+          <View style={[s.chip, s.chipGold]}>
+            <Ionicons name="flash" size={13} color="#2b1600" />
+            <Text style={[s.chipText, { color: '#2b1600' }]}>{t('card.mode')}</Text>
+          </View>
+          <View style={s.chip}>
+            <Ionicons name="time-outline" size={13} color="#fff" />
+            <Text style={s.chipText}>{t('card.gameTime', { minutes: cupTime.game })}</Text>
+          </View>
+          <View style={s.chip}>
+            <Ionicons name="trophy-outline" size={13} color="#fff" />
+            <Text style={s.chipText}>{t('card.cupTime', { minutes: cupTime.cup })}</Text>
+          </View>
+        </View>
+      </View>
       {!data ? (
         cups.error ? (
           <Card>
@@ -117,80 +139,18 @@ export default function CupsScreen() {
           {data.cups.map((hall) => {
             const def = getCup(hall.id);
             if (!def) return null;
-            const short = profile.coins < hall.entry;
-            const busy = cups.busy === hall.id;
             return (
-              <Card key={hall.id} style={s.hall}>
-                <View style={shared.row}>
-                  <ThroneArt
-                    cup={def}
-                    won={hall.won > 0}
-                    size={64}
-                    shine={motion && hall.won > 0}
-                  />
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Label color={theme.accentText}>{t(`collection:halls.${def.id}`)}</Label>
-                    <Text style={shared.sectionTitle}>{t(`collection:throneNames.${def.id}`)}</Text>
-                    <Text style={shared.small}>{t(`hall.mode.${def.variant}`)}</Text>
-                    {hall.won > 0 && (
-                      <Text style={[shared.small, { color: ui.gold, fontWeight: '800' }]}>
-                        {t('hall.won', { count: hall.won })}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-                <View style={s.pills}>
-                  <View style={s.pill}>
-                    <Ionicons name="enter" size={13} color={ui.muted} />
-                    <Text style={s.pillText}>
-                      {hall.entry === 0
-                        ? t('hall.free')
-                        : t('hall.entry', { coins: fmt(hall.entry) })}
-                    </Text>
-                  </View>
-                  <View style={[s.pill, { borderColor: `${ui.gold}66` }]}>
-                    <CoinIcon size={13} />
-                    <Text style={[s.pillText, { color: ui.gold }]}>
-                      {t('hall.prize', { coins: fmt(hall.prize) })}
-                    </Text>
-                  </View>
-                  <View style={s.pill}>
-                    <Text style={s.pillText}>
-                      {t('hall.runnerUp', { coins: fmt(hall.runnerUp) })}
-                    </Text>
-                  </View>
-                  {hall.waiting > 0 && (
-                    <View style={s.pill}>
-                      <Ionicons name="people" size={13} color={ui.green} />
-                      <Text style={[s.pillText, { color: ui.green }]}>
-                        {t('hall.waiting', { count: hall.waiting })}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <View style={shared.row}>
-                  <View style={{ flex: 1 }}>
-                    <Button
-                      disabled={short || busy || cups.busy !== null || data.activeBracket !== null}
-                      onPress={() => void enter(hall)}
-                    >
-                      {busy
-                        ? t('hall.entering')
-                        : short
-                          ? t('hall.short', { coins: fmt(hall.entry - profile.coins) })
-                          : t('hall.enter')}
-                    </Button>
-                  </View>
-                  <Button
-                    secondary
-                    fit
-                    disabled={short || cups.busy !== null || data.activeBracket !== null}
-                    onPress={() => void withFriends(hall)}
-                  >
-                    {cups.busy === `private:${hall.id}` ? t('hall.entering') : t('private.button')}
-                  </Button>
-                </View>
-              </Card>
+              <HallCard
+                key={hall.id}
+                cup={def}
+                hall={hall}
+                coins={profile.coins}
+                busy={cups.busy}
+                locked={data.activeBracket !== null}
+                motion={motion}
+                onEnter={() => void enter(hall)}
+                onFriends={() => void withFriends(hall)}
+              />
             );
           })}
           <Text style={shared.small}>
@@ -204,20 +164,50 @@ export default function CupsScreen() {
 }
 
 const useStyles = makeStyles((ui) => ({
-  hall: { gap: 12, boxShadow: liftByDay(ui) },
-  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: {
+  banner: {
+    borderRadius: 22,
+    overflow: 'hidden',
+    padding: 16,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#ffd76a55',
+    backgroundColor: '#160b3d',
+    boxShadow: liftByDay(ui),
+  },
+  bannerLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#ffd76a66',
+    backgroundColor: '#00000033',
+  },
+  bannerLabelText: { color: '#ffd76a', fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
+  bannerText: {
+    color: '#f3e8ff',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+    maxWidth: '78%',
+  },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 999,
+    backgroundColor: '#ffffff1f',
     borderWidth: 1,
-    borderColor: ui.border,
-    backgroundColor: ui.fill,
+    borderColor: '#ffffff2e',
   },
-  pillText: { color: ui.muted, fontSize: 12, fontWeight: '700' },
+  chipGold: { backgroundColor: '#ffd76a', borderColor: '#ffd76a' },
+  chipText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   codeInput: {
     flex: 1,
     borderWidth: 1,

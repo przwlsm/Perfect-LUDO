@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, Switch, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +8,6 @@ import {
   ACHIEVEMENT_GROUPS,
   ACHIEVEMENT_TIERS,
   ACHIEVEMENTS,
-  CUPS,
   getAchievement,
   getCup,
   nextThreshold,
@@ -22,6 +21,7 @@ import { LudoLoader } from '../components/LudoLoader';
 import { ProgressBar } from '../components/Progress';
 import { Medal, TIER_COLORS } from '../collection/Medal';
 import { ThroneArt } from '../collection/ThroneArt';
+import { ThroneHallCard } from '../collection/ThroneHallCard';
 import { UserAvatar } from '../social/UserAvatar';
 import { useCollection } from '../hooks/useCollection';
 import { useMotionEnabled } from '../hooks/useMotionEnabled';
@@ -30,7 +30,7 @@ import { useSocial } from '../state/SocialProvider';
 import { makeStyles, SchemeScope, useUi } from '../theme/AppearanceProvider';
 import { readableOn } from '../theme/color';
 import { liftByDay, NAVY_HERO } from '../theme/surfaces';
-import { formatDate, numberLocale } from '../i18n/format';
+import { formatDate } from '../i18n/format';
 
 type Tier = (typeof ACHIEVEMENT_TIERS)[number] | 'locked';
 const tierName = (tier: number): Tier => (tier === 0 ? 'locked' : ACHIEVEMENT_TIERS[tier - 1]!);
@@ -199,39 +199,8 @@ export default function CollectionScreen() {
             )}
           </Card>
 
-          {/* ---- The throne hall ---- */}
-          <Card>
-            <Label color={theme.accentText}>{t('thrones.label')}</Label>
-            <Text style={shared.sectionTitle}>{t('thrones.title')}</Text>
-            <Body>{t('thrones.body')}</Body>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 12, paddingVertical: 6 }}
-            >
-              {CUPS.map((cup) => {
-                const count = wonCount(cup.id);
-                return (
-                  <View key={cup.id} style={s.throneTile}>
-                    <ThroneArt cup={cup} won={count > 0} size={84} shine={motion && count > 0} />
-                    <Text style={s.throneName} numberOfLines={1}>
-                      {t(`throneNames.${cup.id}`)}
-                    </Text>
-                    <Text style={shared.small} numberOfLines={1}>
-                      {t(`halls.${cup.id}`)}
-                    </Text>
-                    <Text style={[s.throneCount, count === 0 && { color: ui.subtle }]}>
-                      {count > 0
-                        ? t('thrones.won', { count })
-                        : cup.entry === 0
-                          ? t('thrones.free')
-                          : t('thrones.entry', { coins: cup.entry.toLocaleString(numberLocale()) })}
-                    </Text>
-                  </View>
-                );
-              })}
-            </ScrollView>
-          </Card>
+          {/* ---- The throne hall: every throne in one card ---- */}
+          <ThroneHallCard wonCount={wonCount} motion={motion} />
 
           {/* ---- The medals ---- */}
           <View style={shared.between}>
@@ -424,7 +393,7 @@ function ShowcaseItem({
 }
 
 /** One shelf of medals, by group. */
-function MedalShelf({
+export function MedalShelf({
   group,
   tierOf,
   isNew,
@@ -442,9 +411,22 @@ function MedalShelf({
   const ui = useUi();
   const shared = useShared();
   const defs = ACHIEVEMENTS.filter((a) => a.group === group);
+  const done = defs.filter((d) => tierOf(d.id) > 0).length;
   return (
-    <Card>
-      <Text style={[shared.sectionTitle, { fontSize: 16 }]}>{t(`medals.groups.${group}`)}</Text>
+    // A display cabinet: the night palette in both modes, so the medals glow.
+    <View style={s.cabinet}>
+      <LinearGradient
+        colors={['#1b2150', '#111536', '#0a0d24']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={shared.between}>
+        <Text style={s.cabinetTitle}>{t(`medals.groups.${group}`)}</Text>
+        <Text style={s.cabinetCount}>
+          {done}/{defs.length}
+        </Text>
+      </View>
       <View style={s.grid}>
         {defs.map((def) => {
           const tier = tierOf(def.id);
@@ -455,9 +437,19 @@ function MedalShelf({
               accessibilityLabel={`${t(`achievements.${def.id}.name`)} · ${t(`tiers.${tierName(tier)}`)}`}
               onPress={() => onOpen(def.id)}
               android_ripple={{ color: ui.ripple }}
-              style={s.medalTile}
+              style={[
+                s.medalTile,
+                tier > 0 && {
+                  borderColor: `${TIER_COLORS[tier]!.base}88`,
+                  boxShadow: `0 0 14px ${TIER_COLORS[tier]!.base}44`,
+                },
+              ]}
             >
-              <Medal icon={def.icon} tier={tier} size={58} shine={motion && tier >= 3} />
+              {/* The glow behind an unlocked medal, in its tier's colour. */}
+              {tier > 0 && (
+                <View style={[s.medalGlow, { backgroundColor: `${TIER_COLORS[tier]!.base}2e` }]} />
+              )}
+              <Medal icon={def.icon} tier={tier} size={58} shine={motion && tier >= 2} />
               <Text style={s.medalName} numberOfLines={2}>
                 {t(`achievements.${def.id}.name`)}
               </Text>
@@ -475,7 +467,7 @@ function MedalShelf({
           );
         })}
       </View>
-    </Card>
+    </View>
   );
 }
 
@@ -614,6 +606,18 @@ const useStyles = makeStyles((ui) => ({
   throneName: { color: ui.text, fontSize: 13, fontWeight: '800', marginTop: 4 },
   throneCount: { color: ui.gold, fontSize: 11, fontWeight: '800', marginTop: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  cabinet: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    padding: 14,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#ffffff1f',
+    backgroundColor: '#111536',
+    boxShadow: liftByDay(ui),
+  },
+  cabinetTitle: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
+  cabinetCount: { color: '#ffd76a', fontSize: 13, fontWeight: '900' },
   medalTile: {
     flexBasis: '30%',
     flexGrow: 1,
@@ -623,12 +627,19 @@ const useStyles = makeStyles((ui) => ({
     paddingHorizontal: 4,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: ui.border,
-    backgroundColor: ui.scheme === 'light' ? '#ffffff' : ui.fill,
-    boxShadow: liftByDay(ui),
+    borderColor: '#ffffff14',
+    backgroundColor: '#ffffff0a',
+    overflow: 'hidden',
+  },
+  medalGlow: {
+    position: 'absolute',
+    top: 4,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
   },
   medalName: {
-    color: ui.text,
+    color: '#ffffff',
     fontSize: 12,
     fontWeight: '800',
     textAlign: 'center',

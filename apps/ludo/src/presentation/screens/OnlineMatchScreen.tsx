@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler, useWindowDimensions } from 'react-native';
+import { BackHandler, Platform, useWindowDimensions } from 'react-native';
 import { router, useIsFocused } from 'expo-router';
 import {
   coinsHome,
@@ -27,6 +27,7 @@ import { Body, Button, Card, Screen, Sheet } from '../components/Kit';
 import { GameTable } from '../game/GameTable';
 import { VictoryScreen } from '../game/VictoryScreen';
 import { useMotionEnabled } from '../hooks/useMotionEnabled';
+import { useCupGameLength } from '../hooks/useCupGameLength';
 import { useOnlineMatch } from '../hooks/useOnlineMatch';
 import { useConnectivity } from '../state/ConnectivityProvider';
 import { rewardedAds, rewardsRepository } from '@/config/container';
@@ -112,6 +113,8 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
       setDurationMs(Date.now() - startedAt.current);
   }, [liveStatus]);
   const connectivity = useConnectivity();
+  // How long a cup game takes, for the invitation after a win.
+  const cupTime = useCupGameLength(connectivity.online);
   // A dropped link is reported, never treated as the game ending: the seat
   // is kept server-side and play resumes when the connection does.
   const connectionLost =
@@ -126,7 +129,7 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
   const [leaving, setLeaving] = useState(false);
   const live = game.status === 'IN_PROGRESS' && match !== null && mySeat !== null;
   useEffect(() => {
-    if (!live || !focused) return;
+    if (Platform.OS === 'web' || !live || !focused) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       setMenu(false);
       setConfirmLeave(true);
@@ -207,7 +210,8 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
     }
   }
 
-  async function finish(home: boolean) {
+  /** Saves the result, then goes on: home, back online, or to the Royal Road cups. */
+  async function finish(to: 'home' | 'online' | 'cups') {
     if (!match || saving) return;
     setSaving(true);
     try {
@@ -222,7 +226,7 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
       }
       if (game.cupBracketId)
         router.replace({ pathname: '/cups/[id]', params: { id: game.cupBracketId } });
-      else router.replace(home ? '/' : ONLINE_HOME);
+      else router.replace(to === 'home' ? '/' : to === 'cups' ? '/cups' : ONLINE_HOME);
     } catch {
       setNotice('saveFailed');
     } finally {
@@ -467,9 +471,20 @@ export default function OnlineMatchScreen({ lobbyId }: { lobbyId: string }) {
               primary={{
                 label: game.cupBracketId ? t('cups:match.backToBracket') : t('match.playAgain'),
                 busy: saving,
-                onPress: () => void finish(false),
+                onPress: () => void finish('online'),
               }}
-              secondary={{ label: t('match.lobby'), onPress: () => void finish(true) }}
+              secondary={{ label: t('match.lobby'), onPress: () => void finish('home') }}
+              invite={
+                // A win at an ordinary table is the moment to offer a cup.
+                won && game.status === 'FINISHED' && !game.cupBracketId
+                  ? {
+                      title: t('cups:invite.title'),
+                      body: t('cups:invite.body', { minutes: cupTime.game, cup: cupTime.cup }),
+                      cta: t('cups:invite.cta'),
+                      onPress: () => void finish('cups'),
+                    }
+                  : null
+              }
               shareMessage={
                 won ? t('match.share', { mode: variantTitle(variantOf(match.state)) }) : undefined
               }

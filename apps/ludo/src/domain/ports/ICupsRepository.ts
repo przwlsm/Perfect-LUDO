@@ -1,4 +1,4 @@
-import type { CupBracket, CupsView } from '../collection/Cup';
+import type { CupBracket, CupGameLength, CupsView } from '../collection/Cup';
 
 /** The Royal Road cups: the halls, and one bracket at a time per player. */
 export interface ICupsRepository {
@@ -15,4 +15,6 @@ export interface ICupsRepository {
   joinByCode(code: string): Promise<CupBracket>;
   /** The host starts a cup with friends once two to four are in. */
   startPrivate(bracketId: string): Promise<CupBracket>;
+  /** The average length of a recent real cup game (heads-up Quick 2). */
+  gameLength(): Promise<CupGameLength>;
 }

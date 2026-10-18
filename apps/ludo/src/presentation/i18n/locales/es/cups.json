@@ -4,7 +4,14 @@
   "card": {
     "a11y": "Copas del Camino Real. Abrir los salones",
     "title": "Copas del Camino Real",
-    "body": "Cuatro jugadores, dos rondas, un trono. Gana una copa y llévate su trono a casa."
+    "body": "Cuatro jugadores, dos rondas, un trono. Gana una copa y llévate su trono a casa.",
+    "label": "CAMINO REAL · {{n}} TRONOS",
+    "mode": "Rápida 2",
+    "gameTime": "≈ {{minutes}} min por partida",
+    "cupTime": "Copa entera ≈ {{minutes}} min",
+    "cta": "Entrar a los salones",
+    "timeMeasured": "Media de partidas reales recientes.",
+    "timeEstimate": "Nuestra estimación hasta que se jueguen más partidas."
   },
   "intro": "Cuatro jugadores, dos rondas. El ganador se lleva tres entradas y el trono del salón; el subcampeón recupera su entrada.",
   "signIn": {
@@ -12,7 +19,7 @@
     "body": "Inicia sesión para entrar en una copa. Las entradas se pagan en monedas y los tronos van a tu sala de colección.",
     "button": "Iniciar sesión"
   },
-  "botCap": "Los cuadros con jugadores de computadora pagan monedas {{cap}} veces al día · {{used}} usadas hoy.",
+  "botCap": "Los cuadros de inicio inmediato pagan monedas {{cap}} veces al día, una en los salones 6–8 · {{used}} usadas hoy.",
   "hall": {
     "free": "Entrada gratis",
     "entry": "Entrada {{coins}}",
@@ -32,14 +39,17 @@
     "enter": "Entrar",
     "entering": "Entrando…",
     "continue": "Volver a tu cuadro",
-    "short": "Faltan {{coins}} monedas"
+    "short": "Faltan {{coins}} monedas",
+    "tier": "SALÓN {{n}} DE {{total}}",
+    "winnerTakes": "EL GANADOR SE LLEVA",
+    "gems": "+{{gems}} gemas"
   },
   "bracket": {
     "title": "Cuadro",
     "loading": "Abriendo el cuadro…",
     "waitingTitle": "Llenando los asientos",
-    "waitingBody": "Los asientos que sigan libres tras un minuto los ocupan jugadores de computadora.",
-    "fillIn": "Los jugadores de computadora llegan en {{time}}",
+    "waitingBody": "Los asientos que sigan libres tras un minuto se completan para que la copa empiece a tiempo.",
+    "fillIn": "Los asientos restantes se completan en {{time}}",
     "leave": "Salir y recuperar la entrada",
     "semis": "Semifinales",
     "final": "Final",
@@ -56,10 +66,11 @@
     "youWon": "¡El {{throne}} es tuyo!",
     "prize": "+{{coins}} monedas",
     "runnerUpPrize": "Subcampeón · entrada devuelta",
-    "capReached": "Se agotó la asignación de monedas de hoy para cuadros con jugadores de computadora. El trono sigue siendo tuyo.",
+    "capReached": "Se agotó la asignación de monedas de hoy para cuadros de inicio inmediato. El trono sigue siendo tuyo.",
     "backToCups": "Volver a los salones",
     "seeRoom": "Verlo en tu sala de colección",
-    "you": "Tú"
+    "you": "Tú",
+    "gemsPrize": "+{{gems}} gemas"
   },
   "match": {
     "backToBracket": "Volver al cuadro"
@@ -83,5 +94,10 @@
     "invalid": "Eso no es un código de copa.",
     "shareMessage": "¡Únete a mi copa de Ludo Rumble! Código {{code}} · {{link}}",
     "cancel": "Cancelar la copa y devolver a todos"
+  },
+  "invite": {
+    "title": "¿Listo para un trono?",
+    "body": "Copas del Camino Real: cuatro jugadores, dos rondas de Rápida 2. Unos {{minutes}} min por partida, {{cup}} min la copa entera.",
+    "cta": "Ver las copas"
   }
 }
