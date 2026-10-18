@@ -25,13 +25,36 @@ const notes = [];
 
 const versionCode = Number(process.env.ANDROID_VERSION_CODE);
 if (Number.isInteger(versionCode) && versionCode > 0) {
-  const before = gradle;
-  gradle = gradle.replace(/^(\s*)versionCode\s+\d+\s*$/m, `$1versionCode ${versionCode}`);
-  if (gradle === before) {
+  const line = /^(\s*)versionCode\s+\d+\s*$/m;
+  if (!line.test(gradle)) {
     console.error('Could not find the versionCode line in build.gradle.');
     process.exit(1);
   }
+  gradle = gradle.replace(line, `$1versionCode ${versionCode}`);
   notes.push(`versionCode ${versionCode}`);
+}
+
+// One APK per CPU type instead of one fat APK: a phone downloads only the
+// native code it can run, which roughly halves the file. Google Play does
+// the same from the .aab on its own; this is for the direct download link.
+if (process.env.ANDROID_ABI_SPLITS === 'true') {
+  const splits = `
+    splits {
+        abi {
+            enable true
+            reset()
+            include "arm64-v8a", "armeabi-v7a"
+            universalApk false
+        }
+    }
+`;
+  const before = gradle;
+  gradle = gradle.replace(/(\n\s*buildTypes\s*\{)/, `${splits}$1`);
+  if (gradle === before) {
+    console.error('Could not find the buildTypes block to add ABI splits before.');
+    process.exit(1);
+  }
+  notes.push('one APK per CPU type (arm64-v8a, armeabi-v7a)');
 }
 
 const keystore = process.env.ANDROID_KEYSTORE_PATH;

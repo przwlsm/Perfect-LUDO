@@ -125,6 +125,8 @@ jobs:
         working-directory: apps/${{ matrix.app }}
         env:
           ANDROID_VERSION_CODE: ${{ github.run_number }}
+          # One APK per CPU type: about half the download of a fat APK.
+          ANDROID_ABI_SPLITS: 'true'
           ANDROID_KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -146,7 +148,9 @@ jobs:
         working-directory: apps/${{ matrix.app }}
         run: |
           mkdir -p "$RUNNER_TEMP/out"
-          cp android/app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/out/$APP.apk"
+          # <app>.apk is for today's phones (64-bit ARM); <app>-arm32.apk for old 32-bit ones.
+          cp android/app/build/outputs/apk/release/app-arm64-v8a-release.apk "$RUNNER_TEMP/out/$APP.apk"
+          cp android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk "$RUNNER_TEMP/out/$APP-arm32.apk"
           [ -f android/app/build/outputs/bundle/release/app-release.aab ] && cp android/app/build/outputs/bundle/release/app-release.aab "$RUNNER_TEMP/out/$APP.aab"
           version=$(node -p "require('./app.json').expo.version")
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -167,13 +171,14 @@ jobs:
           Signed with the **$SIGNED** key$([ "$SIGNED" = debug ] && echo " (testing only; not for Google Play)").
 
           Permanent link to the newest build: $link
+          (Phones from before about 2016 with a 32-bit chip need \`$APP-arm32.apk\` from the same release.)
           EOF
           )
           # The numbered release keeps every build; the "latest" release is
           # re-created each time so its link never changes.
           gh release create "$run_tag" "$RUNNER_TEMP"/out/* --title "$APP $VERSION (build ${{ github.run_number }})" --notes "$notes" --target "$GITHUB_SHA"
           gh release delete "$latest_tag" --yes --cleanup-tag 2>/dev/null || true
-          gh release create "$latest_tag" "$RUNNER_TEMP/out/$APP.apk" --title "$APP — latest build" --notes "$notes" --target "$GITHUB_SHA" --latest=false
+          gh release create "$latest_tag" "$RUNNER_TEMP/out/$APP.apk" "$RUNNER_TEMP/out/$APP-arm32.apk" --title "$APP — latest build" --notes "$notes" --target "$GITHUB_SHA" --latest=false
           {
             echo "### $APP $VERSION (build ${{ github.run_number }}) — signed with the $SIGNED key"
             echo

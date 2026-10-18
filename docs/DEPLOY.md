@@ -101,6 +101,12 @@ Send that link to anyone with an Android phone: they open it, tap the file,
 allow installing from the browser once, and the app installs. Every build is
 also kept as a numbered release (`<app>-b<run>`) under GitHub → Releases.
 
+Each build makes one APK per CPU type rather than one fat file, so the
+download is about half the size: `<app>.apk` is for today's 64-bit ARM
+phones, and `<app>-arm32.apk` (in the same release) is for 32-bit phones
+from before about 2016. Google Play does the same split on its own from the
+`.aab`, so store downloads are small too.
+
 How to run it:
 
 - **By hand:** GitHub → Actions → **Build APK** → _Run workflow_ → app folder
@@ -135,6 +141,12 @@ Per-app secrets, when an app needs them (names are case-insensitive):
 `ADMOB_ANDROID_APP_ID_<app>`, `ADMOB_REWARDED_ID_<app>` (required for a store
 build), and for Ludo and Bagh-Chal `SUPABASE_URL_<app>`,
 `SUPABASE_ANON_KEY_<app>`.
+
+The keystore is PKCS12, where the key password is always the same as the
+keystore password, so `ANDROID_KEY_PASSWORD` and `ANDROID_KEYSTORE_PASSWORD`
+get the same value (`secrets.txt` lists both). Verified 2026-10-18: a local
+release build of Quiet Atlas signed with it carries the certificate
+SHA-1 `81:9F:F8:3B:97:54:C3:A4:47:F6:BD:E4:65:B1:1E:92:02:BA:BF:35`.
 
 If you ever build with EAS instead, upload the same keystore there
 (`npx eas-cli@latest credentials` in the app folder) so both routes sign alike.
