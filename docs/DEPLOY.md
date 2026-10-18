@@ -27,16 +27,23 @@ Runs when a pull request is merged into `main` (and on pushes to `app-dev*`).
    files under `packages/<pkg>/` select every app that uses the package, and
    root `package.json` / `package-lock.json` select every app.
 2. **check** runs typecheck, lint and tests for exactly those apps.
-3. **deploy**, per app, with Expo's fingerprint action:
-   - **Only JavaScript or assets changed** → an **over-the-air update** is
-     published. The next time someone opens the app, it waits up to 3 seconds
-     (`updates.fallbackToCacheTimeout` in each `app.json`) for the update and
-     starts with it, so closing and reopening the app is enough. On a slow
-     network it opens as before and shows the update on the following launch.
+3. **deploy**, per app, publishes an **over-the-air update** with `eas update`
+   (never an EAS build, so no Expo build quota is spent):
+   - **Only JavaScript or assets changed** → the next time someone opens the
+     app, it waits up to 3 seconds (`updates.fallbackToCacheTimeout` in each
+     `app.json`) for the update and starts with it, so closing and reopening
+     the app is enough. On a slow network it opens as before and shows the
+     update on the following launch.
    - **Native code changed** (a new native library, `app.json` plugins, an SDK
-     upgrade) → an update cannot run on old installs, so a new **EAS build**
-     starts instead. Upload it to Google Play; once people install it, later
-     merges reach them over the air again.
+     upgrade) → the update's fingerprint matches no installed app, so phones
+     keep running the old version unchanged. Run **Build APK** with the
+     _store_ option and upload the new `.aab` to Google Play; once people
+     install it, later merges reach them over the air again.
+
+Every app's `app.json` names its update channel
+(`updates.requestHeaders["expo-channel-name"]: "production"`), which is what
+lets GitHub-built binaries (download-link and Play installs alike) receive
+these updates. Builds made before that line was added do not get them.
 
 | Branch     | EAS profile / channel | Who gets it                        |
 | ---------- | --------------------- | ---------------------------------- |
@@ -70,22 +77,23 @@ store build for an app whose first release is not set up.
 3. **Access token for GitHub:** Expo dashboard → Account settings → Access
    tokens → create one. GitHub → Settings → Secrets and variables → Actions →
    New secret `EXPO_TOKEN`.
-4. **Environment variables per app** in the Expo dashboard → Project →
-   Environment variables, for `preview` and `production`: the AdMob IDs
-   (`ADMOB_ANDROID_APP_ID`, `ADMOB_IOS_APP_ID`, `EXPO_PUBLIC_ADMOB_REWARDED_ID`;
-   production builds refuse Google's test IDs), and for Ludo and Bagh-Chal
-   their Supabase URL and anon key. Updates are built in CI, not from your
-   `.env`, so they must be set there.
+4. **Per-app values as GitHub secrets** (both workflows read them; nothing
+   needs to be set in the Expo dashboard): `ADMOB_ANDROID_APP_ID_<app>` and
+   `ADMOB_REWARDED_ID_<app>` (store builds refuse Google's test IDs), and for
+   Ludo and Bagh-Chal `SUPABASE_URL_<app>` and `SUPABASE_ANON_KEY_<app>`.
+   Builds and updates are made in CI, not from your `.env`, so the values
+   must be there.
 5. **Turn an app on**, once per app, when it is ready for the store:
-   1. Set its AdMob IDs in its Expo project (step 4).
-   2. Make its first store build by hand, so EAS can create its signing key
-      (answer yes when asked):
-      `cd apps/diya && npx eas-cli@latest build --platform android --profile production`
+   1. Add its AdMob secrets in GitHub (`ADMOB_ANDROID_APP_ID_<app>`,
+      `ADMOB_REWARDED_ID_<app>`).
+   2. Make its store build: GitHub → Actions → **Build APK** → _Run
+      workflow_ → the app, with **store** ticked. The run's release holds the
+      `.aab`, signed with the shared upload key.
    3. Upload that `.aab` in Google Play Console (Play requires the very first
       upload by hand), for example to the internal testing track.
    4. Add the app to `DEPLOY_APPS` in GitHub. From then on a merge into `main`
-      sends small changes over the air (close and reopen the app) and starts
-      a new store build only when native code changes.
+      sends small changes over the air (close and reopen the app); when
+      native code changes, repeat steps 2–3.
 
 ## Free builds and download links (`.github/workflows/build-apk.yml`)
 

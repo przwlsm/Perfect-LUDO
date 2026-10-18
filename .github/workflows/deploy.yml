@@ -6,12 +6,15 @@
 #     phones pick it up when the app is next opened (each app waits up to
 #     3 s at launch for it; on a slow network, the launch after).
 #   * Changes that alter native code (a new native library, app.json plugins,
-#     an SDK upgrade) change the app's fingerprint and cannot ship over the
-#     air, so a new EAS build is started instead, to upload to the store.
+#     an SDK upgrade) change the app's fingerprint: the update is still
+#     published but no installed app matches it, so nothing changes on phones
+#     until a new binary goes out. Binaries come from the Build APK workflow
+#     (GitHub's free runners), never from EAS Build, so this workflow spends
+#     no Expo build quota: it only runs `eas update`.
 #
 # Branches:
-#   main     -> EAS profile/channel "production" (store installs)
-#   app-dev* -> EAS profile/channel "preview" (internal test APKs)
+#   main     -> EAS channel "production" (store and download-link installs)
+#   app-dev* -> EAS channel "preview" (internal testers)
 #
 # An app ships only when it is in the DEPLOY_APPS repository variable
 # (comma-separated or "all"; empty = none), is linked to EAS (a project id
@@ -93,10 +96,14 @@ jobs:
       TARGET: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
       # Repository variable (Settings → Secrets and variables → Actions →
       # Variables): the apps allowed to ship, comma-separated (e.g.
-      # "diya,kolam"), or "all". Empty means none, so a merge never starts a
-      # store build for an app whose first release (signing key, store
-      # listing, AdMob ids) has not been set up yet.
+      # "diya,kolam"), or "all". Empty means none, so a merge never publishes
+      # to an app whose first release has not been set up yet.
       DEPLOY_APPS: ${{ vars.DEPLOY_APPS }}
+      # The update's JavaScript is bundled here, so it needs the same per-app
+      # values as a build (same secret names as build-apk.yml).
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets[format('SUPABASE_URL_{0}', matrix.app)] }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets[format('SUPABASE_ANON_KEY_{0}', matrix.app)] }}
+      EXPO_PUBLIC_ADMOB_REWARDED_ID: ${{ secrets[format('ADMOB_REWARDED_ID_{0}', matrix.app)] }}
     steps:
       - uses: actions/checkout@v7
       - name: Is ${{ matrix.app }} ready to deploy?
@@ -129,15 +136,22 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-      # Publishes an over-the-air update when a build with the same native
-      # fingerprint exists; otherwise starts that build first. iOS joins once
-      # there is an Apple developer account (platform: all).
-      - name: Deploy ${{ matrix.app }}
+      # Update only, never a build. The channel is created on first use;
+      # creating it again is a harmless error. iOS joins once there is an
+      # Apple developer account (platform: all).
+      - name: Publish ${{ matrix.app }} over the air
         if: steps.ready.outputs.go == 'true'
-        uses: expo/expo-github-action/continuous-deploy-fingerprint@v9
-        with:
-          profile: ${{ env.TARGET }}
-          branch: ${{ env.TARGET }}
-          environment: ${{ env.TARGET }}
-          platform: android
-          working-directory: apps/${{ matrix.app }}
+        working-directory: apps/${{ matrix.app }}
+        run: |
+          eas channel:create "$TARGET" --non-interactive >/dev/null 2>&1 || true
+          eas update --channel "$TARGET" --platform android --non-interactive --json \
+            --message "${COMMIT_MESSAGE:0:120}" > update.json
+          node -e '
+            const u = JSON.parse(require("fs").readFileSync("update.json", "utf8"))[0] ?? {};
+            console.log(`### ${process.env.APP}: update published to "${process.env.TARGET}"`);
+            console.log(`runtime version (fingerprint) ${u.runtimeVersion ?? "?"}, group ${u.group ?? "?"}`);
+            console.log("Installed apps with this native fingerprint get it on their next launch. If native code changed, run Build APK (store) and upload the new binary first.");
+          ' >> "$GITHUB_STEP_SUMMARY"
+        env:
+          APP: ${{ matrix.app }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message || 'Manual deploy' }}
