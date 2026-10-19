@@ -114,6 +114,28 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
       - run: npm ci
 
+      # Over-the-air updates only reach phones whose runtime fingerprint
+      # matches exactly. The Gradle build would otherwise compute its own,
+      # after the Android project has been generated and patched, which does
+      # not match what Deploy (eas update, on a clean checkout) publishes
+      # against. So the fingerprint is taken here, on the clean checkout and
+      # with the same environment as Deploy, and the build embeds that value.
+      - name: Runtime fingerprint (the one Deploy publishes against)
+        working-directory: apps/${{ matrix.app }}
+        run: |
+          fp=$(npx expo-updates runtimeversion:resolve --platform android | node -e '
+            let d = "";
+            process.stdin.on("data", (c) => (d += c)).on("end", () => {
+              const line = d.split("\n").find((l) => l.trim().startsWith("{"));
+              const v = line ? JSON.parse(line).runtimeVersion : null;
+              if (typeof v !== "string" || !v) process.exit(1);
+              console.log(v);
+            });
+          ')
+          echo "EXPO_UPDATES_FINGERPRINT_OVERRIDE=$fp" >> "$GITHUB_ENV"
+          echo "### ${APP}: runtime fingerprint ${fp}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Updates published by Deploy reach this APK when they show the same fingerprint." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Generate the Android project
         working-directory: apps/${{ matrix.app }}
         env:
