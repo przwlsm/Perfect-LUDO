@@ -33,6 +33,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Workflow app dropdowns list every app
+        run: node scripts/ci/check-app-lists.mjs
       - name: Lint, typecheck and test every app and package
         run: npx turbo run lint typecheck test
       - name: Ludo database rules and RPC integrity

@@ -29,9 +29,23 @@ on:
   workflow_dispatch:
     inputs:
       app:
-        description: 'App folder to deploy (e.g. diya), or "all"'
+        description: 'App to deploy (every app in apps/ is listed; "all" ships each one that changed)'
         required: true
-        default: all
+        type: choice
+        default: ludo
+        options:
+          - ludo
+          - baghchal
+          - quietatlas
+          - tambola
+          - akshar
+          - utsav
+          - speaklocal
+          - diya
+          - kolam
+          - chaisort
+          - monsoon
+          - all
 
 permissions:
   contents: read
@@ -118,8 +132,13 @@ jobs:
           elif [ "$linked" != "true" ]; then
             echo "::notice title=${{ matrix.app }}::Not linked to EAS yet (run scripts/eas-link-apps.mjs ${{ matrix.app }}), so it was skipped."
             echo "go=false" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # A manual run names its app: that is the choice to ship it, so
+            # the DEPLOY_APPS gate (which guards merges) does not apply.
+            echo "Manual run for ${{ matrix.app }}: shipping it."
+            echo "go=true" >> "$GITHUB_OUTPUT"
           elif [ "$DEPLOY_APPS" != "all" ] && [[ ",${DEPLOY_APPS// /}," != *",${{ matrix.app }},"* ]]; then
-            echo "::notice title=${{ matrix.app }}::Not in the DEPLOY_APPS repository variable, so it was checked but not shipped. See docs/DEPLOY.md."
+            echo "::notice title=${{ matrix.app }}::Not in the DEPLOY_APPS repository variable (this run saw \"${DEPLOY_APPS}\"), so it was checked but not shipped. Add it under Settings > Secrets and variables > Actions > Variables (not Secrets). See docs/DEPLOY.md."
             echo "go=false" >> "$GITHUB_OUTPUT"
           else
             echo "go=true" >> "$GITHUB_OUTPUT"
@@ -143,6 +162,12 @@ jobs:
         if: steps.ready.outputs.go == 'true'
         working-directory: apps/${{ matrix.app }}
         run: |
+          # Apps with a server must never ship a bundle without its address:
+          # every installed phone would lose online play.
+          if [ -d supabase ] && { [ -z "$EXPO_PUBLIC_SUPABASE_URL" ] || [ -z "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ]; }; then
+            echo "::error title=${APP}::SUPABASE_URL_${APP} or SUPABASE_ANON_KEY_${APP} secret is missing, so nothing was published."
+            exit 1
+          fi
           eas channel:create "$TARGET" --non-interactive >/dev/null 2>&1 || true
           eas update --channel "$TARGET" --platform android --non-interactive --json \
             --message "${COMMIT_MESSAGE:0:120}" > update.json
