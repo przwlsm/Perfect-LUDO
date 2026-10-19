@@ -99,5 +99,18 @@
     "title": "Pronto para um trono?",
     "body": "Copas da Estrada Real: quatro jogadores, duas rodadas de Rápida 2. Cerca de {{minutes}} min por partida, {{cup}} min a copa inteira.",
     "cta": "Ver as copas"
+  },
+  "watch": {
+    "button": "Assistir ao vivo",
+    "title": "Mesa ao vivo",
+    "subtitle": "ESTRADA REAL · ASSISTINDO",
+    "loading": "Procurando lugar na arquibancada…",
+    "live": "AO VIVO",
+    "rolling": "Vez de {{name}}",
+    "rolled": "{{name}} tirou {{die}}",
+    "won": "{{name}} vence a mesa!",
+    "over": "Esta mesa terminou.",
+    "home": "{{n}}/{{goal}} em casa",
+    "backToBracket": "Voltar à chave"
   }
 }

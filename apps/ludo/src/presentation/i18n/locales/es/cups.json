@@ -99,5 +99,18 @@
     "title": "¿Listo para un trono?",
     "body": "Copas del Camino Real: cuatro jugadores, dos rondas de Rápida 2. Unos {{minutes}} min por partida, {{cup}} min la copa entera.",
     "cta": "Ver las copas"
+  },
+  "watch": {
+    "button": "Ver en directo",
+    "title": "Mesa en directo",
+    "subtitle": "CAMINO REAL · MIRANDO",
+    "loading": "Buscando sitio en la grada…",
+    "live": "EN DIRECTO",
+    "rolling": "Tira {{name}}",
+    "rolled": "{{name}} sacó un {{die}}",
+    "won": "¡{{name}} gana la mesa!",
+    "over": "Esta mesa ha terminado.",
+    "home": "{{n}}/{{goal}} en casa",
+    "backToBracket": "Volver al cuadro"
   }
 }
