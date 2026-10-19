@@ -74,7 +74,7 @@ jobs:
             # Keep only the changed apps that are switched on for automatic builds.
             apps=$(node -e '
               const changed = JSON.parse(process.argv[1]);
-              const allowed = (process.env.BUILD_APPS || "").split(",").map((s) => s.trim()).filter(Boolean);
+              const allowed = (process.env.BUILD_APPS || "").split(/[\s,]+/).filter(Boolean);
               const all = allowed.includes("all");
               console.log(JSON.stringify(changed.filter((a) => all || allowed.includes(a))));
             ' "$changed")

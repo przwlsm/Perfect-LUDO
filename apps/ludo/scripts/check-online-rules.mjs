@@ -1234,8 +1234,11 @@ try {
     assert.equal(br.rounds.length, 2, 'two semi-finals');
     for (const r of br.rounds) {
       const bots = [r.a, r.b].filter((u) => br.entries.find((e) => e.userId === u).isBot).length;
-      if (bots === 2) assert.ok(r.winner, 'two computer players decide on the spot');
-      else assert.ok(r.lobbyId, 'a human gets a real table');
+      if (bots === 2) {
+        // 0045: a live table, played at a human pace, not a coin flip.
+        assert.ok(r.lobbyId && !r.winner, 'two computer players get a real table');
+        assert.equal(r.matchStatus, 'IN_PROGRESS', 'and it starts at once');
+      } else assert.ok(r.lobbyId, 'a human gets a real table');
     }
     const mine = br.rounds.find((r) => r.a === cupRival || r.b === cupRival);
     assert.ok(mine.lobbyId);
@@ -1255,9 +1258,45 @@ try {
       const snap = (await db.query('select public.match_snapshot($1) as s', [m.id])).rows[0].s;
       assert.equal(snap.match.cupBracketId, br.id, 'the match knows its cup');
     };
+    // 0045: plays every table of computer players in a bracket to its end,
+    // as reads after a long time would.
+    const playOutBots = async (bracketId) => {
+      let b;
+      for (let i = 0; i < 60; i++) {
+        await db.query(
+          "update public.matches set bot_next_at = now() - interval '1 hour' where status = 'IN_PROGRESS' and lobby_id in (select lobby_id from public.cup_rounds where bracket_id = $1)",
+          [bracketId],
+        );
+        b = (await db.query('select public.get_cup_bracket($1) as b', [bracketId])).rows[0].b;
+        const live = b.rounds.filter((r) => !r.winner && r.matchStatus === 'IN_PROGRESS').length;
+        if (b.status === 'FINISHED' || live === 0) break;
+      }
+      return b;
+    };
     await finishTable(mine.lobbyId, cupRival);
     const other = br.rounds.find((r) => r !== mine);
-    if (other.lobbyId) { await login(cupUser); await finishTable(other.lobbyId, cupUser); }
+    if ([other.a, other.b].includes(cupUser)) { await login(cupUser); await finishTable(other.lobbyId, cupUser); }
+    else {
+      // The other semi-final is two computer players: watch it, then let it play out.
+      await login(cupUser);
+      const m0 = (await db.query('select * from public.matches where lobby_id=$1', [other.lobbyId])).rows[0];
+      const w0 = (await db.query('select public.watch_cup_table($1) as w', [other.lobbyId])).rows[0].w;
+      assert.equal(w0.mySeat, null, 'a watcher has no seat');
+      assert.equal(w0.players.length, 2);
+      assert.equal(w0.match.version, m0.version, 'nothing is played before its time');
+      await db.query("update public.matches set bot_next_at = now() - interval '6 seconds' where id=$1", [m0.id]);
+      const w1 = (await db.query('select public.watch_cup_table($1) as w', [other.lobbyId])).rows[0].w;
+      const played = w1.match.version - w0.match.version;
+      assert.ok(played >= 2 && played <= 10, `six seconds plays a few steps at a human pace (played ${played})`);
+      const outsider = randomUUID();
+      await db.query("insert into auth.users(id,email) values ($1,'outsider@example.test')", [outsider]);
+      await login(outsider);
+      await assert.rejects(db.query('select public.watch_cup_table($1)', [other.lobbyId]), /Only players in this cup/);
+      assert.equal((await db.query('select public.match_snapshot($1) as s', [m0.id])).rows[0].s, null, 'nor read it as a player');
+      await login(cupRival);
+      const done = await playOutBots(br.id);
+      assert.ok(done.rounds.find((r) => r.round === 1 && r.slot === other.slot).winner, 'the table plays to a winner');
+    }
     await login(cupRival);
     br = (await db.query('select public.get_cup_bracket($1) as b', [br.id])).rows[0].b;
     assert.equal(br.rounds.length, 3, 'the final is seated once both semi-finals are decided');
@@ -1296,12 +1335,13 @@ try {
     b2 = (await db.query('select public.get_cup_bracket($1) as b', [b2.id])).rows[0].b;
     const r2b = b2.rounds.find((r) => r.round === 1 && r.slot === r2.slot);
     assert.ok(r2b.winner && r2b.winner !== cupUser, 'leaving the table loses the round');
-    assert.equal(b2.status, 'FINISHED', 'the rest is between computer players and settles at once');
+    b2 = await playOutBots(b2.id);
+    assert.equal(b2.status, 'FINISHED', 'the rest is between computer players and plays out at their own tables');
     assert.equal(await coinsOf(cupUser), 5000, 'the free cup cost nothing and paid nothing');
     assert.equal((await db.query('select public.my_cup_bracket() as b')).rows[0].b, null);
   }
   console.log(
-    'PASS: Royal Road cups: entries are paid and refunded before the start, one bracket per player, four seats start two semi-finals as ordinary two-seat tables (computer players fill after the wait and decide their own table on the spot), finished tables decide the rounds, the final pays the winner three entries and the runner-up one, lights the throne, and a walk-out loses the round.',
+    'PASS: Royal Road cups: entries are paid and refunded before the start, one bracket per player, four seats start two semi-finals as ordinary two-seat tables (computer players fill after the wait and play their own tables out at a human pace, which anyone in the cup can watch), finished tables decide the rounds, the final pays the winner three entries and the runner-up one, lights the throne, and a walk-out loses the round.',
   );
 
   // Invite rewards (0036): a new member names the friend who invited them by
@@ -2147,14 +2187,16 @@ try {
     await db.query("update public.matches set finished_at = now() - interval '40 days' where status = 'FINISHED'");
     const host = randomUUID();
     await db.query("insert into auth.users(id,email) values ($1,'timer@example.test')", [host]);
-    const game = async (players, variant, status, secs) => {
+    const bot = (await db.query('select uid from public.profiles where is_bot limit 1')).rows[0].uid;
+    const game = async (players, variant, status, secs, who = host) => {
       const lobby = randomUUID();
       await db.query("insert into public.lobbies(id,host_id,max_players,status) values ($1,$2,$3,'STARTED')", [lobby, host, players]);
-      await db.query(
+      const m = (await db.query(
         `insert into public.matches(lobby_id,player_count,status,variant,created_at,finished_at)
-         values ($1,$2,$3,$4, now() - make_interval(secs => $5), now())`,
+         values ($1,$2,$3,$4, now() - make_interval(secs => $5), now()) returning id`,
         [lobby, players, status, variant, secs],
-      );
+      )).rows[0].id;
+      await db.query('insert into public.match_players(match_id,user_id,seat_index) values ($1,$2,0)', [m, who]);
     };
     const length = async () => (await db.query('select public.cup_game_length() as l')).rows[0].l;
     assert.deepEqual(await length(), { variant: 'quick2', seconds: 0, samples: 0 }, 'no games, no average');
@@ -2165,6 +2207,7 @@ try {
     await game(2, 'quick2', 'ABANDONED', 500);
     await game(4, 'quick2', 'FINISHED', 900);
     await game(2, 'classic', 'FINISHED', 1500);
+    await game(2, 'quick2', 'FINISHED', 900, bot); // two computer players (0045): not counted
     assert.deepEqual(
       await length(),
       { variant: 'quick2', seconds: 360, samples: 2 },

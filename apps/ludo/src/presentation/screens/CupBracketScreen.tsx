@@ -298,14 +298,37 @@ function RoundCard({
       </View>
     );
   };
+  // Any live table of my cup that I am not playing at can be watched.
+  const watchable =
+    !mine &&
+    round.winner === null &&
+    round.lobbyId !== null &&
+    round.matchStatus === 'IN_PROGRESS' &&
+    data.entries.some((e) => e.userId === me);
   return (
-    <Card style={StyleSheet.flatten([s.round, mine && { borderColor: `${theme.accent}66` }])}>
-      {side(round.a)}
-      <View style={{ alignItems: 'center', gap: 4 }}>
-        <Text style={s.vs}>{t('bracket.vs')}</Text>
-        {status && <Text style={shared.small}>{status}</Text>}
+    <Card style={StyleSheet.flatten([s.roundCard, mine && { borderColor: `${theme.accent}66` }])}>
+      <View style={s.round}>
+        {side(round.a)}
+        <View style={{ alignItems: 'center', gap: 4 }}>
+          <Text style={s.vs}>{t('bracket.vs')}</Text>
+          {status && <Text style={shared.small}>{status}</Text>}
+        </View>
+        {side(round.b)}
       </View>
-      {side(round.b)}
+      {watchable && (
+        <Button
+          secondary
+          compact
+          onPress={() =>
+            router.push({
+              pathname: '/cups/watch/[lobby]',
+              params: { lobby: round.lobbyId!, bracket: data.id },
+            })
+          }
+        >
+          {t('watch.button')}
+        </Button>
+      )}
     </Card>
   );
 }
@@ -324,7 +347,8 @@ const useStyles = makeStyles((ui) => ({
   },
   seatOpen: { borderStyle: 'dashed', backgroundColor: 'transparent' },
   seatName: { color: ui.text, fontSize: 11, fontWeight: '700', textAlign: 'center' },
-  round: { flexDirection: 'row', alignItems: 'center', gap: 8, boxShadow: liftByDay(ui) },
+  roundCard: { gap: 10, boxShadow: liftByDay(ui) },
+  round: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   side: { flex: 1, alignItems: 'center', gap: 6 },
   sideName: { color: ui.text, fontSize: 13, fontWeight: '800', textAlign: 'center' },
   vs: { color: ui.subtle, fontSize: 12, fontWeight: '900', letterSpacing: 1 },

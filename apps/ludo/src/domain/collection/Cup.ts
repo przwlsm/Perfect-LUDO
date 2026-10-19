@@ -19,7 +19,7 @@ export interface CupRound {
   readonly slot: number;
   readonly a: string;
   readonly b: string;
-  /** The two-seat table for this round; null while two computer players decide it. */
+  /** The two-seat table for this round; null until it is seated. Computer players get one too (0045). */
   readonly lobbyId: string | null;
   readonly winner: string | null;
   readonly decidedAt: string | null;

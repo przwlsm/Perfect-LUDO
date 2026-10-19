@@ -96,5 +96,18 @@
     "title": "Ready for a throne?",
     "body": "Royal Road cups: four players, two rounds of Quick 2. About {{minutes}} min a game, {{cup}} min for the whole cup.",
     "cta": "See the cups"
+  },
+  "watch": {
+    "button": "Watch live",
+    "title": "Live table",
+    "subtitle": "ROYAL ROAD · WATCHING",
+    "loading": "Finding a seat in the stands…",
+    "live": "LIVE",
+    "rolling": "{{name}} to roll",
+    "rolled": "{{name}} rolled a {{die}}",
+    "won": "{{name}} wins the table!",
+    "over": "This table is over.",
+    "home": "{{n}}/{{goal}} home",
+    "backToBracket": "Back to the bracket"
   }
 }

@@ -1,4 +1,5 @@
 import type { CupBracket, CupGameLength, CupsView } from '../collection/Cup';
+import type { OnlineMatchSnapshot } from '../entities/OnlineMatch';
 
 /** The Royal Road cups: the halls, and one bracket at a time per player. */
 export interface ICupsRepository {
@@ -17,4 +18,6 @@ export interface ICupsRepository {
   startPrivate(bracketId: string): Promise<CupBracket>;
   /** The average length of a recent real cup game (heads-up Quick 2). */
   gameLength(): Promise<CupGameLength>;
+  /** Follows one table of a cup the player is in, read-only; computer tables move on as they are watched. */
+  watch(lobbyId: string): Promise<OnlineMatchSnapshot>;
 }

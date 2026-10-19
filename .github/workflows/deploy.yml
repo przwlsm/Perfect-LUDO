@@ -118,6 +118,11 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets[format('SUPABASE_URL_{0}', matrix.app)] }}
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets[format('SUPABASE_ANON_KEY_{0}', matrix.app)] }}
       EXPO_PUBLIC_ADMOB_REWARDED_ID: ${{ secrets[format('ADMOB_REWARDED_ID_{0}', matrix.app)] }}
+      # Not used by the JavaScript, but it is part of the app config the
+      # runtime fingerprint hashes: it must match build-apk.yml exactly, or
+      # the update's fingerprint differs from the installed APK's and no
+      # phone ever takes it.
+      ADMOB_ANDROID_APP_ID: ${{ secrets[format('ADMOB_ANDROID_APP_ID_{0}', matrix.app)] }}
     steps:
       - uses: actions/checkout@v7
       - name: Is ${{ matrix.app }} ready to deploy?
@@ -125,6 +130,9 @@ jobs:
         run: |
           # Linked = has an EAS project id; updates.url is in app.json or, like
           # Ludo, derived from the id by app.config.ts.
+          # Spaces, tabs and line breaks (an Enter typed into the value box)
+          # are ignored; apps are separated by commas or new lines.
+          apps_list=$(printf '%s' "$DEPLOY_APPS" | tr '\n\r\t' ',,,' | tr -d ' ' | tr -s ',' | sed 's/^,//; s/,$//')
           linked=$(node -e "const fs=require('fs');const d='./apps/${{ matrix.app }}/';const e=require(d+'app.json').expo;const derived=fs.existsSync(d+'app.config.ts')&&fs.readFileSync(d+'app.config.ts','utf8').includes('u.expo.dev');console.log(Boolean(e.extra?.eas?.projectId&&(e.updates?.url||derived)))")
           if [ -z "$EXPO_TOKEN" ]; then
             echo "::notice title=${{ matrix.app }}::EXPO_TOKEN secret is not set, so nothing was deployed. See docs/DEPLOY.md."
@@ -137,8 +145,8 @@ jobs:
             # the DEPLOY_APPS gate (which guards merges) does not apply.
             echo "Manual run for ${{ matrix.app }}: shipping it."
             echo "go=true" >> "$GITHUB_OUTPUT"
-          elif [ "$DEPLOY_APPS" != "all" ] && [[ ",${DEPLOY_APPS// /}," != *",${{ matrix.app }},"* ]]; then
-            echo "::notice title=${{ matrix.app }}::Not in the DEPLOY_APPS repository variable (this run saw \"${DEPLOY_APPS}\"), so it was checked but not shipped. Add it under Settings > Secrets and variables > Actions > Variables (not Secrets). See docs/DEPLOY.md."
+          elif [ "$apps_list" != "all" ] && [[ ",${apps_list}," != *",${{ matrix.app }},"* ]]; then
+            echo "::notice title=${{ matrix.app }}::Not in the DEPLOY_APPS repository variable (this run saw \"${apps_list}\"), so it was checked but not shipped. Add it under Settings > Secrets and variables > Actions > Variables (not Secrets). See docs/DEPLOY.md."
             echo "go=false" >> "$GITHUB_OUTPUT"
           else
             echo "go=true" >> "$GITHUB_OUTPUT"

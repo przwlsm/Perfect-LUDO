@@ -7,8 +7,10 @@ import {
   type CupGameLength,
   type CupsView,
   type ICupsRepository,
+  type OnlineMatchSnapshot,
 } from '@/domain';
 import { rpc } from './supabaseRpc';
+import { toMatchSnapshot } from './socialRows';
 
 export class SupabaseCupsRepository implements ICupsRepository {
   constructor(private readonly client: SupabaseClient) {}
@@ -43,5 +45,9 @@ export class SupabaseCupsRepository implements ICupsRepository {
 
   async gameLength(): Promise<CupGameLength> {
     return parseCupGameLength(await rpc(this.client, 'cup_game_length'));
+  }
+
+  async watch(lobbyId: string): Promise<OnlineMatchSnapshot> {
+    return toMatchSnapshot(await rpc(this.client, 'watch_cup_table', { p_lobby_id: lobbyId }));
   }
 }
